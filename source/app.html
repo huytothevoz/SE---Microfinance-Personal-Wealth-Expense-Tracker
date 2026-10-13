@@ -1,30 +1,64 @@
 <!doctype html>
 <html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#102b4f">
-  <meta name="description" content="WealthFlow — giao diện demo hệ thống quản lý tài chính cá nhân.">
-  <title>Ứng dụng • WealthFlow</title>
-  <link rel="icon" type="image/svg+xml" href="frontend/assets/favicon.svg">
-  <link rel="stylesheet" href="frontend/css/styles.css">
-  <script type="module" src="frontend/js/app.js"></script>
-</head>
-<body class="app-body">
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar" aria-label="Điều hướng ứng dụng">
-      <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M4 22.5 11 15l6 4 11-11" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 8h7v7" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>wealth<span class="brand-accent">flow</span></span></a>
-      <nav id="sidebar-nav"></nav>
-      <div class="sidebar-bottom"><div class="sidebar-help"><span style="color:#94e1d7">✧</span><strong>Hiểu về WealthFlow</strong><p>Quản lý tài chính chủ động, không chỉ ghi chép thu chi.</p><a href="index.html" class="mini-link">Về trang giới thiệu →</a></div><p class="footer-note">VOZ · Construction UI Demo v0.1</p></div>
-    </aside>
-    <div class="mobile-overlay" id="mobile-overlay"></div>
-    <div class="app-main">
-      <header class="topbar"><button type="button" class="icon-button sidebar-toggle" id="sidebar-toggle" aria-label="Mở thanh điều hướng" aria-expanded="false">☰</button><span class="app-mobile-label">WealthFlow</span><div class="breadcrumb">Không gian cá nhân <span aria-hidden="true">/</span><strong id="breadcrumb-name">Tổng quan</strong></div><div class="top-actions"><label class="top-search"><span id="top-search-icon"></span><input type="search" id="global-search" placeholder="Tìm giao dịch nhanh..." aria-label="Tìm giao dịch"></label><button class="top-icon" id="top-notifications" type="button" aria-label="Xem thông báo"><span id="bell-icon"></span><span class="notify-dot"></span></button><button class="user-chip" id="user-menu" type="button" aria-label="Mở hồ sơ cá nhân"><span class="avatar">WF</span><span><strong>Người dùng demo</strong><small>Tài khoản minh họa</small></span><span style="font-size:12px">⌄</span></button></div></header>
-      <main class="main-content" id="app-content" tabindex="-1"></main>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#102b4f">
+    <meta name="description" content="WealthFlow — giao diện demo hệ thống quản lý tài chính cá nhân.">
+    <title>Ứng dụng • WealthFlow</title><link rel="icon" type="image/svg+xml" href="frontend/assets/favicon.svg"><link rel="stylesheet" href="frontend/css/styles.css">
+    <script type="module" src="frontend/js/app.js">
+    </script>
+  </head>
+  <body class="app-body">
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Điều hướng ứng dụng">
+        <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M4 22.5 11 15l6 4 11-11" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 8h7v7" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>wealth<span class="brand-accent">flow</span></span></a>
+        <nav id="sidebar-nav">
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="sidebar-help">
+            <span style="color:#94e1d7">✧</span><strong>Hiểu về WealthFlow</strong>
+            <p>
+              Quản lý tài chính chủ động, không chỉ ghi chép thu chi.
+            </p>
+            <a href="index.html" class="mini-link">Về trang giới thiệu →</a>
+          </div>
+          <p class="footer-note">
+            VOZ · Construction UI Demo v0.1
+          </p>
+        </div>
+      </aside>
+      <div class="mobile-overlay" id="mobile-overlay">
+      </div>
+      <div class="app-main">
+        <header class="topbar">
+          <button type="button" class="icon-button sidebar-toggle" id="sidebar-toggle" aria-label="Mở thanh điều hướng" aria-expanded="false">☰</button><span class="app-mobile-label">WealthFlow</span>
+          <div class="breadcrumb">
+            Không gian cá nhân <span aria-hidden="true">/</span><strong id="breadcrumb-name">Tổng quan</strong>
+          </div>
+          <div class="top-actions">
+            <label class="top-search"><span id="top-search-icon"></span><input type="search" id="global-search" placeholder="Tìm giao dịch nhanh..." aria-label="Tìm giao dịch"></label><button class="top-icon" id="top-notifications" type="button" aria-label="Xem thông báo"><span id="bell-icon"></span><span class="notify-dot"></span></button><button class="user-chip" id="user-menu" type="button" aria-label="Mở hồ sơ cá nhân"><span class="avatar">WF</span><span><strong>Người dùng demo</strong><small>Tài khoản minh họa</small></span><span style="font-size:12px">⌄</span></button>
+          </div>
+        </header>
+        <main class="main-content" id="app-content" tabindex="-1">
+        </main>
+      </div>
     </div>
-  </div>
-  <dialog id="action-dialog" class="app-dialog" aria-labelledby="modal-title"><div class="modal-head"><div><span class="label" id="modal-overline">GIAO DIỆN MINH HỌA</span><h2 id="modal-title">Thao tác</h2></div><button type="button" class="icon-button" id="modal-close" aria-label="Đóng">×</button></div><div class="modal-content" id="modal-content"></div></dialog>
-  <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false"></div>
-</body>
+    <dialog id="action-dialog" class="app-dialog" aria-labelledby="modal-title">
+      <div class="modal-head">
+        <div>
+          <span class="label" id="modal-overline">GIAO DIỆN MINH HỌA</span>
+          <h2 id="modal-title">
+            Thao tác
+          </h2>
+        </div>
+        <button type="button" class="icon-button" id="modal-close" aria-label="Đóng">×</button>
+      </div>
+      <div class="modal-content" id="modal-content">
+      </div>
+    </dialog>
+    <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false">
+    </div>
+  </body>
 </html>
