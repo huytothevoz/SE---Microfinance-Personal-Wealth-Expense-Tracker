@@ -1,11 +1,6 @@
-# SƠ ĐỒ TUẦN TỰ SQ02: GHI NHẬN CHI TIÊU & KIỂM TRA NGÂN SÁCH
-## PHÂN HỆ QUẢN LÝ THU CHI & NGÂN SÁCH (EXPENSE & BUDGET SUBSYSTEM)
+# SQ02: Ghi nhận Chi tiêu, Hạch toán Kép & Kiểm tra Ngân sách
 
-**TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG - KHOA CÔNG NGHỆ THÔNG TIN**  
-- **Môn học:** Công nghệ phần mềm (Software Engineering)
-- **Đề tài:** Hệ thống Quản lý Tài chính Cá nhân, Tài sản và Tài chính Vi mô (WealthFlow)
-- **Nhóm / Lớp:** Voz / N3
-- **Tài liệu tham chiếu:** [SRS.md](../../SRS.md) v2.1 (UC03, UC05) và [sequence_diagram.md](../sequence_diagram.md)
+> Tham chiếu: [SRS.md](../../SRS.md) v2.1 | [sequence_diagram.md](../sequence_diagram.md) | [class_diagram.md](../class_diagram.md)
 
 ---
 

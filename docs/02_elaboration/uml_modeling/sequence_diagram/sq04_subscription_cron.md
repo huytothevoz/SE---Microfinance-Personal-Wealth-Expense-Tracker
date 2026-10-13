@@ -1,11 +1,6 @@
-# SƠ ĐỒ TUẦN TỰ SQ04: XỬ LÝ GIAO DỊCH ĐỊNH KỲ TỰ ĐỘNG (SUBSCRIPTION CRON)
-## PHÂN HỆ TIẾN TRÌNH NỀN & ĐỊNH KỲ (SCHEDULED SERVICES & SUBSCRIPTIONS)
+# SQ04: Xử lý Giao dịch Định kỳ Tự động (Subscription Cron)
 
-**TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG - KHOA CÔNG NGHỆ THÔNG TIN**  
-- **Môn học:** Công nghệ phần mềm (Software Engineering)
-- **Đề tài:** Hệ thống Quản lý Tài chính Cá nhân, Tài sản và Tài chính Vi mô (WealthFlow)
-- **Nhóm / Lớp:** Voz / N3
-- **Tài liệu tham chiếu:** [SRS.md](../../SRS.md) v2.1 (UC04, SYS02) và [sequence_diagram.md](../sequence_diagram.md)
+> Tham chiếu: [SRS.md](../../SRS.md) v2.1 | [sequence_diagram.md](../sequence_diagram.md) | [class_diagram.md](../class_diagram.md)
 
 ---
 

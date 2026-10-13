@@ -1,31 +1,6 @@
-# TÀI LIỆU MÔ HÌNH HÓA USE CASE (USE CASE DIAGRAMS)
-## HỆ THỐNG QUẢN LÝ TÀI CHÍNH CÁ NHÂN, TÀI SẢN VÀ TÀI CHÍNH VI MÔ (WEALTHFLOW)
+# Sơ đồ Use Case (Use Case Diagrams) - WealthFlow
 
-**TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG**  
-**KHOA CÔNG NGHỆ THÔNG TIN**  
-
-- **Môn học:** Công nghệ phần mềm (Software Engineering)
-- **Nhóm / Lớp:** Voz / N3
-- **Giảng viên hướng dẫn:** ThS. Võ Thị Kim Anh
-- **Thành viên nhóm:**
-  - Võ Trịnh Quốc Huy
-  - Võ Văn Khôi Nguyên
-  - Nguyễn Thành Trung
-  - Phan Nguyễn Tuấn Kiệt
-- **Pha tiến trình:** Elaboration (Pha Tinh chế / Phân tích chi tiết)
-- **Tài liệu tham chiếu:** [docs/02_elaboration/SRS.md](../SRS.md) v2.1 (Elaboration Refined Baseline - 13 Core Use Cases)
-
----
-
-## 1. Giới thiệu và Quy ước Mô hình hóa
-
-Tài liệu này trực quan hóa toàn bộ **13 Use Cases cốt lõi (`UC01` – `UC13`)** và **3 Kịch bản nền (`SYS01` – `SYS03`)** đã được tinh gọn và đặc tả chuẩn hóa trong tài liệu SRS v2.1. Để đảm bảo tính khả dụng, tính công thái học và tránh quá tải thị giác, mô hình được tổ chức theo:
-1. **01 Sơ đồ Tổng quan Toàn hệ thống (System Overview Diagram):** Thể hiện sự phân bổ 13 Use Cases theo 6 phân hệ nghiệp vụ và mối quan hệ với các tác nhân.
-2. **06 Sơ đồ Chi tiết theo Phân hệ (Subsystem Diagrams):** Gom nhóm các Use Case có chung Functional Requirements (FR) và luồng dữ liệu tương hỗ, làm rõ các mối quan hệ cấu trúc chuẩn UML 2.5:
-   - **Liên kết cơ bản (Association):** Đường nối liền giữa Tác nhân và Use Case.
-   - **Quan hệ `«include»` (Bao hàm):** Mũi tên nét đứt từ Base Use Case trỏ đến Included Use Case (`Base -.->|«include»| Included`), biểu thị hành vi bắt buộc phải thực thi.
-   - **Quan hệ `«extend»` (Mở rộng):** Mũi tên nét đứt từ Extension Use Case trỏ ngược về Base Use Case (`Extension -.->|«extend»| Base`), biểu thị hành vi mở rộng có điều kiện tại Extension Point.
-   - **Kế thừa tác nhân (Generalization):** Mũi tên trỏ từ tác nhân chuyên biệt về tác nhân tổng quát.
+> Tham chiếu: [SRS.md](../SRS.md) v2.1 (13 Core Use Cases) | [class_diagram.md](./class_diagram.md) | [sequence_diagram.md](./sequence_diagram.md)
 
 ---
 

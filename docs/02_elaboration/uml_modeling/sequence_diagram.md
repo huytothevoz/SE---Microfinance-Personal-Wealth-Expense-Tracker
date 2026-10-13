@@ -1,48 +1,10 @@
-# TÀI LIỆU MÔ HÌNH HÓA SƠ ĐỒ TUẦN TỰ (SEQUENCE DIAGRAMS - INDEX HUB)
-## HỆ THỐNG QUẢN LÝ TÀI CHÍNH CÁ NHÂN, TÀI SẢN VÀ TÀI CHÍNH VI MÔ (WEALTHFLOW)
+# Sơ đồ Tuần tự (Sequence Diagrams Hub) - WealthFlow
 
-**TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG**  
-**KHOA CÔNG NGHỆ THÔNG TIN**  
-
-- **Môn học:** Công nghệ phần mềm (Software Engineering)
-- **Nhóm / Lớp:** Voz / N3
-- **Giảng viên hướng dẫn:** ThS. Võ Thị Kim Anh
-- **Thành viên nhóm:**
-  - Võ Trịnh Quốc Huy
-  - Võ Văn Khôi Nguyên
-  - Nguyễn Thành Trung
-  - Phan Nguyễn Tuấn Kiệt
-- **Pha tiến trình:** Elaboration (Pha Tinh chế / Phân tích chi tiết)
-- **Tài liệu tham chiếu:** [docs/02_elaboration/SRS.md](../SRS.md) v2.1, [usecase_diagram.md](./usecase_diagram.md), [activity_diagram.md](./activity_diagram.md)
+> Tham chiếu: [SRS.md](../SRS.md) v2.1 | [usecase_diagram.md](./usecase_diagram.md) | [class_diagram.md](./class_diagram.md)
 
 ---
 
-## 1. Giới thiệu và Quy ước Mô hình hóa Tuần tự (Sequence Modeling Guidelines)
-
-### 1.1 Vai trò của Sequence Diagram trong Pha Elaboration (UP / RUP)
-Theo phương pháp luận Unified Process (Ian Sommerville - Chương 5: System Modeling), **Sequence Diagram (Sơ đồ Tuần tự)** là cầu nối trực tiếp giữa Pha Phân tích Yêu cầu (Analysis) và Pha Thiết kế Kiến trúc (Design):
-1. **Hiện thực hóa Use Case (Use Case Realization):** Mô hình hóa cụ thể cách các đối tượng phần mềm tương tác với nhau để hoàn thành kịch bản của từng Use Case theo trục thời gian (từ trên xuống dưới).
-2. **Phân bổ trách nhiệm theo mô hình BCE (Boundary - Control - Entity):**
-   - **Boundary (Biên giới):** Tiếp nhận tương tác từ Actor, kiểm tra hợp lệ sơ bộ tại Client hoặc API Controller (`View`, `Controller`).
-   - **Control (Điều khiển):** Chứa các quy tắc nghiệp vụ (Business Rules), điều phối luồng xử lý và tính toán (`Service`, `Engine`).
-   - **Entity / Persistence (Thực thể & Dữ liệu):** Lưu trữ trạng thái nghiệp vụ và giao tiếp trực tiếp với cơ sở dữ liệu (`Repository`, `Database`).
-3. **Làm rõ ranh giới giao dịch ACID:** Chỉ định rõ thời điểm mở giao dịch cơ sở dữ liệu (Transaction Begin), thời điểm xác nhận (Commit), và thời điểm hoàn tác (Rollback) khi phát sinh lỗi.
-
-### 1.2 Bảng quy ước ký hiệu thông điệp chuẩn UML 2.5
-
-| Thành phần | Cú pháp Mermaid | Cú pháp PlantUML | Ý nghĩa ngữ nghĩa |
-| :--- | :---: | :---: | :--- |
-| **Thông điệp đồng bộ (Synchronous Call)** | `->>` | `->` | Lời gọi hàm hoặc HTTP request đồng bộ (bên gọi đợi phản hồi). |
-| **Thông điệp không đồng bộ (Asynchronous)** | `--)` | `->>` | Lời gọi bất đồng bộ, sự kiện nền hoặc đẩy thông báo hàng đợi. |
-| **Thông điệp phản hồi (Reply / Return)** | `-->>` | `-->` | Kết quả trả về sau khi phương thức hoặc truy vấn hoàn tất. |
-| **Kích hoạt thực thi (Activation Box)** | `activate / deactivate` | `activate / deactivate` | Khoảng thời gian đối tượng đang trực tiếp chiếm quyền xử lý. |
-| **Khối rẽ nhánh điều kiện (Alternative)** | `alt ... else ... end` | `alt ... else ... end` | Rẽ nhánh điều kiện logic tương ứng với Guard Conditions. |
-| **Khối tùy chọn (Optional)** | `opt ... end` | `opt ... end` | Hành động chỉ thực thi khi điều kiện thỏa mãn. |
-| **Khối lặp (Loop)** | `loop ... end` | `loop ... end` | Lặp lại thao tác xử lý trên danh sách bản ghi. |
-
----
-
-## 2. Danh mục 08 Sơ đồ Tuần tự Trọng yếu (Sequence Catalog)
+## Danh mục 08 Sơ đồ Tuần tự Trọng yếu (Sequence Catalog)
 
 Để tối ưu hóa trải nghiệm xem và kết xuất sơ đồ (tránh hiện tượng quá tải bộ nhớ khi nạp đồng thời 8 sơ đồ lớn trong cùng một trang), toàn bộ 08 kịch bản tuần tự đã được tổ chức phân vị độc lập trong thư mục [sequence_diagram/](./sequence_diagram/):
 

@@ -1,11 +1,6 @@
-# SƠ ĐỒ TUẦN TỰ SQ06: QUẢN LÝ VÀNG & TỔNG HỢP NET WORTH DASHBOARD
-## PHÂN HỆ TÀI SẢN CÁ NHÂN & BÁO CÁO (PERSONAL WEALTH & DASHBOARD SUBSYSTEM)
+# SQ06: Quản lý Vàng & Tổng hợp Net Worth Dashboard
 
-**TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG - KHOA CÔNG NGHỆ THÔNG TIN**  
-- **Môn học:** Công nghệ phần mềm (Software Engineering)
-- **Đề tài:** Hệ thống Quản lý Tài chính Cá nhân, Tài sản và Tài chính Vi mô (WealthFlow)
-- **Nhóm / Lớp:** Voz / N3
-- **Tài liệu tham chiếu:** [SRS.md](../../SRS.md) v2.1 (UC08, UC10) và [sequence_diagram.md](../sequence_diagram.md)
+> Tham chiếu: [SRS.md](../../SRS.md) v2.1 | [sequence_diagram.md](../sequence_diagram.md) | [class_diagram.md](../class_diagram.md)
 
 ---
 

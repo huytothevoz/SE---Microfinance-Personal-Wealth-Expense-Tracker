@@ -1,11 +1,6 @@
-# SƠ ĐỒ TUẦN TỰ SQ01: ĐĂNG KÝ, MÃ HÓA MẬT KHẨU & ĐĂNG NHẬP JWT
-## PHÂN HỆ XÁC THỰC & HỒ SƠ TÀI CHÍNH (AUTH & PROFILE SUBSYSTEM)
+# SQ01: Đăng ký, Mã hóa Argon2id & Đăng nhập JWT
 
-**TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG - KHOA CÔNG NGHỆ THÔNG TIN**  
-- **Môn học:** Công nghệ phần mềm (Software Engineering)
-- **Đề tài:** Hệ thống Quản lý Tài chính Cá nhân, Tài sản và Tài chính Vi mô (WealthFlow)
-- **Nhóm / Lớp:** Voz / N3
-- **Tài liệu tham chiếu:** [SRS.md](../../SRS.md) v2.1 (UC01, UC02) và [sequence_diagram.md](../sequence_diagram.md)
+> Tham chiếu: [SRS.md](../../SRS.md) v2.1 | [sequence_diagram.md](../sequence_diagram.md) | [class_diagram.md](../class_diagram.md)
 
 ---
 

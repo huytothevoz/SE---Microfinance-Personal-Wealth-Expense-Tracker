@@ -1,11 +1,6 @@
-# SƠ ĐỒ TUẦN TỰ SQ05: KHỞI TẠO KHOẢN VAY & THANH TOÁN TRẢ NỢ VI MÔ
-## PHÂN HỆ TÀI CHÍNH VI MÔ (MICROFINANCE SUBSYSTEM)
+# SQ05: Khởi tạo Khoản vay & Thanh toán Trả nợ Vi mô
 
-**TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG - KHOA CÔNG NGHỆ THÔNG TIN**  
-- **Môn học:** Công nghệ phần mềm (Software Engineering)
-- **Đề tài:** Hệ thống Quản lý Tài chính Cá nhân, Tài sản và Tài chính Vi mô (WealthFlow)
-- **Nhóm / Lớp:** Voz / N3
-- **Tài liệu tham chiếu:** [SRS.md](../../SRS.md) v2.1 (UC06, UC07) và [sequence_diagram.md](../sequence_diagram.md)
+> Tham chiếu: [SRS.md](../../SRS.md) v2.1 | [sequence_diagram.md](../sequence_diagram.md) | [class_diagram.md](../class_diagram.md)
 
 ---
 

@@ -1,11 +1,6 @@
-# SƠ ĐỒ TUẦN TỰ SQ07: ĐỐI SOÁT SỔ CÁI & XUẤT DỮ LIỆU CSV AN TOÀN
-## PHÂN HỆ BÁO CÁO & ĐỐI SOÁT (REPORTING & RECONCILIATION SUBSYSTEM)
+# SQ07: Đối soát Sổ cái & Xuất Dữ liệu CSV An toàn
 
-**TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG - KHOA CÔNG NGHỆ THÔNG TIN**  
-- **Môn học:** Công nghệ phần mềm (Software Engineering)
-- **Đề tài:** Hệ thống Quản lý Tài chính Cá nhân, Tài sản và Tài chính Vi mô (WealthFlow)
-- **Nhóm / Lớp:** Voz / N3
-- **Tài liệu tham chiếu:** [SRS.md](../../SRS.md) v2.1 (UC11) và [sequence_diagram.md](../sequence_diagram.md)
+> Tham chiếu: [SRS.md](../../SRS.md) v2.1 | [sequence_diagram.md](../sequence_diagram.md) | [class_diagram.md](../class_diagram.md)
 
 ---
 

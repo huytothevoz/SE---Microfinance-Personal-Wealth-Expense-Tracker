@@ -1,78 +1,10 @@
-# TÀI LIỆU MÔ HÌNH HÓA SƠ ĐỒ HOẠT ĐỘNG (ACTIVITY DIAGRAMS WITH SWIMLANES)
-## HỆ THỐNG QUẢN LÝ TÀI CHÍNH CÁ NHÂN, TÀI SẢN VÀ TÀI CHÍNH VI MÔ (WEALTHFLOW)
+# Sơ đồ Hoạt động (Activity Diagrams) - WealthFlow
 
-**TRƯỜNG ĐẠI HỌC TÔN ĐỨC THẮNG**  
-**KHOA CÔNG NGHỆ THÔNG TIN**  
-
-- **Môn học:** Công nghệ phần mềm (Software Engineering)
-- **Nhóm / Lớp:** Voz / N3
-- **Giảng viên hướng dẫn:** ThS. Võ Thị Kim Anh
-- **Thành viên nhóm:**
-  - Võ Trịnh Quốc Huy
-  - Võ Văn Khôi Nguyên
-  - Nguyễn Thành Trung
-  - Phan Nguyễn Tuấn Kiệt
-- **Pha tiến trình:** Elaboration (Pha Tinh chế / Phân tích chi tiết)
-- **Tài liệu tham chiếu:** [docs/02_elaboration/SRS.md](../SRS.md) v2.1 và [usecase_diagram.md](./usecase_diagram.md)
+> Tham chiếu: [SRS.md](../SRS.md) v2.1 | [usecase_diagram.md](./usecase_diagram.md) | [class_diagram.md](./class_diagram.md) | [sequence_diagram.md](./sequence_diagram.md)
 
 ---
 
-## 1. Giới thiệu và Quy ước Mô hình hóa Làn bơi theo Tác nhân (Actor Swimlanes)
-
-### 1.1 Khái niệm Làn bơi theo Tác nhân (Swimlanes by Actor / System)
-Theo giáo trình *Software Engineering (Ian Sommerville - Chapter 5: System Modeling)* và chuẩn UML 2.5:
-* **Swimlanes (Làn bơi):** Là các cột hình chữ nhật song song đặt cạnh nhau từ **TRÁI SANG PHẢI**, mỗi cột đại diện cho một **Tác nhân (Actor)** hoặc **Hệ thống xử lý (System)** tham gia vào quy trình nghiệp vụ.
-* **Quy tắc phân làn chuẩn nghiệp vụ:**
-  - **Làn 1 (Cột bên trái):** `Người dùng (User / Customer / Guest)` - Nơi khởi phát hành động (Initial Node: Bắt đầu), nhập liệu biểu mẫu, xác nhận thao tác và tiếp nhận kết quả cuối cùng (Final Node: Kết thúc).
-  - **Làn 2 (Cột ở giữa):** `Hệ thống WealthFlow (WealthFlow System)` - Tiếp nhận yêu cầu, kiểm tra dữ liệu và quy tắc nghiệp vụ (Decision Node: Rẽ nhánh điều kiện), thực thi ghi sổ kế toán kép, cập nhật số dư và gửi phản hồi.
-  - **Làn 3 (Cột bên phải - nếu có):** `Dịch vụ Bên ngoài / Đối tác / Admin` (ví dụ: `SYS Scheduler`, `Exchange Rate Service`, `End-User`) - Tham gia vào các quy trình tự động hoặc có bên thứ ba tương tác.
-
-```
-┌──────────────────────────────────────┬──────────────────────────────────────┬──────────────────────────────────────┐
-│        LÀN 1: NGƯỜI DÙNG             │       LÀN 2: HỆ THỐNG WEALTHFLOW     │      LÀN 3: BÊN LIÊN QUAN (NẾU CÓ)   │
-│              (User)                  │                (System)              │          (External / Scheduler)      │
-├──────────────────────────────────────┼──────────────────────────────────────┼──────────────────────────────────────┤
-│                                      │                                      │                                      │
-│             (( Bắt đầu ))            │                                      │                                      │
-│                   │                  │                                      │                                      │
-│                   ▼                  │                                      │                                      │
-│          ┌─────────────────┐         │                                      │                                      │
-│          │ Nhập dữ liệu    │────────►│         ┌─────────────────┐          │                                      │
-│          └─────────────────┘         │         │ Tiếp nhận &     │          │                                      │
-│                                      │         │ Kiểm tra logic  │          │                                      │
-│                                      │         └────────┬────────┘          │                                      │
-│                                      │                  │                   │                                      │
-│                                      │                  ▼                   │                                      │
-│          ┌─────────────────┐         │               ╱     ╲                │                                      │
-│          │ Nhận báo lỗi    │◄────────┼──────────────◇Hợp lệ?◇               │                                      │
-│          └─────────────────┘ [Không] │               ╲     ╱                │                                      │
-│                                      │                  │ [Có]              │                                      │
-│                                      │                  ▼                   │                                      │
-│                                      │         ┌─────────────────┐          │         ┌─────────────────┐          │
-│                                      │         │ Ghi sổ kế toán  │─────────►│         │ Tác vụ đồng bộ  │          │
-│                                      │         └────────┬────────┘          │         └────────┬────────┘          │
-│                                      │                  │                   │                  │                   │
-│          ┌─────────────────┐         │                  ▼                   │                  │                   │
-│          │ Xem kết quả     │◄────────┼──────────────────┴───────────────────┼──────────────────┘                   │
-│          └────────┬────────┘         │                                      │                                      │
-│                   │                  │                                      │                                      │
-│                   ▼                  │                                      │                                      │
-│            ((( Kết thúc )))          │                                      │                                      │
-│                                      │                                      │                                      │
-└──────────────────────────────────────┴──────────────────────────────────────┴──────────────────────────────────────┘
-```
-
-### 1.2 Hai định dạng hỗ trợ song song
-1. **Sơ đồ Mermaid đa cột (Mermaid Multi-Column Swimlanes):**
-   - Thiết kế dưới dạng các cột song song từ trái sang phải (`flowchart LR`) với `direction TB` bên trong mỗi cột.
-   - Hiển thị trực tiếp và sắc nét ngay trên GitHub và VS Code Markdown Preview.
-2. **Mã nguồn PlantUML chính quy (PlantUML Swimlanes Code):**
-   - Dùng cú pháp `|#Màu|Tên Actor|` chính thức của PlantUML để sinh ra sơ đồ hình ảnh có thanh tiêu đề màu và các vạch phân làn thẳng tắp **giống hệt 100% hình ảnh mẫu của đồ án**.
-   - Có thể dán trực tiếp vào [PlantText](https://www.planttext.com/) hoặc extension PlantUML trong VS Code để xuất ảnh PNG/SVG chèn vào báo cáo Word đồ án (`Modelling_NhomVoz.docx`).
-
----
-
-## 2. Danh mục 08 Sơ đồ Hoạt động theo Tác nhân (Activity Catalog)
+## Danh mục 08 Quy trình Hoạt động theo Làn bơi (Swimlanes)
 
 | Mã Sơ đồ | Tên Quy trình Nghiệp vụ | Use Cases bao phủ | Các Làn bơi (Swimlanes theo thứ tự từ Trái sang Phải) |
 | :---: | :--- | :---: | :--- |
