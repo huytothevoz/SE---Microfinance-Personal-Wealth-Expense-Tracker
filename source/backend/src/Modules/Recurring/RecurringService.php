@@ -1,0 +1,160 @@
+<?php
+
+declare(strict_types=1);
+
+namespace WealthFlow\Modules\Recurring;
+
+use DateTimeImmutable;
+use InvalidArgumentException;
+use WealthFlow\Modules\Wallets\WalletRepository;
+
+final class RecurringService
+{
+    private RecurringRepository $repo;
+    private WalletRepository $walletRepo;
+
+    public function __construct(
+        ?RecurringRepository $repo = null,
+        ?WalletRepository $walletRepo = null
+    ) {
+        $this->repo = $repo ?? new RecurringRepository();
+        $this->walletRepo = $walletRepo ?? new WalletRepository();
+    }
+
+    /**
+     * Create a recurring schedule (FR06.01, BR09).
+     * @param array{
+     *     name: string,
+     *     amount: float|string,
+     *     currency?: string,
+     *     walletId: int,
+     *     categoryId?: ?int,
+     *     dayOfMonth: int,
+     *     executionMode?: string
+     * } $dto
+     * @return array<string, mixed>
+     */
+    public function createSchedule(int $userId, array $dto): array
+    {
+        $name = trim((string) ($dto['name'] ?? ''));
+        $amount = (float) ($dto['amount'] ?? 0);
+        $walletId = (int) ($dto['walletId'] ?? 0);
+        $categoryId = isset($dto['categoryId']) && $dto['categoryId'] !== '' ? (int) $dto['categoryId'] : null;
+        $dayOfMonth = (int) ($dto['dayOfMonth'] ?? 1);
+        $executionMode = strtoupper((string) ($dto['executionMode'] ?? 'DRAFT_REMINDER'));
+
+        if ($name === '') {
+            throw new InvalidArgumentException('Tên khoản định kỳ không được để trống.');
+        }
+        if ($amount <= 0) {
+            throw new InvalidArgumentException('Số tiền định kỳ phải lớn hơn 0.');
+        }
+        if ($dayOfMonth < 1 || $dayOfMonth > 31) {
+            throw new InvalidArgumentException('Ngày neo định kỳ trong tháng phải từ 1 đến 31.');
+        }
+        if (!in_array($executionMode, ['DRAFT_REMINDER', 'AUTO_POST'], true)) {
+            $executionMode = 'DRAFT_REMINDER';
+        }
+
+        $wallet = $this->walletRepo->findByIdAndUser($walletId, $userId);
+        if (!$wallet) {
+            throw new InvalidArgumentException('Ví thanh toán không tồn tại hoặc không thuộc quyền sở hữu.');
+        }
+
+        $currency = strtoupper($dto['currency'] ?? $wallet['currency']);
+        $nextDueDate = self::calculateInitialDueDate($dayOfMonth);
+
+        $id = $this->repo->create([
+            'userId' => $userId,
+            'walletId' => $walletId,
+            'categoryId' => $categoryId,
+            'name' => $name,
+            'amount' => $amount,
+            'currency' => $currency,
+            'dayOfMonth' => $dayOfMonth,
+            'nextDueDate' => $nextDueDate,
+            'executionMode' => $executionMode,
+        ]);
+
+        return $this->getSchedule($id, $userId);
+    }
+
+    /** @return array<string, mixed> */
+    public function getSchedule(int $id, int $userId): array
+    {
+        $res = $this->repo->findByIdAndUser($id, $userId);
+        if (!$res) {
+            throw new InvalidArgumentException('Khoản định kỳ không tồn tại hoặc không thuộc quyền sở hữu.');
+        }
+        return $res;
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function listSchedules(int $userId): array
+    {
+        return $this->repo->listByUser($userId);
+    }
+
+    public function pauseSchedule(int $id, int $userId): bool
+    {
+        $this->getSchedule($id, $userId);
+        return $this->repo->updateStatus($id, $userId, 'PAUSED');
+    }
+
+    public function resumeSchedule(int $id, int $userId): bool
+    {
+        $this->getSchedule($id, $userId);
+        return $this->repo->updateStatus($id, $userId, 'ACTIVE');
+    }
+
+    public function deleteSchedule(int $id, int $userId): bool
+    {
+        $this->getSchedule($id, $userId);
+        return $this->repo->delete($id, $userId);
+    }
+
+    /**
+     * Compute next monthly due date respecting anchor day and clamping to month-end (BR09).
+     * e.g., anchorDay = 31, currentDueDate = '2026-01-31' -> next is '2026-02-28'
+     * then from '2026-02-28' -> next is '2026-03-31'.
+     */
+    public static function calculateNextMonthlyDueDate(int $anchorDay, string $currentDueDate): string
+    {
+        $dt = new DateTimeImmutable($currentDueDate);
+        $nextMonthDt = $dt->modify('first day of next month');
+        $year = (int) $nextMonthDt->format('Y');
+        $month = (int) $nextMonthDt->format('m');
+        $maxDays = (int) $nextMonthDt->format('t');
+
+        $clampedDay = min($anchorDay, $maxDays);
+        return sprintf('%04d-%02d-%02d', $year, $month, $clampedDay);
+    }
+
+    /**
+     * Calculate initial due date for anchor day relative to today.
+     * If anchorDay in current month has not passed today, use current month, else next month.
+     */
+    public static function calculateInitialDueDate(int $anchorDay, ?string $asOfDate = null): string
+    {
+        $today = new DateTimeImmutable($asOfDate ?: 'now');
+        $curYear = (int) $today->format('Y');
+        $curMonth = (int) $today->format('m');
+        $curDay = (int) $today->format('d');
+        $maxDaysThisMonth = (int) $today->format('t');
+
+        $dueThisMonth = min($anchorDay, $maxDaysThisMonth);
+
+        if ($dueThisMonth >= $curDay) {
+            return sprintf('%04d-%02d-%02d', $curYear, $curMonth, $dueThisMonth);
+        }
+
+        // Target next month
+        $nextMonthDt = $today->modify('first day of next month');
+        $nextYear = (int) $nextMonthDt->format('Y');
+        $nextMonth = (int) $nextMonthDt->format('m');
+        $maxDaysNextMonth = (int) $nextMonthDt->format('t');
+
+        $clampedDay = min($anchorDay, $maxDaysNextMonth);
+        return sprintf('%04d-%02d-%02d', $nextYear, $nextMonth, $clampedDay);
+    }
+}
