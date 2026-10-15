@@ -270,6 +270,7 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
   FOREIGN KEY (target_user_id) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
+
 -- Pending: refresh-token rotation/revocation schema, category owner constraints across joins,
 -- referential user isolation, strict immutable ledger posting, base-currency reconciliation,
 -- cross-currency weighted cost-basis accounting, complete reversal lifecycle and migrations.

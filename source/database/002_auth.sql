@@ -40,3 +40,7 @@ INSERT IGNORE INTO default_categories (name, category_type) VALUES
   ('Lương', 'INCOME'), ('Thu nhập khác', 'INCOME'),
   ('Ăn uống', 'EXPENSE'), ('Đi lại', 'EXPENSE'),
   ('Nhà ở', 'EXPENSE'), ('Mua sắm', 'EXPENSE'), ('Giải trí', 'EXPENSE');
+
+INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`, `status`, `base_currency`, `created_at`, `updated_at`) VALUES (NULL, 'nguyen', 'user1@gmail.com', '$2y$12$3E5SQtCbtDHbZEvyMahaBOeGp5XEtthDK6v8k3QATe.gBCokmPRhm', 'USER', 'ACTIVE', 'VND', '2026-10-15 18:04:56', '2026-10-15 18:04:56')
+
+
