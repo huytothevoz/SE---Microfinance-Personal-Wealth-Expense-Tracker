@@ -96,14 +96,30 @@ try {
     $originalApache = file_get_contents($apacheConfig);
     writeChecked($backup . '/httpd.conf', $originalApache);
     $newRoot = $htdocs . '/wealthflow';
+    if (str_contains($newRoot, '"') || str_contains($newRoot, "\n")) throw new RuntimeException('Unsupported XAMPP path.');
     $updatedApache = preg_replace('/^DocumentRoot\s+"[^"]+"\s*$/m', 'DocumentRoot "' . $newRoot . '"', $originalApache, -1, $rootCount);
     $updatedApache = preg_replace('/^Listen\s+(?:[0-9.]+:)?\d+\s*$/m', 'Listen 127.0.0.1:' . $port, $updatedApache, -1, $listenCount);
     if ($rootCount !== 1 || $listenCount !== 1) throw new RuntimeException('Expected one main DocumentRoot and Listen; configure this custom Apache installation manually.');
     $updatedApache = preg_replace('/^#\s*(LoadModule\s+rewrite_module\s+.+)$/m', '$1', $updatedApache);
+    if (!preg_match('/^\s*LoadModule\s+rewrite_module\b/m', $updatedApache)) {
+        throw new RuntimeException('Apache mod_rewrite is not enabled in httpd.conf.');
+    }
     // Replace only our managed block on subsequent runs.
     $updatedApache = preg_replace('/\n# BEGIN WEALTHFLOW\n.*?# END WEALTHFLOW\n/s', "\n", $updatedApache);
-    $updatedApache .= "\n# BEGIN WEALTHFLOW\n<Directory \"{$newRoot}\">\n    Options FollowSymLinks\n    AllowOverride All\n    Require all granted\n</Directory>\n# END WEALTHFLOW\n";
-    if (str_contains($newRoot, '"') || str_contains($newRoot, "\n")) throw new RuntimeException('Unsupported XAMPP path.');
+    $updatedApache .= "\n# BEGIN WEALTHFLOW\n<Directory \"{$newRoot}\">\n"
+        . "    Options -Indexes +FollowSymLinks\n"
+        . "    AllowOverride None\n"
+        . "    Require all granted\n"
+        . "    RewriteEngine On\n"
+        . "    RewriteRule ^(?:backend|database)(?:/|$) - [F,END,NC]\n"
+        . "    RewriteRule (^|/)\\. - [F,END]\n"
+        . "    RewriteRule ^api/(.*)$ backend/public/index.php?route=$1 [END,QSA]\n"
+        . "    RewriteRule ^app\\.html$ backend/app.php [END]\n"
+        . "    RewriteRule ^(?:index\\.html|app\\.php)$ - [END]\n"
+        . "    RewriteRule ^frontend/(?:css|js|assets)/[A-Za-z0-9_./-]+\\.(?:css|js|svg|png|jpe?g)$ - [END]\n"
+        . "    RewriteRule ^$ - [END]\n"
+        . "    RewriteRule . - [F,END]\n"
+        . "</Directory>\n# END WEALTHFLOW\n";
     echo "Fresh install: replacing ALL of {$htdocs}; resetting database {$name}.\nBackup: {$backup}\n";
     // Database backup is complete before any reset; source is fully staged first.
     $db->exec("DROP DATABASE IF EXISTS `{$name}`");

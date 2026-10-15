@@ -2,7 +2,7 @@
 
 `001_initial_schema.sql` chứa schema cho đăng nhập và các phân hệ tài chính FR03–FR06. `002_auth.sql` bổ sung các bảng phục vụ phiên đăng nhập, giới hạn tốc độ, nhật ký bảo mật và email chào mừng.
 
-Các migration `003` trở đi bổ sung luồng khôi phục mật khẩu và thay đổi tương thích schema. Installer áp dụng các file migration dạng số theo thứ tự và ghi nhận từng file trong `schema_migrations`.
+`002_auth.sql` bổ sung FR01: `auth_sessions`, `auth_rate_limits`, `security_audit_logs`, `registration_emails` và danh mục thu/chi mặc định. `003_password_reset.sql` thêm bảng dữ liệu đặt lại mật khẩu; `004_password_reset_otp.sql` thêm giới hạn lần nhập OTP. `005_idempotency_response.sql` cập nhật bảng idempotency cho API tài chính. Các migration được áp dụng theo thứ tự và ghi nhận trong `schema_migrations`; tương thích MySQL 8 và MariaDB 10.4+ của XAMPP.
 
 Khởi tạo/cập nhật giữ dữ liệu: sau khi cài dependencies và cấu hình backend, chạy `php source/backend/bin/setup.php` từ gốc repo. Installer tự tạo database nếu chưa có và ghi `schema_migrations`; chạy lại không tạo trùng hay xóa dữ liệu.
 

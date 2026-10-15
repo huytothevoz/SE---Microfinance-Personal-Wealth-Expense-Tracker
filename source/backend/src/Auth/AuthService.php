@@ -174,6 +174,94 @@ final class AuthService
         }
     }
 
+    public function requestPasswordReset(array $input): array
+    {
+        $email = strtolower(trim($this->string($input, 'email')));
+        $this->limit('password-reset-ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'cli'), 10, 3600);
+        $this->limit('password-reset-email:' . $email, 5, 3600);
+        if (strlen($email) > 254 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new ApiException('VALIDATION_ERROR', 'Địa chỉ email không hợp lệ.', 422, ['email' => 'Địa chỉ email không hợp lệ.']);
+        }
+
+        $otp = '';
+        $this->db->beginTransaction();
+        try {
+            $user = $this->query('SELECT id, full_name, email FROM users WHERE email = ? AND status = ? FOR UPDATE', [$email, 'ACTIVE'])->fetch();
+            $this->audit('PASSWORD_RESET_REQUESTED', $user ? (int) $user['id'] : null);
+            if ($user) {
+                $otp = (string) random_int(100000, 999999);
+                $this->query('DELETE FROM password_reset_tokens WHERE user_id = ?', [$user['id']]);
+                $this->query(
+                    'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, attempts) VALUES (?, ?, ?, 0)',
+                    [$user['id'], hash_hmac('sha256', $otp, $this->config->get('APP_KEY')), gmdate('Y-m-d H:i:s', time() + 600)]
+                );
+            }
+            $this->db->commit();
+        } catch (\Throwable $error) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $error;
+        }
+        if ($user) {
+            try {
+                (new EmailService($this->config))->sendPasswordResetOtp($user['email'], $user['full_name'], $otp);
+            } catch (\Throwable $error) {
+                error_log('WealthFlow password reset email failed; user=' . (int) $user['id'] . '; type=' . get_class($error));
+            }
+        }
+
+        return ['message' => 'Nếu email này được đăng ký, hướng dẫn đặt lại mật khẩu sẽ được gửi đến hộp thư của bạn.'];
+    }
+
+    public function resetPassword(array $input): array
+    {
+        $this->limit('password-reset-submit-ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'cli'), 20, 900);
+        $email = strtolower(trim($this->string($input, 'email')));
+        $otp = $this->string($input, 'otp');
+        $password = $this->string($input, 'newPassword');
+        $fields = $this->passwordErrors($password);
+        if ($password !== $this->string($input, 'passwordConfirmation')) {
+            $fields['passwordConfirmation'] = 'Mật khẩu xác nhận không khớp.';
+        }
+        if ($fields) throw new ApiException('VALIDATION_ERROR', 'Mật khẩu mới chưa hợp lệ.', 422, $fields);
+        if (strlen($email) > 254 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new ApiException('VALIDATION_ERROR', 'Địa chỉ email không hợp lệ.', 422, ['email' => 'Địa chỉ email không hợp lệ.']);
+        }
+        if (!preg_match('/^[0-9]{6}$/D', $otp)) {
+            throw new ApiException('INVALID_RESET_OTP', 'Mã OTP không hợp lệ hoặc đã hết hạn.', 400);
+        }
+
+        $invalidOtp = false;
+        $this->db->beginTransaction();
+        try {
+            $row = $this->query(
+                'SELECT t.user_id, t.token_hash, t.expires_at, t.attempts FROM password_reset_tokens t JOIN users u ON u.id = t.user_id WHERE u.email = ? AND u.status = ? FOR UPDATE',
+                [$email, 'ACTIVE']
+            )->fetch();
+            if (!$row || strtotime($row['expires_at'] . ' UTC') <= time() || (int) $row['attempts'] >= 5) {
+                $invalidOtp = true;
+            } elseif (!hash_equals($row['token_hash'], hash_hmac('sha256', $otp, $this->config->get('APP_KEY')))) {
+                $this->query('UPDATE password_reset_tokens SET attempts = attempts + 1 WHERE user_id = ?', [$row['user_id']]);
+                $invalidOtp = true;
+            } else {
+                $userId = (int) $row['user_id'];
+                $this->query('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]), $userId]);
+                $this->query('DELETE FROM auth_sessions WHERE user_id = ?', [$userId]);
+                $this->query('DELETE FROM password_reset_tokens WHERE user_id = ?', [$userId]);
+                $this->audit('PASSWORD_RESET', $userId);
+            }
+            $this->db->commit();
+        } catch (\Throwable $error) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $error;
+        }
+        if ($invalidOtp) {
+            throw new ApiException('INVALID_RESET_OTP', 'Mã OTP không hợp lệ hoặc đã hết hạn.', 400);
+        }
+
+        $this->tokens->clearCookies();
+        return ['message' => 'Mật khẩu đã được đặt lại. Vui lòng đăng nhập bằng mật khẩu mới.'];
+    }
+
     private function newSession(int $id): array
     {
         $sid = bin2hex(random_bytes(32));

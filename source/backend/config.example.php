@@ -14,8 +14,8 @@ return [
     'MAIL_HOST' => 'smtp.gmail.com',
     'MAIL_PORT' => '587',
     'MAIL_ENCRYPTION' => 'tls', // tls (STARTTLS), ssl (465), none (local SMTP test only)
-    'MAIL_USERNAME' => '',
+    'MAIL_USERNAME' => 'wealthflow.voz@gmail.com',
     'MAIL_PASSWORD' => '', // SMTP password / Gmail App Password
-    'MAIL_FROM_ADDRESS' => '',
+    'MAIL_FROM_ADDRESS' => 'wealthflow.voz@gmail.com',
     'MAIL_FROM_NAME' => 'WealthFlow',
 ];

@@ -5,7 +5,7 @@ header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
 try {
-    $config = require __DIR__ . '/backend/bootstrap.php';
+    $config = require __DIR__ . '/bootstrap.php';
     $config->validate();
     $auth = new WealthFlow\Auth\AuthService(WealthFlow\Database::connect($config), $config);
     try {
@@ -14,7 +14,7 @@ try {
         $auth->authenticate(true);
     }
     header('Content-Type: text/html; charset=utf-8');
-    readfile(__DIR__ . '/app.html');
+    readfile(dirname(__DIR__) . '/app.html');
 } catch (WealthFlow\Http\ApiException) {
     header('Location: index.html?auth=login', true, 302);
 } catch (Throwable $error) {

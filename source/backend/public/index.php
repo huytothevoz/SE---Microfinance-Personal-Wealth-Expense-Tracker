@@ -5,7 +5,6 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/src/bootstrap.php';
 
 use WealthFlow\Auth\AuthService;
-use WealthFlow\Config\Database as ModuleDatabase;
 use WealthFlow\Database;
 use WealthFlow\Http\ApiException;
 use WealthFlow\Http\JsonResponse;
@@ -35,6 +34,8 @@ try {
         'auth/refresh' => 'POST',
         'auth/logout' => 'POST',
         'auth/change-password' => 'POST',
+        'auth/password/forgot' => 'POST',
+        'auth/password/reset' => 'POST',
     ];
 
     if (in_array($route, ['health', 'features', ...array_keys($authRoutes)], true)) {
@@ -88,6 +89,8 @@ try {
             'auth/refresh' => $auth->refresh(),
             'auth/logout' => $auth->logout(),
             'auth/change-password' => $auth->changePassword($input),
+            'auth/password/forgot' => $auth->requestPasswordReset($input),
+            'auth/password/reset' => $auth->resetPassword($input),
         };
         JsonResponse::success($result, $route === 'auth/register' ? 201 : 200);
         return;
@@ -101,25 +104,7 @@ try {
             throw new ApiException('INVALID_CONTENT_TYPE', 'Yêu cầu phải dùng JSON.', 415);
         }
     }
-
     $router = new Router();
-    $router->get('/health', static function (): void {
-        JsonResponse::success([
-            'project' => 'WealthFlow',
-            'status' => 'ok',
-            'databaseConnected' => true,
-            'databaseDriver' => ModuleDatabase::getDriver(),
-            'modulesImplemented' => ['FR03', 'FR04', 'FR05', 'FR06'],
-        ]);
-    });
-    $router->get('/features', static function (): void {
-        JsonResponse::success([
-            'status' => 'active_implementation',
-            'implementedFR' => ['FR01', 'FR03', 'FR04', 'FR05', 'FR06'],
-            'implementedUseCases' => ['UC03', 'UC04', 'UC05', 'SYS02'],
-            'note' => 'Các phân hệ tài chính yêu cầu phiên đăng nhập WealthFlow hợp lệ.',
-        ]);
-    });
     $router->get('/wallets', static function (Request $request): void {
         $wallets = (new WalletRepository())->findAllByUser(AuthContext::getUserId($request));
         JsonResponse::success(['wallets' => $wallets, 'count' => count($wallets)]);

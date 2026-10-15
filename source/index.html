@@ -6,7 +6,8 @@
     <meta name="color-scheme" content="light">
     <meta name="theme-color" content="#102c52">
     <meta name="description" content="WealthFlow – theo dõi thu chi, quản lý ví, ngân sách, khoản vay, vàng tích lũy và tài sản ròng trên một nền tảng.">
-    <title>WealthFlow — Kiểm soát dòng tiền, xây dựng tài sản</title><link rel="icon" type="image/svg+xml" href="frontend/assets/favicon.svg"><link rel="stylesheet" href="frontend/css/styles.css">
+    <meta name="referrer" content="no-referrer">
+    <title>WealthFlow</title><link rel="icon" type="image/png" href="frontend/assets/favicon.png"><link rel="stylesheet" href="frontend/css/base.css"><link rel="stylesheet" href="frontend/css/landing.css"><link rel="stylesheet" href="frontend/css/responsive.css">
     <script type="module" src="frontend/js/landing.js">
     </script>
   </head>
@@ -32,7 +33,7 @@
               <span class="pulse-dot"></span> NỀN TẢNG QUẢN LÝ TÀI CHÍNH CÁ NHÂN
             </div>
             <h1>
-              Hiểu dòng tiền.<br><span>Xây dựng tương lai</span><br>tài chính của bạn.
+              Nắm rõ dòng tiền.<br><span>Xây dựng tương lai</span><br>tài chính của bạn.
             </h1>
             <p>
               Không chỉ ghi lại thu chi. WealthFlow giúp bạn theo dõi toàn bộ tài sản, kiểm soát ngân sách, quản lý nợ và tiến gần hơn đến những mục tiêu quan trọng.
@@ -258,15 +259,12 @@
             Nhìn rõ hiện tại. Lập kế hoạch thông minh hơn cho ngày mai.
           </p>
           <button class="btn btn--primary btn--lg" data-open-auth="register">Bắt đầu với WealthFlow →</button>
-          <div class="demo-disclaimer">
-            Đăng ký và đăng nhập đã hoạt động. Các màn hình tài chính hiện sử dụng dữ liệu minh họa.
-          </div>
         </div>
       </section>
     </main>
     <footer class="site-footer">
       <div class="container footer-inner">
-        <a class="brand" href="index.html"><span class="brand-mark small">↗</span><span>wealth<span class="brand-accent">flow</span></span></a>
+        <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M4 22.5 11 15l6 4 11-11" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 8h7v7" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>wealth<span class="brand-accent">flow</span></span></a>
         <p>
           Phát triển bởi nhóm VOZ
         </p>
@@ -276,14 +274,12 @@
     <dialog id="auth-dialog" class="auth-dialog" aria-labelledby="auth-title">
       <div class="auth-modal">
         <button class="icon-button auth-close" data-close-dialog aria-label="Đóng cửa sổ">×</button>
-        <div class="auth-mark">
-          ↗
-        </div>
+        <div class="auth-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M4 22.5 11 15l6 4 11-11" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 8h7v7" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <span class="section-kicker">CHÀO MỪNG ĐẾN WEALTHFLOW</span>
         <h2 id="auth-title">
           Đăng nhập tài khoản
         </h2>
-        <p class="auth-desc">
+        <p class="auth-desc" id="auth-desc">
           Đăng nhập để tiếp tục hoặc tạo tài khoản mới để bắt đầu.
         </p>
         <div class="auth-tabs" role="tablist">
@@ -293,23 +289,27 @@
           <div id="register-name" class="field" hidden>
             <label for="auth-name">Họ và tên</label><input id="auth-name" autocomplete="name" maxlength="150" placeholder="Nguyễn Văn A">
           </div>
-          <div class="field">
-            <label for="auth-email">Email</label><input id="auth-email" type="email" autocomplete="email" placeholder="ban@example.com" required>
+          <div class="field" id="auth-email-field">
+            <label for="auth-email">Email</label><input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com" required>
           </div>
-          <div class="field">
+          <div class="field" id="auth-password-field">
             <label for="auth-password">Mật khẩu</label><input id="auth-password" type="password" autocomplete="current-password" placeholder="Nhập mật khẩu" required>
+          </div>
+          <button type="button" class="auth-forgot" id="auth-forgot-link">Quên mật khẩu?</button>
+          <div class="field" id="reset-otp-field" hidden>
+            <label for="auth-reset-otp">Mã OTP trong email</label><input id="auth-reset-otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="Nhập mã 6 chữ số">
+          </div>
+          <div class="field" id="confirmation-field" hidden>
+            <label for="auth-confirmation">Nhập lại mật khẩu</label><input id="auth-confirmation" type="password" autocomplete="new-password">
           </div>
           <div id="register-extra" hidden>
             <p class="form-hint">Ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số; tối đa 72 byte.</p>
-            <div class="field"><label for="auth-confirmation">Nhập lại mật khẩu</label><input id="auth-confirmation" type="password" autocomplete="new-password"></div>
             <div class="field"><label for="auth-currency">Tiền cơ sở</label><select id="auth-currency"><option value="VND">VND · Việt Nam đồng</option><option value="USD">USD · Đô la Mỹ</option><option value="EUR">EUR · Euro</option></select></div>
           </div>
           <p id="auth-feedback" role="status" aria-live="polite"></p>
           <button class="btn btn--primary auth-submit" type="submit">Đăng nhập →</button>
+          <button type="button" class="auth-back" id="auth-back-login" hidden>← Quay lại đăng nhập</button>
         </form>
-        <p class="auth-footnote">
-          Sau khi đăng ký, bạn sẽ nhận email chào mừng từ WealthFlow.
-        </p>
       </div>
     </dialog>
   </body>

@@ -3,68 +3,124 @@ import { authApi, errorMessage } from './auth-api.js';
 const dialog = document.querySelector('#auth-dialog');
 const tabs = [...document.querySelectorAll('[data-auth-tab]')];
 const title = document.querySelector('#auth-title');
+const description = document.querySelector('#auth-desc');
 const nameField = document.querySelector('#register-name');
 const nameInput = document.querySelector('#auth-name');
+const emailField = document.querySelector('#auth-email-field');
+const emailInput = document.querySelector('#auth-email');
+const passwordField = document.querySelector('#auth-password-field');
 const password = document.querySelector('#auth-password');
+const otpInput = document.querySelector('#auth-reset-otp');
+const otpField = document.querySelector('#reset-otp-field');
 const menu = document.querySelector('#landing-menu');
 const feedback = document.querySelector('#auth-feedback');
 const submit = document.querySelector('.auth-submit');
 const confirmation = document.querySelector('#auth-confirmation');
-let currentTab = 'login';
-function setTab(tab) {
-  currentTab = tab;
+const confirmationField = document.querySelector('#confirmation-field');
+const tabsContainer = document.querySelector('.auth-tabs');
+const forgotLink = document.querySelector('#auth-forgot-link');
+const backToLogin = document.querySelector('#auth-back-login');
+let currentMode = 'login';
+function setMode(mode) {
+  currentMode = mode;
   tabs.forEach(button => {
-    const active = button.dataset.authTab === tab;
+    const active = button.dataset.authTab === mode;
     button.classList.toggle('active', active);
     button.setAttribute('aria-selected', String(active));
   });
-  title.textContent = tab === 'register' ? 'Tạo tài khoản WealthFlow' : 'Đăng nhập tài khoản';
-  nameField.hidden = tab !== 'register';
-  nameInput.required = tab === 'register';
-  password.autocomplete = tab === 'register' ? 'new-password' : 'current-password';
-  password.minLength = tab === 'register' ? 8 : 1;
-  document.querySelector('#register-extra').hidden = tab !== 'register';
-  confirmation.required = tab === 'register';
-  submit.textContent = tab === 'register' ? 'Đăng ký tài khoản →' : 'Đăng nhập →';
+  const isRegister = mode === 'register';
+  const isForgot = mode === 'forgot';
+  const isReset = mode === 'reset';
+  tabsContainer.hidden = isForgot || isReset;
+  title.textContent = isRegister ? 'Tạo tài khoản WealthFlow'
+    : isForgot ? 'Tìm lại mật khẩu'
+      : isReset ? 'Đặt mật khẩu mới' : 'Đăng nhập tài khoản';
+  description.textContent = isRegister ? 'Tạo tài khoản để bắt đầu quản lý tài chính của bạn.'
+    : isForgot ? 'Nhập email đã đăng ký. Nếu tài khoản tồn tại, chúng tôi sẽ gửi mã OTP đặt lại mật khẩu.'
+      : isReset ? 'Chọn mật khẩu mới có ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số.'
+        : 'Đăng nhập để tiếp tục hoặc tạo tài khoản mới để bắt đầu.';
+  nameField.hidden = !isRegister;
+  nameInput.required = isRegister;
+  emailField.hidden = isReset;
+  emailInput.required = !isReset;
+  passwordField.hidden = isForgot;
+  password.required = !isForgot;
+  password.autocomplete = isRegister || isReset ? 'new-password' : 'current-password';
+  password.minLength = isRegister || isReset ? 8 : 1;
+  document.querySelector('#register-extra').hidden = !isRegister;
+  confirmationField.hidden = !isRegister && !isReset;
+  confirmationField.querySelector('label').textContent = isReset ? 'Nhập lại mật khẩu mới' : 'Nhập lại mật khẩu';
+  confirmation.required = isRegister || isReset;
+  otpField.hidden = !isReset;
+  otpInput.required = isReset;
+  forgotLink.hidden = mode !== 'login';
+  backToLogin.hidden = !isForgot && !isReset;
+  submit.textContent = isRegister ? 'Đăng ký tài khoản →'
+    : isForgot ? 'Gửi mã OTP'
+      : isReset ? 'Lưu mật khẩu mới' : 'Đăng nhập →';
   feedback.textContent = '';
 }
 document.querySelectorAll('[data-open-auth]').forEach(button => button.addEventListener('click', () => {
-  setTab(button.dataset.openAuth);
+  setMode(button.dataset.openAuth);
   dialog.showModal();
 }));
 document.querySelector('[data-close-dialog]').addEventListener('click', () => dialog.close());
 dialog.addEventListener('click', event => {
   if (event.target === dialog) dialog.close();
 });
-tabs.forEach(tab => tab.addEventListener('click', () => setTab(tab.dataset.authTab)));
+tabs.forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.authTab)));
+forgotLink.addEventListener('click', () => {
+  setMode('forgot');
+  emailInput.focus();
+});
+backToLogin.addEventListener('click', () => setMode('login'));
 document.querySelector('#auth-form').addEventListener('submit', async event => {
   event.preventDefault();
   if (!event.currentTarget.reportValidity()) return;
-  const tab = currentTab;
+  const mode = currentMode;
   const form = event.currentTarget;
   const data = {
-    email: document.querySelector('#auth-email').value, password: password.value,
+    email: emailInput.value, password: password.value,
     fullName: nameInput.value, baseCurrency: document.querySelector('#auth-currency').value,
     passwordConfirmation: confirmation.value
   };
   submit.disabled = true;
   tabs.forEach(button => { button.disabled = true; });
-  feedback.textContent = tab === 'register' ? 'Đang tạo tài khoản…' : 'Đang đăng nhập…';
+  feedback.textContent = mode === 'register' ? 'Đang tạo tài khoản…'
+    : mode === 'forgot' ? 'Đang gửi yêu cầu…'
+      : mode === 'reset' ? 'Đang cập nhật mật khẩu…' : 'Đang đăng nhập…';
   try {
-    const result = await authApi(tab, data);
-    if (tab === 'login') {
+    const route = mode === 'forgot' ? 'password/forgot'
+      : mode === 'reset' ? 'password/reset' : mode;
+    const payload = mode === 'reset' ? {
+      email: emailInput.value, otp: otpInput.value,
+      newPassword: password.value, passwordConfirmation: confirmation.value
+    } : mode === 'forgot' ? { email: emailInput.value } : data;
+    const result = await authApi(route, payload);
+    if (mode === 'login') {
       form.reset();
       window.location.assign('app.html');
       return;
     }
-    setTab('login');
-    password.value = '';
-    confirmation.value = '';
-    const mailMessage = result.emailDelivery === 'sent' ? ' Email chào mừng đã được gửi; hãy kiểm tra cả thư rác.'
-      : result.emailDelivery === 'preview' ? ' Email được lưu ở chế độ xem thử trên máy chủ.'
-        : ' Email chào mừng đang chờ gửi. Bạn vẫn có thể đăng nhập ngay.';
-    feedback.textContent = result.message + mailMessage;
-    password.focus();
+    if (mode === 'register') {
+      setMode('login');
+      password.value = '';
+      confirmation.value = '';
+      const mailMessage = result.emailDelivery === 'sent' ? ' Email chào mừng đã được gửi; hãy kiểm tra cả thư rác.'
+        : result.emailDelivery === 'preview' ? ' Email được lưu ở chế độ xem thử trên máy chủ.'
+          : ' Email chào mừng đang chờ gửi. Bạn vẫn có thể đăng nhập ngay.';
+      feedback.textContent = result.message + mailMessage;
+      password.focus();
+    } else if (mode === 'forgot') {
+      setMode('reset');
+      feedback.textContent = result.message;
+      otpInput.focus();
+    } else {
+      form.reset();
+      setMode('login');
+      feedback.textContent = result.message;
+      emailInput.focus();
+    }
   } catch (error) {
     feedback.textContent = errorMessage(error);
   } finally {
@@ -83,6 +139,6 @@ document.querySelectorAll('.landing-nav a').forEach(link => link.addEventListene
 }));
 const requestedTab = new URLSearchParams(location.search).get('auth');
 if (['login', 'register'].includes(requestedTab)) {
-  setTab(requestedTab);
+  setMode(requestedTab);
   dialog.showModal();
 }

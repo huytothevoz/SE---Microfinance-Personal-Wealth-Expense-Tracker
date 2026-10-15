@@ -9,7 +9,7 @@ $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $path = is_string($path) ? rawurldecode($path) : '/';
 if ($path === '/api' || str_starts_with($path, '/api/')) {
     $_GET['route'] = trim(substr($path, 4), '/');
-    require __DIR__ . '/backend/public/index.php';
+    require __DIR__ . '/public/index.php';
     return true;
 }
 if ($path === '/app.html' || $path === '/app.php') {
@@ -25,8 +25,9 @@ if (!preg_match('~^/(?:index\.html|frontend/(?:css|js|assets)/[A-Za-z0-9_./-]+\.
     echo '404 Not Found';
     return true;
 }
-$file = realpath(__DIR__ . $path);
-if ($file === false || !is_file($file) || !str_starts_with($file, __DIR__ . DIRECTORY_SEPARATOR)) {
+$sourceRoot = dirname(__DIR__);
+$file = realpath($sourceRoot . $path);
+if ($file === false || !is_file($file) || !str_starts_with($file, $sourceRoot . DIRECTORY_SEPARATOR)) {
     http_response_code(404);
     echo '404 Not Found';
     return true;

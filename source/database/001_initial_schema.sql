@@ -1,6 +1,3 @@
--- WealthFlow / Construction UI Prototype / MySQL 8.0+ / InnoDB
--- SCHEMA DRAFT: baseline for later backend integration. NOT production-ready.
--- Add ledger integrity tests, immutable posting constraints, migrations, RBAC, and JWT revocation before real usage.
 CREATE DATABASE IF NOT EXISTS wealthflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE wealthflow;
 
@@ -270,9 +267,3 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
   FOREIGN KEY (admin_user_id) REFERENCES users(id),
   FOREIGN KEY (target_user_id) REFERENCES users(id)
 ) ENGINE=InnoDB;
-
-
--- Pending: refresh-token rotation/revocation schema, category owner constraints across joins,
--- referential user isolation, strict immutable ledger posting, base-currency reconciliation,
--- cross-currency weighted cost-basis accounting, complete reversal lifecycle and migrations.
--- All MUST be finalized and tested before writing real financial data.

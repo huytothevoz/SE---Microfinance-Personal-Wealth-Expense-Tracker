@@ -64,4 +64,16 @@ final class EmailService
             . '<p>Cảm ơn bạn đã đồng hành cùng WealthFlow. Email này không chứa mật khẩu của bạn.</p>',
             "Xin chào {$fullName},\nTài khoản WealthFlow của bạn đã được tạo thành công.\nĐăng nhập: {$url}\n");
     }
+
+    public function sendPasswordResetOtp(string $email, string $fullName, string $otp): void
+    {
+        $name = htmlspecialchars($fullName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $code = htmlspecialchars($otp, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $this->send($email, $fullName, 'Đặt lại mật khẩu WealthFlow',
+            '<h1>Đặt lại mật khẩu</h1><p>Xin chào ' . $name . ',</p>'
+            . '<p>Mã OTP để đặt lại mật khẩu của bạn là:</p><p style="font-size:28px;font-weight:bold;letter-spacing:8px">' . $code . '</p>'
+            . '<p>Mã có hiệu lực trong 10 phút và tối đa 5 lần nhập.</p>'
+            . '<p>Nếu bạn không yêu cầu thao tác này, hãy bỏ qua email. Mật khẩu hiện tại của bạn vẫn an toàn.</p>',
+            "Xin chào {$fullName},\nMã OTP để đặt lại mật khẩu WealthFlow của bạn là: {$otp}\nMã có hiệu lực trong 10 phút và tối đa 5 lần nhập.\n\nNếu bạn không yêu cầu thao tác này, hãy bỏ qua email.\n");
+    }
 }
