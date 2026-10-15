@@ -12,9 +12,9 @@ final class JsonResponse
         self::send(['success' => true, 'data' => $data, 'error' => null, 'requestId' => bin2hex(random_bytes(8))], $status);
     }
 
-    public static function error(string $code, string $message, int $status): void
+    public static function error(string $code, string $message, int $status, array $fields = []): void
     {
-        self::send(['success' => false, 'data' => null, 'error' => ['code' => $code, 'message' => $message, 'fieldErrors' => new \stdClass()], 'requestId' => bin2hex(random_bytes(8))], $status);
+        self::send(['success' => false, 'data' => null, 'error' => ['code' => $code, 'message' => $message, 'fieldErrors' => (object) $fields], 'requestId' => bin2hex(random_bytes(8))], $status);
     }
 
     /** @param array<string, mixed> $payload */

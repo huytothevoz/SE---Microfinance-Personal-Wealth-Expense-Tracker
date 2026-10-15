@@ -38,7 +38,7 @@
               Không chỉ ghi lại thu chi. WealthFlow giúp bạn theo dõi toàn bộ tài sản, kiểm soát ngân sách, quản lý nợ và tiến gần hơn đến những mục tiêu quan trọng.
             </p>
             <div class="hero-actions">
-              <button class="btn btn--primary btn--lg" data-open-auth="register">Khám phá WealthFlow <span aria-hidden="true">→</span></button><a class="btn btn--outline btn--lg" href="app.html">Xem giao diện demo <span aria-hidden="true">↗</span></a>
+              <button class="btn btn--primary btn--lg" data-open-auth="register">Khám phá WealthFlow <span aria-hidden="true">→</span></button><button class="btn btn--outline btn--lg" data-open-auth="login">Đăng nhập <span aria-hidden="true">↗</span></button>
             </div>
             <div class="hero-trust">
               <span class="trust-symbol">✓</span> Quản lý đa ví <span class="hero-divider"></span><span class="trust-symbol">✓</span> Theo dõi tài sản ròng <span class="hero-divider"></span><span class="trust-symbol">✓</span> Dữ liệu do bạn kiểm soát
@@ -244,7 +244,7 @@
             <p>
               WealthFlow hướng đến sinh viên, người mới đi làm, freelancer và người muốn chủ động kiểm soát thu chi, nợ và tài sản tích lũy. Đây là công cụ ghi chép và phân tích tài chính, không phải dịch vụ ngân hàng hay cấp tín dụng.
             </p>
-            <button class="btn btn--white" data-open-auth="register">Trải nghiệm bản demo <span>→</span></button>
+            <button class="btn btn--white" data-open-auth="register">Tạo tài khoản miễn phí <span>→</span></button>
           </div>
         </div>
       </section>
@@ -257,9 +257,9 @@
           <p>
             Nhìn rõ hiện tại. Lập kế hoạch thông minh hơn cho ngày mai.
           </p>
-          <a class="btn btn--primary btn--lg" href="app.html">Mở bản demo WealthFlow →</a>
+          <button class="btn btn--primary btn--lg" data-open-auth="register">Bắt đầu với WealthFlow →</button>
           <div class="demo-disclaimer">
-            Bản trình diễn giao diện sử dụng dữ liệu giả lập. Chức năng tài chính và xác thực thực tế chưa kết nối.
+            Đăng ký và đăng nhập đã hoạt động. Các màn hình tài chính hiện sử dụng dữ liệu minh họa.
           </div>
         </div>
       </section>
@@ -284,29 +284,31 @@
           Đăng nhập tài khoản
         </h2>
         <p class="auth-desc">
-          Giao diện xác thực hiện ở chế độ demo; chưa kết nối máy chủ.
+          Đăng nhập để tiếp tục hoặc tạo tài khoản mới để bắt đầu.
         </p>
         <div class="auth-tabs" role="tablist">
           <button type="button" class="active" data-auth-tab="login" role="tab" aria-selected="true">Đăng nhập</button><button type="button" data-auth-tab="register" role="tab" aria-selected="false">Đăng ký</button>
         </div>
         <form id="auth-form">
           <div id="register-name" class="field" hidden>
-            <label for="auth-name">Họ và tên</label><input id="auth-name" autocomplete="name" placeholder="Nguyễn Văn A">
+            <label for="auth-name">Họ và tên</label><input id="auth-name" autocomplete="name" maxlength="150" placeholder="Nguyễn Văn A">
           </div>
           <div class="field">
             <label for="auth-email">Email</label><input id="auth-email" type="email" autocomplete="email" placeholder="ban@example.com" required>
           </div>
           <div class="field">
-            <label for="auth-password">Mật khẩu</label><input id="auth-password" type="password" autocomplete="current-password" minlength="6" placeholder="Nhập mật khẩu" required>
+            <label for="auth-password">Mật khẩu</label><input id="auth-password" type="password" autocomplete="current-password" placeholder="Nhập mật khẩu" required>
           </div>
-          <button class="btn btn--primary auth-submit" type="submit">Tiếp tục vào bản demo →</button>
+          <div id="register-extra" hidden>
+            <p class="form-hint">Ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số; tối đa 72 byte.</p>
+            <div class="field"><label for="auth-confirmation">Nhập lại mật khẩu</label><input id="auth-confirmation" type="password" autocomplete="new-password"></div>
+            <div class="field"><label for="auth-currency">Tiền cơ sở</label><select id="auth-currency"><option value="VND">VND · Việt Nam đồng</option><option value="USD">USD · Đô la Mỹ</option><option value="EUR">EUR · Euro</option></select></div>
+          </div>
+          <p id="auth-feedback" role="status" aria-live="polite"></p>
+          <button class="btn btn--primary auth-submit" type="submit">Đăng nhập →</button>
         </form>
-        <div class="auth-separator">
-          HOẶC
-        </div>
-        <a href="app.html" class="btn btn--outline auth-demo">Xem demo không cần tài khoản</a>
         <p class="auth-footnote">
-          Không lưu hoặc gửi mật khẩu trong phiên bản này.
+          Sau khi đăng ký, bạn sẽ nhận email chào mừng từ WealthFlow.
         </p>
       </div>
     </dialog>

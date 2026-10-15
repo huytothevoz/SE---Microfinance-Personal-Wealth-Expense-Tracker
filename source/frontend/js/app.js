@@ -1,4 +1,21 @@
 import { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers, trend, incomeTrend, expenseTrend } from './demo-data.js';
+import { authApi, errorMessage } from './auth-api.js';
+
+let currentUser;
+try {
+  ({ user: currentUser } = await authApi('me'));
+} catch (error) {
+  if (error.status === 401) location.replace('index.html?auth=login');
+  document.querySelector('#app-content').textContent = error.message;
+  throw error;
+}
+document.querySelector('#user-menu strong').textContent = currentUser.fullName;
+document.querySelector('#user-menu small').textContent = currentUser.email;
+window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
+window.addEventListener('focus', async () => {
+  try { await authApi('me'); }
+  catch (error) { if (error.status === 401) location.replace('index.html?auth=login'); }
+});
 /** Construction UI-only shell. No business or authorization is performed client-side. */
 const paths = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
@@ -178,9 +195,15 @@ ${state.admin ? 'Quay về người dùng' : 'Xem giao diện Admin'}\
 </div>\
 <p class="admin-preview-note">Chuyển vai trò chỉ để trình diễn UI, không cấp quyền thật.</p>`;
   document.body.classList.toggle('admin-mode', state.admin);
+  if (currentUser.role !== 'ADMIN') {
+    nav.querySelector('[data-action="switch-role"]')?.parentElement.remove();
+    nav.querySelector('.admin-preview-note')?.remove();
+  }
 
 }
 function navigate(page) {
+  if (page.startsWith('admin-') && currentUser.role !== 'ADMIN') page = 'overview';
+  state.admin = page.startsWith('admin-') && currentUser.role === 'ADMIN';
   if (!META[page]) return;
   state.page = page;
   renderNav();
@@ -191,7 +214,7 @@ ${icon('info')}\
 </span>\
 <span>\
 <strong>\
-${state.admin ? 'Bản xem trước Admin' : 'Chế độ demo'}:</strong> Các con số chỉ minh họa; biểu mẫu chưa ghi vào MySQL, chưa có xác thực và ghi sổ thực tế. ${state.admin ? 'Admin không được xem sổ sách cá nhân.' : ''}</span></div>${PAGES[page]()}`;
+${state.admin ? 'Bản xem trước Admin' : 'Dữ liệu tài chính minh họa'}:</strong> Tài khoản và phiên đăng nhập đã được xác thực. Các con số và nghiệp vụ tài chính vẫn là dữ liệu mẫu. ${state.admin ? 'Admin không được xem sổ sách cá nhân.' : ''}</span></div>${PAGES[page]()}`;
   closeSidebar();
   const hash = '#' + page;
   if (location.hash !== hash) history.replaceState(null, '', hash);
@@ -811,21 +834,21 @@ ${panel('Hồ sơ cá nhân',
     `<div class="settings-row">\
 <div>\
 <strong>Họ và tên</strong>\
-<p>Người dùng demo</p>\
+<p>${safe(currentUser.fullName)}</p>\
 </div>\
 <button class="btn btn--outline btn-sm" data-action="profile-edit">Chỉnh sửa</button>\
 </div>\
 <div class="settings-row">\
 <div>\
 <strong>Email</strong>\
-<p>demo@wealthflow.local</p>\
+<p>${safe(currentUser.email)}</p>\
 </div>\
-<span class="badge neutral">Minh họa</span>\
+<span class="badge neutral">Đã đăng ký</span>\
 </div>\
 <div class="settings-row">\
 <div>\
 <strong>Tiền cơ sở</strong>\
-<p>VND · Việt Nam đồng</p>\
+<p>${safe(currentUser.baseCurrency)}</p>\
 </div>\
 <button class="btn btn--outline btn-sm" data-action="currency-setting">Chi tiết</button>\
 </div>\
@@ -836,7 +859,7 @@ ${panel('Hồ sơ cá nhân',
 </div>\
 <span class="badge blue">vi-VN</span>\
 </div>`)}${panel('Tài khoản & bảo mật',
-      'Các chức năng sẽ triển khai ở pha backend',
+      'Quản lý mật khẩu và phiên đăng nhập',
       `<div class="settings-row">\
 <div>\
 <strong>Đổi mật khẩu</strong>\
@@ -847,9 +870,9 @@ ${panel('Hồ sơ cá nhân',
 <div class="settings-row">\
 <div>\
 <strong>Phiên đăng nhập</strong>\
-<p>JWT và Refresh Token HttpOnly sẽ triển khai theo SRS.</p>\
+<p>Đăng xuất sẽ kết thúc ngay phiên đăng nhập hiện tại.</p>\
 </div>\
-<span class="badge warn">Chưa kết nối</span>\
+<span class="badge green">Đang hoạt động</span>\
 </div>\
 <div class="settings-row">\
 <div>\
@@ -860,10 +883,10 @@ ${panel('Hồ sơ cá nhân',
 </div>\
 <div class="settings-row">\
 <div>\
-<strong>Thoát bản demo</strong>\
-<p>Quay về trang giới thiệu, không có phiên thực để thu hồi.</p>\
+<strong>Đăng xuất</strong>\
+<p>Kết thúc phiên và quay về trang đăng nhập.</p>\
 </div>\
-<a class="btn btn--outline btn-sm" href="index.html">Thoát</a>\
+<button class="btn btn--outline btn-sm" data-action="logout">Đăng xuất</button>\
 </div>`)}</div>`;
 
 }
@@ -1549,7 +1572,13 @@ function applyTransactionSearch() {
 
 }
 function handleAction(action) {
+  if (action === 'password') { openPasswordForm(); return; }
+  if (action === 'logout') {
+    authApi('logout', {}).then(() => location.replace('index.html?auth=login')).catch(error => toast(errorMessage(error)));
+    return;
+  }
   if (action === 'switch-role') {
+    if (currentUser.role !== 'ADMIN') return;
     state.admin = !state.admin;
     navigate(state.admin ? 'admin-overview' : 'overview');
     toast(state.admin ? 'Đang xem giao diện Admin demo – không cấp quyền máy chủ.' : 'Đã quay về giao diện người dùng demo.');
@@ -1580,6 +1609,36 @@ function handleAction(action) {
   }
   openAction(action);
 
+}
+function openPasswordForm() {
+  document.querySelector('#modal-overline').textContent = 'BẢO MẬT TÀI KHOẢN';
+  document.querySelector('#modal-title').textContent = 'Đổi mật khẩu';
+  document.querySelector('#modal-content').innerHTML = `<form id="password-form">
+    <p class="form-hint">Mật khẩu mới cần ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số; tối đa 72 byte. Các phiên cũ trên mọi thiết bị sẽ được đăng xuất.</p>
+    <div class="field"><label for="current-password">Mật khẩu hiện tại</label><input id="current-password" name="currentPassword" type="password" autocomplete="current-password" required></div>
+    <div class="field"><label for="new-password">Mật khẩu mới</label><input id="new-password" name="newPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+    <div class="field"><label for="confirm-password">Nhập lại mật khẩu mới</label><input id="confirm-password" name="passwordConfirmation" type="password" autocomplete="new-password" required></div>
+    <p id="password-feedback" role="status" aria-live="polite"></p>
+    <div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary">Đổi mật khẩu</button></div>
+  </form>`;
+  document.querySelector('#password-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const submit = form.querySelector('[type="submit"]');
+    const feedback = form.querySelector('#password-feedback');
+    submit.disabled = true;
+    feedback.textContent = 'Đang đổi mật khẩu…';
+    try {
+      const result = await authApi('change-password', Object.fromEntries(new FormData(form)));
+      form.reset();
+      dialog.close();
+      toast(result.message);
+    } catch (error) {
+      if (error.status === 401) location.replace('index.html?auth=login');
+      feedback.textContent = errorMessage(error);
+    } finally { submit.disabled = false; }
+  });
+  dialog.showModal();
 }
 document.addEventListener('click', event => {
   const page = event.target.closest('[data-page]');
