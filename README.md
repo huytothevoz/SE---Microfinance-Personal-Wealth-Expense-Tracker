@@ -143,7 +143,7 @@ OTP được gửi **đến email người dùng yêu cầu đặt lại mật k
    Dòng đầu không gửi thư; dòng thứ hai gửi một email test. Nếu báo SMTP authentication failed, hãy tạo lại Google App Password. **Không gửi App Password hoặc `config.local.php` cho người khác.**
 6. Thử chức năng quên mật khẩu từ giao diện. Nếu chưa nhận OTP, kiểm tra Spam và có thể gửi lại sau 60 giây.
 
-> Nếu source ZIP mới không có `backend/config.local.php`, đó là chủ ý để không làm lộ bí mật. Giữ lại file của bản đang triển khai, hoặc tạo file bằng `php bin/setup.php` mà **không chạy lại script cài mới/reset database**. Chế độ `MAIL_TRANSPORT=log` chỉ dùng để test local, xem file `.eml` trong `backend/storage` (không gửi Gmail). Xem hướng dẫn chi tiết tại `source/backend/OTP_TROUBLESHOOTING.md`.
+> Nếu source ZIP mới không có `backend/config.local.php`, đó là chủ ý để không làm lộ bí mật. Giữ lại file của bản đang triển khai, hoặc tạo file bằng `php bin/setup.php` mà **không chạy lại script cài mới/reset database**. Chế độ `MAIL_TRANSPORT=log` chỉ dùng để test local, xem file `.eml` trong `backend/storage` (không gửi Gmail).
 
 ### 4.5. Kiểm tra màn hình tài chính
 
@@ -217,5 +217,3 @@ Không gửi `config.local.php`, mật khẩu Gmail/App Password, OTP, cookie đ
 - `source/database/`: schema và migrations MySQL.
 
 Khi triển khai module tài chính: kết nối từng màn hình đến API đã có, bỏ dữ liệu `fixtures.js` tương ứng, kiểm thử với database riêng trước khi đưa vào môi trường thật. Các nút thuộc chức năng chưa làm không ghi dữ liệu hoặc trả thông báo thành công giả.
-
-Xem thêm `source/frontend/README.md` và `source/CHANGELOG_UI.md`.
