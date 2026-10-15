@@ -116,6 +116,7 @@ CREATE TABLE IF NOT EXISTS idempotency_keys (
   request_hash CHAR(64) NOT NULL,
   transaction_id BIGINT UNSIGNED NULL,
   result_code SMALLINT UNSIGNED NULL,
+  response_json JSON NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_idempotency (user_id, request_key),
   FOREIGN KEY (user_id) REFERENCES users(id),

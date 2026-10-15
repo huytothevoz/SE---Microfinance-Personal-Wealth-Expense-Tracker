@@ -1,4 +1,4 @@
-# WealthFlow backend — FR01
+# WealthFlow backend — FR01, FR03–FR06
 
 PHP 8.2+, PDO MySQL, PHPMailer và firebase/php-jwt. Cài dependencies bằng `composer install`; không commit `vendor` hoặc `config.local.php`. Xem [cài đặt và email](../../FR01_XAMPP.md).
 
@@ -14,8 +14,26 @@ PHP 8.2+, PDO MySQL, PHPMailer và firebase/php-jwt. Cài dependencies bằng `c
 | POST | `/api/auth/refresh` | `{}` |
 | POST | `/api/auth/logout` | `{}` |
 | POST | `/api/auth/change-password` | `currentPassword`, `newPassword`, `passwordConfirmation` |
+| GET | `/api/wallets` | Ví của phiên hiện tại |
+| GET/POST | `/api/transactions` | Liệt kê hoặc ghi giao dịch; hỗ trợ `Idempotency-Key` |
+| POST | `/api/transactions/transfer` | Chuyển tiền giữa hai ví |
+| GET | `/api/transactions/{id}` | Chi tiết giao dịch thuộc user hiện tại |
+| POST | `/api/transactions/{id}/reverse` | Đảo giao dịch |
+| GET/POST | `/api/categories` | Danh mục của user hiện tại |
+| GET | `/api/exchange-rates` | Tỷ giá mới nhất |
+| POST | `/api/exchange-rates` | Ghi tỷ giá; chỉ tài khoản ADMIN |
+| GET/POST | `/api/budgets` | Liệt kê/tạo ngân sách |
+| GET | `/api/budgets/summary` | Tổng hợp ngân sách |
+| PUT/DELETE | `/api/budgets/{id}` | Cập nhật/xóa ngân sách thuộc user |
+| GET/POST | `/api/recurring` | Liệt kê/tạo lịch định kỳ |
+| POST | `/api/recurring/{id}/pause` hoặc `/resume` | Tạm dừng/kích hoạt lịch của user |
+| DELETE | `/api/recurring/{id}` | Xóa lịch thuộc user |
+| GET | `/api/notifications` | Thông báo của user hiện tại |
+| POST | `/api/notifications/{id}/read` hoặc `/read-all` | Đánh dấu thông báo đã đọc |
 
 POST bắt buộc `Content-Type: application/json`, `X-WealthFlow: 1`, cùng origin với APP_URL. Không bật CORS. Response thống nhất `success`, `data`, `error`, `requestId`; lỗi validation có `error.fieldErrors`. Body tối đa 16 KiB.
+
+Các API tài chính xác thực cookie phiên máy chủ WealthFlow; không chấp nhận user ID từ header/query và không có user mặc định. Tỷ giá toàn cục chỉ ADMIN được ghi. Worker lịch định kỳ không có HTTP route; cấu hình scheduler đáng tin cậy chạy `php bin/process_recurring.php`. Worker lấy khóa MySQL độc quyền và xử lý lịch, bút toán, execution record trong cùng transaction.
 
 Access JWT 15 phút; refresh JWT 7 ngày, được xoay mỗi lần refresh. Cả hai nằm trong cookie HttpOnly/SameSite=Strict, Secure khi HTTPS; không lưu token trong localStorage. Refresh token chỉ lưu SHA-256 ở database. Mỗi yêu cầu bảo vệ kiểm tra chữ ký HS256, issuer, audience, loại token, hạn dùng, trạng thái ACTIVE và phiên còn tồn tại. Logout xóa phiên ngay; đổi mật khẩu xóa mọi phiên cũ và cấp cặp token mới.
 
