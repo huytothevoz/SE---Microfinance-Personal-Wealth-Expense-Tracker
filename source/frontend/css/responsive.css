@@ -268,10 +268,7 @@
   .page-heading h1 {
     font-size: 26px;
   }
-  .demo-banner {
-    font-size: 10px;
-  }
-  .kpi-grid {
+.kpi-grid {
     gap: 10px;
   }
   .kpi-card {

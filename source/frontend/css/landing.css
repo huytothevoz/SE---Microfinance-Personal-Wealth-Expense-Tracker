@@ -630,12 +630,6 @@
   margin: 0 0 30px;
 }
 
-.demo-disclaimer {
-  color: #9ca9b9;
-  font-size: 11px;
-  margin-top: 22px;
-}
-
 .site-footer {
   border-top: 1px solid var(--line);
 }
@@ -787,7 +781,7 @@
   text-decoration: underline;
 }
 
-.auth-submit,.auth-demo {
+.auth-submit {
   width: 100%;
   margin-top: 10px;
   min-height: 46px;
@@ -807,4 +801,25 @@
   font-size: 10px;
   color: #a0acba;
   margin: 15px 0 0;
+}
+
+/* Password recovery: secondary action kept separate from the primary submit. */
+.auth-resend {
+  align-self: flex-start;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: #087b92;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-resend:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.auth-resend:disabled {
+  color: #73859b;
+  cursor: not-allowed;
 }

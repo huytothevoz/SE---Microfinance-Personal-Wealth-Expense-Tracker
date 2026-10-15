@@ -1,6 +1,6 @@
 # WealthFlow backend — FR01, FR03–FR06
 
-PHP 8.2+, PDO MySQL, PHPMailer và firebase/php-jwt. Cài dependencies bằng `composer install`; không commit `vendor` hoặc `config.local.php`. Xem [cài đặt và email](../../FR01_XAMPP.md).
+PHP 8.2+, PDO MySQL, PHPMailer và firebase/php-jwt. Cài dependencies bằng `composer install`; không commit `vendor` hoặc `config.local.php`. Xem [hướng dẫn cài đặt và email](../../README.md).
 
 ## API
 
@@ -50,6 +50,26 @@ Mật khẩu từ 8 ký tự, có hoa/thường/số, tối đa 72 byte theo gi�
 Yêu cầu đặt lại mật khẩu không tiết lộ email có tồn tại hay không. OTP 6 chữ số chỉ lưu dạng HMAC, hết hạn sau 10 phút và cho phép tối đa 5 lần nhập; đặt lại thành công sẽ thu hồi tất cả phiên đăng nhập. Cần cấu hình SMTP để gửi email đặt lại. Migrations `003_password_reset.sql` và `004_password_reset_otp.sql` được áp dụng tự động khi chạy `php bin/setup.php`.
 
 Để gửi OTP qua `wealthflow.voz@gmail.com`, bật xác minh 2 bước cho tài khoản Google, tạo App Password rồi nhập App Password vào `MAIL_PASSWORD` trong `config.local.php`. `MAIL_USERNAME` và `MAIL_FROM_ADDRESS` đã mặc định là địa chỉ WealthFlow này; SMTP Gmail dùng `smtp.gmail.com:587` với TLS. Không dùng mật khẩu đăng nhập Google thường và không commit `config.local.php`.
+
+### Kiểm tra lỗi gửi OTP
+
+**Quan trọng:** `config.local.php` không được đóng gói trong ZIP để bảo vệ tài khoản Gmail. Nếu triển khai source mới vào máy khác, phải tạo hoặc giữ lại file này và điền Gmail App Password. Khi `MAIL_PASSWORD` trống, API yêu cầu OTP trả `OTP_SERVICE_UNAVAILABLE` thay vì giả vờ đã gửi.
+
+Mở CMD/PowerShell tại thư mục `backend` đã triển khai và chạy:
+
+```cmd
+"F:\xampp\php\php.exe" bin\check-mail.php
+"F:\xampp\php\php.exe" bin\check-mail.php --to=dia-chi-email-ban-dang-su-dung@example.com
+```
+
+- Lệnh đầu kiểm tra cấu hình, **chưa gửi thư**.
+- Lệnh thứ hai gửi email thử (không chứa OTP). Nếu SMTP tiếp nhận thì kiểm tra Inbox và Spam.
+- Nếu báo **SMTP authentication failed**, dùng Google **App Password** (không dùng mật khẩu Gmail thường). Nếu báo **Cannot connect to SMTP**, kiểm tra firewall/mạng/cổng 587 và TLS.
+- Chế độ kiểm thử ngoại tuyến: `APP_ENV=local`, `MAIL_TRANSPORT=log` trong `config.local.php`. Email OTP chỉ được ghi vào `backend/storage/mail-*.eml` trên máy chủ và **không gửi đến Gmail**. Không bật log transport trên production.
+- Để test lớp gửi mail độc lập không cần MySQL/Gmail: `php tests/mail_smoke_test.php`.
+- Khi đã sửa cấu hình, dùng link **Quên mật khẩu** trên web; có thể gửi lại mã sau 60 giây. OTP hết hạn sau 10 phút, tối đa 5 lần nhập sai. Không đăng nhập bằng email chưa đăng ký để đòi OTP.
+
+Xem thêm [`OTP_TROUBLESHOOTING.md`](OTP_TROUBLESHOOTING.md). Không gửi App Password, OTP hoặc file `config.local.php` lên GitHub hay chat.
 
 `EmailService::send(...)` là lớp gửi SMTP dùng lại được; `sendWelcome(...)` tạo email chào mừng. Không đưa mật khẩu người dùng vào email. Email chào mừng lỗi được lưu PENDING; chạy `php bin/send-pending-emails.php` sau khi sửa SMTP. Worker xử lý tối đa 50 email/lần. Hàng đợi có thể gửi lặp nếu tiến trình chết sau khi SMTP nhận thư nhưng trước khi ghi SENT; đây là cơ chế thử lại ít nhất một lần.
 

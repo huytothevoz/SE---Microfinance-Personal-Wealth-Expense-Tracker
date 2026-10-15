@@ -183,6 +183,20 @@ final class AuthService
             throw new ApiException('VALIDATION_ERROR', 'Địa chỉ email không hợp lệ.', 422, ['email' => 'Địa chỉ email không hợp lệ.']);
         }
 
+        // Check service-wide mail configuration for every submitted address.
+        // Do not issue an OTP that cannot possibly be delivered.
+        $mailer = new EmailService($this->config);
+        try {
+            $mailer->assertConfigured();
+        } catch (\Throwable $error) {
+            error_log('WealthFlow OTP mail configuration: ' . $error->getMessage());
+            throw new ApiException(
+                'OTP_SERVICE_UNAVAILABLE',
+                'Dịch vụ gửi mã OTP chưa sẵn sàng. Vui lòng liên hệ quản trị viên kiểm tra cấu hình email.',
+                503
+            );
+        }
+
         $otp = '';
         $this->db->beginTransaction();
         try {
@@ -203,13 +217,16 @@ final class AuthService
         }
         if ($user) {
             try {
-                (new EmailService($this->config))->sendPasswordResetOtp($user['email'], $user['full_name'], $otp);
+                $mailer->sendPasswordResetOtp($user['email'], $user['full_name'], $otp);
             } catch (\Throwable $error) {
-                error_log('WealthFlow password reset email failed; user=' . (int) $user['id'] . '; type=' . get_class($error));
+                // Keep the HTTP response generic to avoid revealing registered emails.
+                // Record the failure for server administrators; never log the OTP.
+                error_log('WealthFlow OTP delivery failed; user_id=' . (int) $user['id']
+                    . '; category=' . $this->mailFailureCategory($error));
             }
         }
 
-        return ['message' => 'Nếu email này được đăng ký, hướng dẫn đặt lại mật khẩu sẽ được gửi đến hộp thư của bạn.'];
+        return ['message' => 'Nếu email này đã đăng ký, mã OTP sẽ được gửi đến hộp thư của bạn. Vui lòng kiểm tra cả thư rác.'];
     }
 
     public function resetPassword(array $input): array
@@ -260,6 +277,25 @@ final class AuthService
 
         $this->tokens->clearCookies();
         return ['message' => 'Mật khẩu đã được đặt lại. Vui lòng đăng nhập bằng mật khẩu mới.'];
+    }
+
+    /** Return a safe diagnostic category without credentials or email addresses. */
+    private function mailFailureCategory(\Throwable $error): string
+    {
+        $message = strtolower($error->getMessage());
+        if (str_contains($message, 'authenticate') || str_contains($message, 'password')) {
+            return 'SMTP_AUTH';
+        }
+        if (str_contains($message, 'connect') || str_contains($message, 'smtp connect')) {
+            return 'SMTP_CONNECTION';
+        }
+        if (str_contains($message, 'tls') || str_contains($message, 'certificate')) {
+            return 'SMTP_TLS';
+        }
+        if (str_contains($message, 'write') || str_contains($message, 'permission')) {
+            return 'MAIL_STORAGE';
+        }
+        return 'MAIL_DELIVERY_ERROR';
     }
 
     private function newSession(int $id): array

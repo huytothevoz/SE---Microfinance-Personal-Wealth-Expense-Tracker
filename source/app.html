@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light">
     <meta name="theme-color" content="#102b4f">
-    <meta name="description" content="WealthFlow — giao diện demo hệ thống quản lý tài chính cá nhân.">
+    <meta name="description" content="WealthFlow — ứng dụng quản lý tài chính cá nhân.">
     <title>Ứng dụng • WealthFlow</title><link rel="icon" type="image/png" href="frontend/assets/favicon.png"><link rel="stylesheet" href="frontend/css/base.css"><link rel="stylesheet" href="frontend/css/app.css"><link rel="stylesheet" href="frontend/css/responsive.css">
-    <script type="module" src="frontend/js/app.js">
+    <script type="module" src="frontend/js/app/main.js">
     </script>
   </head>
   <body class="app-body">
@@ -25,7 +25,7 @@
             <a href="index.html" class="mini-link">Về trang giới thiệu →</a>
           </div>
           <p class="footer-note">
-            VOZ · Construction UI Demo v0.1
+            VOZ · Ứng dụng quản lý tài chính
           </p>
         </div>
       </aside>
@@ -38,7 +38,7 @@
             Không gian cá nhân <span aria-hidden="true">/</span><strong id="breadcrumb-name">Tổng quan</strong>
           </div>
           <div class="top-actions">
-            <label class="top-search"><span id="top-search-icon"></span><input type="search" id="global-search" placeholder="Tìm giao dịch nhanh..." aria-label="Tìm giao dịch"></label><button class="top-icon" id="top-notifications" type="button" aria-label="Xem thông báo"><span id="bell-icon"></span><span class="notify-dot"></span></button><button class="user-chip" id="user-menu" type="button" aria-label="Mở hồ sơ cá nhân"><span class="avatar">WF</span><span><strong>Người dùng demo</strong><small>Tài khoản minh họa</small></span><span style="font-size:12px">⌄</span></button>
+            <label class="top-search"><span id="top-search-icon"></span><input type="search" id="global-search" placeholder="Tìm giao dịch nhanh..." aria-label="Tìm giao dịch"></label><button class="top-icon" id="top-notifications" type="button" aria-label="Xem thông báo"><span id="bell-icon"></span><span class="notify-dot"></span></button><button class="user-chip" id="user-menu" type="button" aria-label="Mở hồ sơ cá nhân"><span class="avatar">WF</span><span><strong>Tài khoản</strong><small>Hồ sơ cá nhân</small></span><span style="font-size:12px">⌄</span></button>
           </div>
         </header>
         <main class="main-content" id="app-content" tabindex="-1">
@@ -48,7 +48,7 @@
     <dialog id="action-dialog" class="app-dialog" aria-labelledby="modal-title">
       <div class="modal-head">
         <div>
-          <span class="label" id="modal-overline">GIAO DIỆN MINH HỌA</span>
+          <span class="label" id="modal-overline">WEALTHFLOW</span>
           <h2 id="modal-title">
             Thao tác
           </h2>

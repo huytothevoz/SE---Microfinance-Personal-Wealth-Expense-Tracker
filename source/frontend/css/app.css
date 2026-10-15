@@ -5,7 +5,6 @@
   font-size: 13px;
   min-width: 320px;
 }
-
 .app-shell {
   display: flex;
   min-height: 100vh;
@@ -280,28 +279,6 @@
   padding: 35px 38px 80px;
   max-width: 1590px;
   margin: 0 auto;
-}
-
-.demo-banner {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  background: #e8f4fa;
-  border: 1px solid #d5e6f1;
-  padding: 11px 15px;
-  color: #335a78;
-  border-radius: 10px;
-  font-size: 11px;
-  line-height: 1.5;
-  margin-bottom: 26px;
-}
-
-.demo-banner strong {
-  color: #13456d;
-}
-
-.demo-banner .demo-icon {
-  color: #167e95;
 }
 
 .page-heading {
@@ -1116,19 +1093,7 @@
   background: #193351;
 }
 
-.admin-mode .demo-banner {
-  background: #fff4e5;
-  border-color: #f4dfc3;
-  color: #996b38;
-}
-
-.admin-preview-note {
-  color: #a6b8cc;
-  font-size: 10px;
-  padding: 0 14px 12px;
-}
-
-.empty-state {
+.admin-mode .empty-state {
   text-align: center;
   padding: 45px 25px;
   color: #869bad;

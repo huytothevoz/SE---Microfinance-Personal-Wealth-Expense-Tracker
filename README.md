@@ -133,7 +133,17 @@ OTP được gửi **đến email người dùng yêu cầu đặt lại mật k
 
    Nếu XAMPP nằm ở ổ/thư mục khác, thay đường dẫn. Không dùng mật khẩu đăng nhập Google thông thường. Không commit hoặc gửi App Password qua chat.
 4. Lưu file. Apache không cần khởi động lại.
-5. Thử chức năng quên mật khẩu từ giao diện.
+5. Tại thư mục `backend` đang chạy trong XAMPP, kiểm tra cấu hình trước khi thử giao diện:
+
+   ```cmd
+   "F:\xampp\php\php.exe" bin\check-mail.php
+   "F:\xampp\php\php.exe" bin\check-mail.php --to=your-email@example.com
+   ```
+
+   Dòng đầu không gửi thư; dòng thứ hai gửi một email test. Nếu báo SMTP authentication failed, hãy tạo lại Google App Password. **Không gửi App Password hoặc `config.local.php` cho người khác.**
+6. Thử chức năng quên mật khẩu từ giao diện. Nếu chưa nhận OTP, kiểm tra Spam và có thể gửi lại sau 60 giây.
+
+> Nếu source ZIP mới không có `backend/config.local.php`, đó là chủ ý để không làm lộ bí mật. Giữ lại file của bản đang triển khai, hoặc tạo file bằng `php bin/setup.php` mà **không chạy lại script cài mới/reset database**. Chế độ `MAIL_TRANSPORT=log` chỉ dùng để test local, xem file `.eml` trong `backend/storage` (không gửi Gmail). Xem hướng dẫn chi tiết tại `source/backend/OTP_TROUBLESHOOTING.md`.
 
 ### 4.5. Kiểm tra màn hình tài chính
 
@@ -192,3 +202,20 @@ Khi một bước thất bại, ghi lại:
 5. Dòng log liên quan trong `XAMPP\apache\logs\error.log`, sau khi rà soát và che thông tin riêng tư.
 
 Không gửi `config.local.php`, mật khẩu Gmail/App Password, OTP, cookie đăng nhập hoặc token.
+
+
+## Phân chia code frontend (cập nhật)
+
+- `source/frontend/js/landing/main.js`: trang giới thiệu và xác thực.
+- `source/frontend/js/services/auth-api.js`: dịch vụ xác thực.
+- `source/frontend/js/app/main.js`: khởi động ứng dụng, điều hướng và sự kiện.
+- `source/frontend/js/app/pages.js`: các màn hình giao diện.
+- `source/frontend/js/app/forms.js`: trường biểu mẫu cho các thao tác chưa nối API.
+- `source/frontend/js/app/ui-core.js`: thành phần UI dùng chung.
+- `source/frontend/js/data/fixtures.js`: dữ liệu tĩnh trong màn hình còn chưa kết nối API; **không phải số dư thật**.
+- `source/backend/`: backend PHP và API đã có. Không chuyển logic nghiệp vụ sang frontend.
+- `source/database/`: schema và migrations MySQL.
+
+Khi triển khai module tài chính: kết nối từng màn hình đến API đã có, bỏ dữ liệu `fixtures.js` tương ứng, kiểm thử với database riêng trước khi đưa vào môi trường thật. Các nút thuộc chức năng chưa làm không ghi dữ liệu hoặc trả thông báo thành công giả.
+
+Xem thêm `source/frontend/README.md` và `source/CHANGELOG_UI.md`.

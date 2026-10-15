@@ -8,7 +8,7 @@
     <meta name="description" content="WealthFlow – theo dõi thu chi, quản lý ví, ngân sách, khoản vay, vàng tích lũy và tài sản ròng trên một nền tảng.">
     <meta name="referrer" content="no-referrer">
     <title>WealthFlow</title><link rel="icon" type="image/png" href="frontend/assets/favicon.png"><link rel="stylesheet" href="frontend/css/base.css"><link rel="stylesheet" href="frontend/css/landing.css"><link rel="stylesheet" href="frontend/css/responsive.css">
-    <script type="module" src="frontend/js/landing.js">
+    <script type="module" src="frontend/js/landing/main.js">
     </script>
   </head>
   <body class="landing-body">
@@ -65,7 +65,7 @@
                 <div class="mini-caption">
                   Biến động tài sản 6 tháng gần nhất
                 </div>
-                <svg class="mini-chart" viewBox="0 0 500 170" aria-label="Biểu đồ minh họa tài sản tăng dần"><defs><linearGradient id="fillHero" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1c95ab" stop-opacity=".19"/><stop offset="1" stop-color="#1c95ab" stop-opacity="0"/></linearGradient></defs><path d="M5 140L75 128L145 118L210 132L283 94L350 87L420 50L495 22V170H5Z" fill="url(#fillHero)"/><path d="M5 140L75 128L145 118L210 132L283 94L350 87L420 50L495 22" stroke="#10879d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="495" cy="22" r="6" fill="#10879d" stroke="white" stroke-width="4"/></svg>
+                <svg class="mini-chart" viewBox="0 0 500 170" aria-label="Biểu đồ biến động tài sản ròng"><defs><linearGradient id="fillHero" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1c95ab" stop-opacity=".19"/><stop offset="1" stop-color="#1c95ab" stop-opacity="0"/></linearGradient></defs><path d="M5 140L75 128L145 118L210 132L283 94L350 87L420 50L495 22V170H5Z" fill="url(#fillHero)"/><path d="M5 140L75 128L145 118L210 132L283 94L350 87L420 50L495 22" stroke="#10879d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="495" cy="22" r="6" fill="#10879d" stroke="white" stroke-width="4"/></svg>
                 <div class="mini-months">
                   <span>Thg 5</span><span>Thg 6</span><span>Thg 7</span><span>Thg 8</span><span>Thg 9</span><span>Thg 10</span>
                 </div>
@@ -292,13 +292,16 @@
           <div class="field" id="auth-email-field">
             <label for="auth-email">Email</label><input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com" required>
           </div>
+          <div class="field" id="reset-otp-field" hidden>
+            <label for="auth-reset-otp">Mã OTP trong email</label>
+            <p id="auth-reset-email-note" class="form-hint"></p>
+            <input id="auth-reset-otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="Nhập mã 6 chữ số">
+            <button type="button" class="auth-resend" id="auth-resend-otp">Gửi lại mã OTP</button>
+          </div>
           <div class="field" id="auth-password-field">
             <label for="auth-password">Mật khẩu</label><input id="auth-password" type="password" autocomplete="current-password" placeholder="Nhập mật khẩu" required>
           </div>
           <button type="button" class="auth-forgot" id="auth-forgot-link">Quên mật khẩu?</button>
-          <div class="field" id="reset-otp-field" hidden>
-            <label for="auth-reset-otp">Mã OTP trong email</label><input id="auth-reset-otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="Nhập mã 6 chữ số">
-          </div>
           <div class="field" id="confirmation-field" hidden>
             <label for="auth-confirmation">Nhập lại mật khẩu</label><input id="auth-confirmation" type="password" autocomplete="new-password">
           </div>

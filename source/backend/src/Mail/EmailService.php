@@ -11,8 +11,52 @@ final class EmailService
 {
     public function __construct(private readonly Config $config) {}
 
+    /**
+     * Check transport settings before generating an OTP. This check must not
+     * depend on whether the submitted email is registered (anti-enumeration).
+     */
+    public function assertConfigured(): void
+    {
+        $transport = strtolower(trim($this->config->get('MAIL_TRANSPORT')));
+        $sender = $this->config->get('MAIL_FROM_ADDRESS');
+        if (!filter_var($sender, FILTER_VALIDATE_EMAIL)) {
+            throw new \RuntimeException('MAIL_FROM_ADDRESS_INVALID');
+        }
+        if ($transport === 'log') {
+            if ($this->config->get('APP_ENV') !== 'local') {
+                throw new \RuntimeException('MAIL_LOG_NOT_ALLOWED');
+            }
+            $directory = $this->config->directory . '/storage';
+            if (!is_dir($directory) || !is_writable($directory)) {
+                throw new \RuntimeException('MAIL_PREVIEW_DIRECTORY_NOT_WRITABLE');
+            }
+            return;
+        }
+        if ($transport !== 'smtp') {
+            throw new \RuntimeException('MAIL_TRANSPORT_INVALID');
+        }
+        $host = trim($this->config->get('MAIL_HOST'));
+        $port = filter_var($this->config->get('MAIL_PORT'), FILTER_VALIDATE_INT);
+        $encryption = strtolower(trim($this->config->get('MAIL_ENCRYPTION')));
+        $localHost = in_array($host, ['localhost', '127.0.0.1', '::1'], true);
+        if ($host === '' || $port === false || $port < 1 || $port > 65535
+            || !in_array($encryption, ['tls', 'ssl', 'none'], true)
+            || ($encryption === 'none' && !$localHost)) {
+            throw new \RuntimeException('MAIL_SMTP_SETTINGS_INVALID');
+        }
+        $username = trim($this->config->get('MAIL_USERNAME'));
+        // Local mail-capture servers (Mailpit/MailHog) typically have no login.
+        if ($username === '' && !$localHost) {
+            throw new \RuntimeException('MAIL_SMTP_USERNAME_MISSING');
+        }
+        if ($username !== '' && trim($this->config->get('MAIL_PASSWORD')) === '') {
+            throw new \RuntimeException('MAIL_SMTP_PASSWORD_MISSING');
+        }
+    }
+
     public function send(string $recipient, string $name, string $subject, string $html, string $text): void
     {
+        $this->assertConfigured();
         $mail = new PHPMailer(true);
         $mail->CharSet = PHPMailer::CHARSET_UTF8;
         $mail->setFrom($this->config->get('MAIL_FROM_ADDRESS'), $this->config->get('MAIL_FROM_NAME'));
