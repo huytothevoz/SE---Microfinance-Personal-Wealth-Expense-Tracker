@@ -6,118 +6,110 @@
 
 ## 1. Sơ đồ Thực thể Nghiệp vụ (Domain Model)
 
-Sơ đồ thể hiện các thực thể dữ liệu chính và mối quan hệ theo nguyên tắc kế toán kép và quản lý tài sản:
+Để đảm bảo tính trực quan, không gian hiển thị rộng rãi và dễ theo dõi các ràng buộc nghiệp vụ, mô hình thực thể của WealthFlow được phân rã theo **6 cụm phân hệ nghiệp vụ cốt lõi** (tiếp cận theo Domain-Driven Design / Bounded Contexts). 
+
+Mỗi phân hệ làm rõ:
+- **Tác nhân (Actors)** tham gia tương tác trực tiếp với phân hệ.
+- **Thực thể dữ liệu (Entities)** cùng thuộc tính và kiểu dữ liệu chuẩn xác.
+- **Thuyết minh nghiệp vụ & Quy tắc thiết kế (Business Rules - BR)** chi phối phân hệ.
+
+---
+
+### 1.1. Phân hệ Định danh, Người dùng & Ví tiền (Identity & Wallet Management)
+
+> **Tham chiếu nghiệp vụ:** [FR01](../SRS.md#fr01), [FR02](../SRS.md#fr02), [FR04](../SRS.md#fr04) | **Use Cases:** [UC01](../SRS.md#uc01), [UC02](../SRS.md#uc02).
+
+#### Sơ đồ Thực thể (Domain Plot):
 
 ```mermaid
 classDiagram
     direction TB
 
+    %% Khai báo Actors tương tác
+    class GuestActor {
+        <<Actor: Khách vãng lai A01-G>>
+        +register()
+        +login()
+        +requestPasswordReset()
+    }
+
+    class EndUserActor {
+        <<Actor: Người dùng A01>>
+        +updateProfile()
+        +changePassword()
+        +createWallet()
+        +archiveWallet()
+    }
+
+    class AdminActor {
+        <<Actor: Quản trị viên A02>>
+        +lockUser()
+        +unlockUser()
+    }
+
+    %% Các thực thể nghiệp vụ (Entities)
     class User {
-        +UUID id
+        +ID id
+        +String fullName
         +String email
         +String passwordHash
-        +String fullName
-        +String role
+        +UserRole role
+        +UserStatus status
         +String baseCurrency
-        +String status
+        +DateTime createdAt
+        +DateTime updatedAt
     }
 
     class Wallet {
-        +UUID id
-        +UUID userId
+        +ID id
+        +ID userId
         +String name
-        +String type
+        +WalletType walletType
         +String currency
-        +Decimal balance
+        +Decimal cachedBalance
+        +WalletStatus status
+        +DateTime createdAt
     }
 
-    class Transaction {
-        +UUID id
-        +UUID userId
-        +String type
-        +Date date
-        +String status
-        +String idempotencyKey
-        +UUID originalId
+    class PasswordResetToken {
+        +ID userId
+        +String tokenHash
+        +Integer attempts
+        +DateTime expiresAt
+        +DateTime createdAt
     }
 
-    class JournalEntry {
-        +UUID id
-        +UUID transactionId
-        +UUID walletId
-        +String direction
-        +Decimal amount
-    }
+    %% Tương tác giữa Actors và Thực thể
+    GuestActor ..> User : registers_authenticates (UC01)
+    GuestActor ..> PasswordResetToken : submits_otp (UC01)
+    EndUserActor --> User : owns_profile
+    EndUserActor --> Wallet : manages (UC02)
+    AdminActor ..> User : moderates_status (UC12)
 
-    class Budget {
-        +UUID id
-        +UUID userId
-        +UUID categoryId
-        +String monthYear
-        +Decimal limitAmount
-    }
-
-    class Loan {
-        +UUID id
-        +UUID userId
-        +String title
-        +String type
-        +Decimal initialPrincipal
-        +Decimal remainingPrincipal
-        +String status
-    }
-
-    class LoanRepayment {
-        +UUID id
-        +UUID loanId
-        +UUID transactionId
-        +Decimal principalPaid
-        +Decimal interestPaid
-        +Date paymentDate
-    }
-
-    class GoldAsset {
-        +UUID id
-        +UUID userId
-        +String name
-        +String goldType
-        +Decimal quantityChi
-        +Decimal currentMarketValue
-    }
-
-    class Subscription {
-        +UUID id
-        +UUID userId
-        +String name
-        +Decimal amount
-        +Integer anchorDay
-        +Date nextDueDate
-        +Boolean isAutoPost
-    }
-
-    class FinancialGoal {
-        +UUID id
-        +UUID userId
-        +String title
-        +Decimal targetAmount
-        +Decimal currentAmount
-        +Date deadlineDate
-    }
-
-    %% Relationships
-    User "1" *-- "1..*" Wallet : owns
-    User "1" *-- "0..*" Transaction : creates
-    User "1" *-- "0..*" Budget : sets
-    User "1" *-- "0..*" Loan : manages
-    User "1" *-- "0..*" GoldAsset : holds
-    User "1" *-- "0..*" Subscription : schedules
-    User "1" *-- "0..*" FinancialGoal : pursues
-
-    Transaction "1" *-- "2..*" JournalEntry : balances (BR01)
-    Wallet "1" o-- "0..*" JournalEntry : posts_to
-    Transaction "0..1" <-- "0..*" Transaction : reverses (BR06)
-    Loan "1" *-- "0..*" LoanRepayment : tracks
+    %% Mối quan hệ giữa các Thực thể
+    User "1" *-- "1..*" Wallet : owns (BR02)
+    User "1" o-- "0..1" PasswordResetToken : requests (FR01)
 ```
+
+#### Thuyết minh Nghiệp vụ & Quy tắc thiết kế (Business Rules):
+
+1. **Tác nhân tham gia (Actors):**
+   - **`Khách vãng lai (A01-G)`**: Tương tác với hệ thống khi chưa có phiên đăng nhập hợp lệ. Thực hiện đăng ký tài khoản mới (`FR01`), xác thực đăng nhập để nhận JWT Token, hoặc yêu cầu gửi mã OTP đặt lại mật khẩu qua email (`UC01`).
+   - **`Người dùng (A01)`**: Chủ sở hữu tài khoản sau khi đăng nhập thành công. Quản lý thông tin hồ sơ cá nhân, đổi mật khẩu, thiết lập đồng tiền cơ sở (`baseCurrency`), tạo mới, cập nhật hoặc đóng các ví tiền nguồn (`UC02`, `FR02`).
+   - **`Quản trị viên (A02)`**: Quản lý vòng đời tài khoản người dùng (Khóa `LOCKED` / Mở khóa `ACTIVE`), thu hồi hiệu lực token phiên tức thì khi phát hiện hành vi bất thường (`UC12`, `FR13`).  
+     *Ràng buộc bảo mật tuyệt đối (`UR10`):* Quản trị viên không được cấp quyền xem số dư, tên ví hay bất kỳ dữ liệu sổ sách tài chính cá nhân nào của người dùng.
+
+2. **Ràng buộc nghiệp vụ giữa các thực thể:**
+   - **Quan hệ sở hữu và khởi tạo ví (`User "1" *-- "1..*" Wallet` - `BR02`):**
+     - Khi một tài khoản được đăng ký thành công, hệ thống tự động khởi tạo ít nhất một ví tiền mặt mặc định (`CASH`, tiền tệ `VND`) để người dùng có thể bắt đầu ghi chép ngay lập tức.
+     - Người dùng có thể tạo thêm nhiều ví thuộc các phân loại khác nhau: Tiền mặt (`CASH`), Tài khoản ngân hàng (`BANK`), Ví điện tử MoMo/ZaloPay (`E_WALLET`), Sổ tiết kiệm (`SAVINGS`), Thẻ tín dụng (`CREDIT`).
+     - Mỗi ví có thể sử dụng đồng tiền (`currency`) độc lập với đồng tiền cơ sở của người dùng (ví dụ: User dùng `VND` nhưng có thể mở thêm ví ngoại tệ `USD` hoặc `EUR`). Khi lên báo cáo tổng hợp, hệ thống quy đổi theo tỷ giá snapshot tại thời điểm giao dịch (`BR15`).
+   - **Bảo toàn lịch sử ví, không xóa cứng (`BR02`):**
+     - Ví tiền đã từng phát sinh giao dịch trong lịch sử sổ cái tuyệt đối **không được phép xóa cứng (`Hard Delete`)** khỏi cơ sở dữ liệu.
+     - Khi người dùng không còn sử dụng ví, hệ thống chỉ cập nhật trạng thái `status` thành `ARCHIVED` (đóng ví) để bảo toàn tính toàn vẹn và khả năng kiểm toán của sổ cái kế toán kép.
+   - **Cơ chế OTP đặt lại mật khẩu (`PasswordResetToken` - `FR01`):**
+     - Mã OTP 6 chữ số được mã hóa một chiều (`tokenHash`) trước khi lưu trữ, có thời hạn hiệu lực tối đa là 10 phút (`expiresAt`).
+     - Trường `attempts` đếm số lần nhập sai. Nếu người dùng nhập sai quá 5 lần (`attempts >= 5`), mã OTP sẽ bị vô hiệu hóa ngay lập tức nhằm ngăn chặn triệt để tấn công vét cạn (brute-force).
 
 ---
 
