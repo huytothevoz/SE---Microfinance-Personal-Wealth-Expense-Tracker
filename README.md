@@ -12,77 +12,48 @@ Tài liệu này hướng dẫn thành viên nhóm cài WealthFlow trên Windows
 
 Script setup phải được chạy từ thư mục gốc repository (thư mục chứa file này). Có thể để project ở ổ C dù XAMPP ở ổ F.
 
-## 2. Cảnh báo về dữ liệu
+## 2. Cách chạy ứng dụng (Khuyến nghị 1-Click)
 
-`setup-run-version-windows.ps1` là script **cài mới**, không phải lệnh chạy ứng dụng thường ngày. Khi chạy, script:
+Hệ thống đã hỗ trợ script tự động kiểm tra môi trường, bật MySQL/Apache và mở ứng dụng.
 
-1. Sao lưu rồi thay thế **toàn bộ** thư mục `XAMPP\htdocs`.
-2. Đặt lại database `wealthflow`.
-3. Giữ bản backup trong `XAMPP\wealthflow-backups`.
+### Trên Windows
+Từ thư mục gốc repository, bạn chỉ cần:
+- Nhấp đúp chuột vào file `run_wealthflow.bat`
+- Hoặc mở PowerShell/CMD gõ:
+  ```cmd
+  .\run_wealthflow.bat
+  ```
 
-Sao lưu website/database cần giữ trước khi chạy. Không chạy lại setup chỉ để bật ứng dụng hoặc thử đăng nhập.
-
-## 3. Cài mới lần đầu
-
-### 3.1. Khởi động MySQL
-
-1. Mở XAMPP Control Panel.
-2. Nhấn **Start** ở dòng **MySQL**.
-3. Chờ đến khi trạng thái MySQL hiện **Running**.
-4. Để cửa sổ XAMPP mở trong lúc cài và kiểm thử.
-
-Không cần cài Apache dưới dạng Windows Service. Setup sẽ khởi động Apache của XAMPP sau khi cài.
-
-### 3.2. Tải Composer PHAR nếu chưa cài Composer
-
-Mở PowerShell tại thư mục gốc repository. Nếu XAMPP ở `F:\xampp`, chạy:
-
-```powershell
-$Php = 'F:\xampp\php\php.exe'
-$ComposerPhar = Join-Path $env:TEMP 'composer.phar'
-Invoke-WebRequest 'https://getcomposer.org/download/latest-stable/composer.phar' -OutFile $ComposerPhar
-& $Php $ComposerPhar --version
+### Trên Linux (Ubuntu/Debian)
+Từ thư mục gốc repository, chạy:
+```bash
+chmod +x run_wealthflow.sh
+./run_wealthflow.sh
 ```
 
-Nếu XAMPP ở nơi khác, sửa `$Php` thành đường dẫn tới `php.exe` của XAMPP. Lệnh cuối cần in ra phiên bản Composer.
+> **Script sẽ tự động:**
+> 1. Dò tìm thư mục cài đặt XAMPP (`C:\xampp`, `D:\xampp`, hoặc `/opt/lampp`).
+> 2. Kiểm tra và khởi động MySQL nếu chưa chạy.
+> 3. Tự động tải Composer dependencies và đồng bộ mã nguồn nếu là lần đầu chạy.
+> 4. Khởi tạo cơ sở dữ liệu `wealthflow` và các bảng dữ liệu mẫu nếu chưa có.
+> 5. Cấu hình và khởi động Apache chạy trên cổng **8080** mà không gây xung đột hệ thống.
+> 6. Tự động mở trình duyệt đến trang chủ `http://localhost:8080/`.
 
-### 3.3. Chạy setup
+---
 
-Trong cùng PowerShell, từ thư mục gốc repository, chạy:
+## 3. Thông tin đăng nhập mẫu (Test Account)
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\setup-run-version-windows.ps1" -XamppDir "F:\xampp" -ApachePort 8080 -ComposerPhar "$env:TEMP\composer.phar"
-```
+Trong cơ sở dữ liệu đã có sẵn tài khoản mẫu để kiểm thử:
+- **Email:** `user1@gmail.com`
+- **Mật khẩu:** `User1234`
+- **Tên hiển thị:** `nguyen`
+- **Trang chủ:** [http://localhost:8080/](http://localhost:8080/)
+- **Trang Dashboard ứng dụng:** [http://localhost:8080/app.html](http://localhost:8080/app.html)
+- **API Health Check:** [http://localhost:8080/api/health](http://localhost:8080/api/health)
 
-Thay `F:\xampp` nếu XAMPP ở đường dẫn khác. Nếu Composer đã cài và nhận diện được bằng lệnh `composer`, có thể bỏ `-ComposerPhar "$env:TEMP\composer.phar"`.
+*(Bạn cũng có thể tự tạo tài khoản mới bằng nút **Đăng ký** trên giao diện).*
 
-Nếu cổng 8080 đang được chương trình khác sử dụng, chọn cổng trống khác, ví dụ `-ApachePort 8081`. Sau khi cài, dùng đúng cổng mà bạn đã chọn.
-
-Setup thành công khi dòng cuối là:
-
-```text
-Fresh install and API health check completed.
-```
-
-Cảnh báo `No installed service named "Apache2.4"` có thể xuất hiện với XAMPP không chạy Apache dạng Windows Service. Hãy xem kết quả cuối cùng của setup và health check để xác nhận thành công.
-
-### 3.4. Mở ứng dụng và xác nhận API
-
-Mở trình duyệt:
-
-```text
-http://localhost:8080/
-```
-
-Không mở `source\index.html` trực tiếp bằng `file://`.
-
-Trong PowerShell, xác nhận API và database:
-
-```powershell
-Invoke-RestMethod 'http://localhost:8080/api/health' | ConvertTo-Json -Depth 5
-```
-
-Kết quả mong đợi có `success: true` và `databaseConnected: true`.
+Khi khởi động, script sẽ hiển thị thông báo thành công cùng trạng thái kết nối Database và API Health Check (`status: ok`, `databaseConnected: true`).
 
 ## 4. Kiểm thử thủ công đầu-cuối
 
@@ -163,21 +134,13 @@ Chạy từ thư mục gốc repository. Nếu XAMPP ở đường dẫn khác, 
 
 Kết quả mong đợi có dòng tổng kết `36 PASSED, 0 FAILED` (số lượng có thể thay đổi khi nhóm bổ sung test) và tiến trình kết thúc không có lỗi.
 
-## 6. Kiểm tra nhanh sau khi khởi động lại máy
+## 6. Khởi động ứng dụng hàng ngày
 
-Sau khi đã setup thành công, **không chạy lại setup**:
+Khi khởi động lại máy hoặc muốn mở lại ứng dụng:
+- **Windows:** Chỉ cần chạy lại file `run_wealthflow.bat` (hoặc nhấp đúp chuột).
+- **Linux:** Chạy `./run_wealthflow.sh`.
 
-1. Mở XAMPP Control Panel.
-2. Start MySQL nếu chưa Running.
-3. Mở PowerShell và chạy Apache bằng cấu hình XAMPP:
-
-   ```powershell
-   Start-Process -FilePath 'F:\xampp\apache\bin\httpd.exe' -ArgumentList @('-d','F:/xampp/apache','-f','conf/httpd.conf') -WorkingDirectory 'F:\xampp\apache\bin'
-   ```
-
-4. Kiểm tra `http://localhost:8080/` và lệnh health trong mục 3.4.
-
-Nếu Apache đã chạy, không khởi động thêm bản Apache thứ hai. Trong XAMPP Control Panel cũng có thể nhấn **Start** ở dòng Apache nếu cấu hình XAMPP đang trỏ đúng cổng.
+Script sẽ tự kiểm tra trạng thái: nếu MySQL/Apache đang chạy thì giữ nguyên và mở trình duyệt, nếu dịch vụ nào chưa bật thì sẽ tự động khởi chạy an toàn. Bạn không cần phải nhớ cấu hình lệnh thủ công.
 
 ## 7. Xử lý lỗi thường gặp
 
