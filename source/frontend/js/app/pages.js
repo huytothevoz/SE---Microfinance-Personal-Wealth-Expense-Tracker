@@ -276,71 +276,64 @@ ${txTable(filtered)}</div>`)}\
 
 }
 function walletPage() {
-  return `${heading('wallets', btn('Tạo ví mới', 'wallet-add') + btn('Cập nhật tỷ giá', 'rate-refresh', 'outline', 'repeat'))}\
+  const items = state.walletItems || [];
+  const summary = state.walletSummary || { baseCurrency: 'VND', totalBalanceBase: '0', activeCount: 0, archivedCount: 0, hasUnconvertedBalances: false };
+  const shown = items.filter(wallet => wallet.status === 'ACTIVE' || !state.onlyActiveWallets);
+  const labels = { CASH: 'Tiền mặt', BANK: 'Ngân hàng', E_WALLET: 'Ví điện tử', SAVINGS: 'Tiết kiệm' };
+  const amount = (value, currency) => `${Number(value).toLocaleString('vi-VN', { minimumFractionDigits: currency === 'VND' ? 0 : 2, maximumFractionDigits: currency === 'VND' ? 0 : 2 })} ${currency === 'VND' ? 'đ' : currency}`;
+  const cards = state.walletLoading
+    ? '<div class="empty-state"><span class="empty-icon">◷</span><strong>Đang tải dữ liệu ví</strong></div>'
+    : state.walletError
+      ? `<div class="empty-state"><span class="empty-icon">!</span><strong>Không thể tải dữ liệu ví</strong><p>${safe(state.walletError)}</p><button class="btn btn--outline btn-sm" data-action="wallet-retry">Thử lại</button></div>`
+      : shown.length === 0
+        ? `<div class="empty-state"><span class="empty-icon">◎</span><strong>${items.length ? 'Không có ví phù hợp' : 'Chưa có ví nào'}</strong><p>${items.length ? 'Không có ví lưu trữ để hiển thị.' : 'Tạo ví đầu tiên để bắt đầu quản lý nguồn tiền.'}</p></div>`
+        : `<div class="card-grid section-gap">${shown.map(wallet => `<article class="wallet-card wallet-card--${safe(wallet.colorKey)}">\
+<div class="wallet-header">\
+<div class="wallet-identity"><span class="wallet-icon">${icon(wallet.iconKey)}</span><div><span class="wallet-name">${safe(wallet.name)}</span><span class="wallet-sub">${safe(labels[wallet.type] || wallet.type)} · ${safe(wallet.currency)}</span></div></div>\
+<span class="wallet-type">${wallet.status === 'ARCHIVED' ? 'Đã lưu trữ' : safe(labels[wallet.type] || wallet.type)}</span>\
+</div>\
+<div><div class="wallet-balance">${amount(wallet.balance, wallet.currency)}</div>\
+<div class="wallet-meta">${wallet.baseBalance === null ? `Chưa có tỷ giá quy đổi sang ${safe(wallet.baseCurrency)}` : wallet.currency === wallet.baseCurrency ? `Tiền cơ sở ${safe(wallet.baseCurrency)}` : `≈ ${amount(wallet.baseBalance, wallet.baseCurrency)}`}</div>\
+${wallet.status === 'ACTIVE' ? `<div class="wallet-actions"><button class="text-action" data-action="wallet-adjust" data-wallet-id="${wallet.id}">Thêm / bớt tiền</button><button class="text-action" data-action="wallet-edit" data-wallet-id="${wallet.id}">Chỉnh sửa</button><button class="text-action" data-action="wallet-archive-real" data-wallet-id="${wallet.id}">Lưu trữ</button></div>` : `<div class="wallet-actions"><button class="text-action text-action--danger" data-action="wallet-delete-permanent" data-wallet-id="${wallet.id}">Xóa vĩnh viễn</button></div>`}</div></article>`).join('')}</div>`;
+  const foreignRates = items.filter(wallet => wallet.status === 'ACTIVE' && wallet.currency !== wallet.baseCurrency)
+    .filter((wallet, index, rows) => rows.findIndex(item => item.currency === wallet.currency) === index);
+
+  return `${heading('wallets', btn('Tạo ví mới', 'wallet-add-real') + btn('Cập nhật tỷ giá', 'wallet-rates-refresh', 'outline', 'repeat'))}\
 <div class="filter-row">\
 <p class="description">Quản lý tiền mặt, ngân hàng, ví điện tử và tài khoản tiết kiệm. Số dư ngoại tệ được quy đổi khi có tỷ giá hợp lệ.</p>\
-<button class="btn btn--outline btn-sm" data-action="wallet-toggle">\
+${summary.archivedCount > 0 ? `<button class="btn btn--outline btn-sm" data-action="wallet-toggle">\
 ${icon('layers')} ${state.onlyActiveWallets ? 'Hiện ví lưu trữ' : 'Ẩn ví lưu trữ'}\
-</button>\
+</button>` : ''}\
 </div>\
-<div class="card-grid section-gap">\
-${wallets.filter(w => w.active || !state.onlyActiveWallets).map(w => `<article class="wallet-card">\
-<div class="wallet-header">\
-<div>\
-<span class="wallet-name">\
-${w.name}\
-</span>\
-<span class="wallet-sub">\
-${w.number}\
-</span>\
-</div>\
-<span class="wallet-type">\
-${w.type}\
-</span>\
-</div>\
-<div>\
-<div class="wallet-balance">\
-${w.currency === 'USD' ? w.balance + ' USD' : money(w.balance)}\
-</div>\
-<div class="wallet-meta">\
-${w.currency === 'USD' ? `≈ ${money(w.baseBalance)}` : `Tiền tệ ${w.currency}`} ${!w.active ? '· Đã lưu trữ' : ''}</div>${w.active && w.balance === 0 ? `<button class="text-action" style="margin-top:9px" data-action="wallet-archive">Lưu trữ ví →</button>` : w.active ? `<button class="text-action" style="margin-top:9px" data-action="wallet-archive">Quản lý / lưu trữ →</button>` : `<button class="text-action" style="margin-top:9px" data-action="wallet-archive">Xem lịch sử ví →</button>`}</div></article>`).join('')}\
-</div>\
+${cards}\
 <div class="info-grid">\
 ${panel('Tổng số dư các ví',
     'Chưa bao gồm tài sản vàng',
     `<div class="metric-list">\
 <div class="metric-item">\
-<span>Tổng số dư quy đổi (VND)</span>\
-<strong>\
-${money(91550000)}\
-</strong>\
+<span>Tổng số dư quy đổi (${safe(summary.baseCurrency)})</span>\
+<strong>${amount(summary.totalBalanceBase, summary.baseCurrency)}</strong>\
 </div>\
 <div class="metric-item">\
 <span>Ví đang sử dụng</span>\
-<strong>5</strong>\
+<strong>${summary.activeCount}</strong>\
 </div>\
 <div class="metric-item">\
 <span>Ví đã lưu trữ</span>\
-<strong>1</strong>\
+<strong>${summary.archivedCount}</strong>\
 </div>\
 </div>`)}${panel('Quy đổi tiền tệ',
-      'Tỷ giá tham khảo',
+      'Tỷ giá mới nhất trong hệ thống',
       `<div class="metric-list">\
 <div class="metric-item">\
-<span>VND (tiền cơ sở)</span>\
+<span>${safe(summary.baseCurrency)} (tiền cơ sở)</span>\
 <strong>1</strong>\
 </div>\
-<div class="metric-item">\
-<span>USD → VND</span>\
-<strong>26.000 VND / USD</strong>\
-</div>\
-<div class="metric-item">\
-<span>Ghi nhận tỷ giá</span>\
-<strong>Lưu tỷ giá tại thời điểm ghi sổ</strong>\
-</div>\
+${foreignRates.length ? foreignRates.map(wallet => `<div class="metric-item"><span>${safe(wallet.currency)} → ${safe(wallet.baseCurrency)}<small>${wallet.rateProvider === 'VIETCOMBANK_TRANSFER' ? 'Vietcombank · tỷ giá chuyển khoản' : safe(wallet.rateProvider || 'Nguồn hệ thống')}</small></span><strong>${wallet.conversionRate === null ? 'Chưa có tỷ giá' : Number(wallet.conversionRate).toLocaleString('vi-VN', { maximumFractionDigits: 8 })}</strong></div>`).join('') : '<div class="metric-item"><span>Ngoại tệ đang theo dõi</span><strong>Không có</strong></div>'}\
 </div>`)}\
 </div>\
-<div class="hint-box" style="margin-top:17px">Chỉ lưu trữ ví không còn số dư và không liên kết lịch định kỳ đang hoạt động. Số dư ban đầu phải được ghi nhận trong sổ tài chính.</div>`;
+${state.walletRateWarning ? `<div class="hint-box section-gap">Không cập nhật được tỷ giá mới: ${safe(state.walletRateWarning)} Dữ liệu gần nhất trong hệ thống vẫn được sử dụng.</div>` : ''}\
+${summary.hasUnconvertedBalances ? '<div class="hint-box section-gap">Một số số dư ngoại tệ chưa được cộng vào tổng do thiếu tỷ giá hợp lệ.</div>' : ''}`;
 
 }
 function categoryPage() {

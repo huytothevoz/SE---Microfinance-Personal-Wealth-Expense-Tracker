@@ -208,13 +208,23 @@ final class TransactionController
         JsonResponse::success(['rates' => $rates]);
     }
 
+    public function syncRates(Request $request): void
+    {
+        AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        try {
+            JsonResponse::success($this->fxService->syncPublicRates());
+        } catch (RuntimeException $error) {
+            JsonResponse::error('RATE_PROVIDER_UNAVAILABLE', $error->getMessage(), 503);
+        }
+    }
+
     public function recordRate(Request $request): void
     {
         AuthContext::requireAdmin(AuthContext::getUserId($request));
         $body = $request->getBody();
         $from = (string) ($body['from'] ?? '');
         $to = (string) ($body['to'] ?? 'VND');
-        $rate = (float) ($body['rate'] ?? 0);
+        $rate = trim((string) ($body['rate'] ?? ''));
         $provider = (string) ($body['provider'] ?? 'MANUAL');
 
         try {

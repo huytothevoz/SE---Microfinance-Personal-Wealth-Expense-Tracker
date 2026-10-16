@@ -120,9 +120,9 @@ OTP được gửi **đến email người dùng yêu cầu đặt lại mật k
 
 Đăng nhập rồi mở mục Ví, Giao dịch, Danh mục, Ngân sách và Định kỳ để kiểm tra giao diện, điều hướng và hiển thị trên desktop/mobile.
 
-**Giới hạn hiện tại:** một số phân hệ trong dashboard là giao diện demo phía frontend, chưa nối với API lưu dữ liệu thật. Không xem thao tác trên các màn hình đó là bằng chứng dữ liệu đã được ghi vào MySQL. Dùng bộ kiểm thử backend ở mục 5 để kiểm tra logic FR03–FR06.
+Màn hình Ví & tài khoản đã sử dụng dữ liệu thật theo user đăng nhập. Một số phân hệ khác trong dashboard vẫn là giao diện demo phía frontend; không xem thao tác trên các màn hình đó là bằng chứng dữ liệu đã được ghi vào MySQL.
 
-## 5. Chạy kiểm thử backend FR03–FR06
+## 5. Chạy kiểm thử backend FR02–FR06
 
 Sau khi cài dependencies thành công, chạy trong PowerShell:
 
@@ -132,7 +132,7 @@ Sau khi cài dependencies thành công, chạy trong PowerShell:
 
 Chạy từ thư mục gốc repository. Nếu XAMPP ở đường dẫn khác, đổi đường dẫn `php.exe`. Bộ test dùng SQLite in-memory và không cần sửa database MySQL của ứng dụng.
 
-Kết quả mong đợi có dòng tổng kết `36 PASSED, 0 FAILED` (số lượng có thể thay đổi khi nhóm bổ sung test) và tiến trình kết thúc không có lỗi.
+Kết quả mong đợi có dòng tổng kết `51 PASSED, 0 FAILED` và tiến trình kết thúc không có lỗi.
 
 ## 6. Khởi động ứng dụng hàng ngày
 
@@ -173,7 +173,9 @@ Không gửi `config.local.php`, mật khẩu Gmail/App Password, OTP, cookie đ
 - `source/frontend/js/services/auth-api.js`: dịch vụ xác thực.
 - `source/frontend/js/app/main.js`: khởi động ứng dụng, điều hướng và sự kiện.
 - `source/frontend/js/app/pages.js`: các màn hình giao diện.
+- `source/frontend/js/app/wallets.js`: trạng thái và thao tác của màn hình Ví & tài khoản.
 - `source/frontend/js/app/forms.js`: trường biểu mẫu cho các thao tác chưa nối API.
+- `source/frontend/js/services/wallet-api.js`: dịch vụ API cho FR02.
 - `source/frontend/js/app/ui-core.js`: thành phần UI dùng chung.
 - `source/frontend/js/data/fixtures.js`: dữ liệu tĩnh trong màn hình còn chưa kết nối API; **không phải số dư thật**.
 - `source/backend/`: backend PHP và API đã có. Không chuyển logic nghiệp vụ sang frontend.

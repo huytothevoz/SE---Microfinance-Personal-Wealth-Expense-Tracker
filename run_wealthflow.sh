@@ -2,155 +2,208 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd -- "$(dirname -- "$0")" && pwd)"
+SCRIPT_PATH="$PROJECT_ROOT/$(basename -- "$0")"
 XAMPP_DIR="${XAMPP_DIR:-/opt/lampp}"
 XAMPP_PORT="${XAMPP_PORT:-8080}"
 PHP_BIN="$XAMPP_DIR/bin/php"
-MYSQL_BIN="$XAMPP_DIR/bin/mysql"
+MYSQLADMIN_BIN="$XAMPP_DIR/bin/mysqladmin"
 DEST="$XAMPP_DIR/htdocs/wealthflow"
 SOURCE_DIR="$PROJECT_ROOT/source"
+APP_URL="http://localhost:$XAMPP_PORT"
+
+info() { printf '[INFO] %s\n' "$*"; }
+ok() { printf '[OK]   %s\n' "$*"; }
+die() { printf '[ERR]  %s\n' "$*" >&2; exit 1; }
 
 echo "==============================================================="
 echo "       WEALTHFLOW RUNNER (LINUX / XAMPP)                       "
 echo "==============================================================="
 
-# Kiem tra quyen root
+[[ "$XAMPP_PORT" =~ ^[0-9]+$ ]] && ((XAMPP_PORT >= 1 && XAMPP_PORT <= 65535)) \
+    || die "XAMPP_PORT phai la mot cong hop le (1-65535)."
+[[ -d "$SOURCE_DIR/backend" ]] || die "Khong tim thay ma nguon tai $SOURCE_DIR."
+[[ -d "$XAMPP_DIR" && -x "$PHP_BIN" && -x "$XAMPP_DIR/lampp" ]] \
+    || die "Khong tim thay XAMPP tai $XAMPP_DIR. Hay cai XAMPP hoac dat bien XAMPP_DIR."
+
+# XAMPP needs administrator privileges. Use the terminal when one exists; when
+# launched from a GUI/Codex session, pkexec displays the desktop password dialog.
 if [[ "$(id -u)" != 0 ]]; then
-    echo "[!] Tren Linux, XAMPP can quyen quan tri de bat Apache/MySQL."
-    echo "[*] Dang chuyen quyen sang sudo..."
-    exec sudo -E bash "$0" "$@"
+    info "Can quyen quan tri de cau hinh va khoi dong XAMPP."
+    if [[ -t 0 && -t 1 ]]; then
+        exec sudo --preserve-env=XAMPP_DIR,XAMPP_PORT,DISPLAY,XAUTHORITY bash "$SCRIPT_PATH" "$@"
+    fi
+    if command -v pkexec >/dev/null 2>&1 && [[ -n "${DISPLAY:-}" ]]; then
+        exec pkexec env \
+            XAMPP_DIR="$XAMPP_DIR" XAMPP_PORT="$XAMPP_PORT" \
+            DISPLAY="$DISPLAY" XAUTHORITY="${XAUTHORITY:-}" \
+            bash "$SCRIPT_PATH" "$@"
+    fi
+    die "Hay chay lenh: sudo -E bash \"$SCRIPT_PATH\""
 fi
 
-# Kiem tra thu muc XAMPP
-if [[ ! -d "$XAMPP_DIR" || ! -x "$PHP_BIN" || ! -x "$XAMPP_DIR/lampp" ]]; then
-    echo "[ERR] Khong tim thay XAMPP tai $XAMPP_DIR. Vui long cai dat XAMPP (/opt/lampp) hoac dat bien XAMPP_DIR."
-    exit 1
-fi
-echo "[INFO] Thu muc XAMPP: $XAMPP_DIR"
-
+info "Thu muc XAMPP: $XAMPP_DIR"
 export PATH="$XAMPP_DIR/bin:$PATH"
 export COMPOSER_ALLOW_SUPERUSER=1
 
-# 1. Kiem tra va bat MySQL
-echo "[INFO] Kiem tra dich vu MySQL..."
-if ! "$XAMPP_DIR/bin/mysqladmin" ping --silent >/dev/null 2>&1; then
-    echo "[INFO] Dang khoi dong MySQL..."
+# Start MySQL first because the application setup applies pending migrations.
+info "Kiem tra dich vu MySQL..."
+if ! "$MYSQLADMIN_BIN" ping --silent >/dev/null 2>&1; then
+    info "Dang khoi dong MySQL..."
     "$XAMPP_DIR/lampp" startmysql
-    ready=0
-    for ((attempt=0; attempt<20; attempt++)); do
-        if "$XAMPP_DIR/bin/mysqladmin" ping --silent >/dev/null 2>&1; then ready=1; break; fi
+    mysql_ready=0
+    for ((attempt=0; attempt<30; attempt++)); do
+        if "$MYSQLADMIN_BIN" ping --silent >/dev/null 2>&1; then
+            mysql_ready=1
+            break
+        fi
         sleep 1
     done
-    if [[ "$ready" != 1 ]]; then
-        echo "[ERR] Khong the khoi dong MySQL. Kiem tra log cua XAMPP."
-        exit 1
-    fi
+    [[ "$mysql_ready" == 1 ]] || die "Khong the khoi dong MySQL. Hay kiem tra $XAMPP_DIR/var/mysql/*.err."
 fi
-echo "[OK]   MySQL dang hoat dong."
+ok "MySQL dang hoat dong."
 
-# 2. Kiem tra dependencies Composer
-if [[ ! -f "$SOURCE_DIR/backend/vendor/autoload.php" ]]; then
-    echo "[INFO] Cai dat dependencies Composer..."
+# Always deploy current source. config.local.php and generated mail previews are
+# intentionally absent from source, so an existing local configuration is kept.
+info "Dong bo ma nguon sang $DEST..."
+mkdir -p "$DEST"
+cp -a "$SOURCE_DIR/." "$DEST/"
+mkdir -p "$DEST/backend/storage"
+
+# Install dependencies in the deployed copy, not in the Git working tree.
+if [[ ! -f "$DEST/backend/vendor/autoload.php" ]]; then
+    info "Cai dat dependencies Composer..."
     COMPOSER_BIN="$(command -v composer || true)"
-    if [[ -z "$COMPOSER_BIN" ]]; then
-        if [[ ! -f "$PROJECT_ROOT/composer.phar" ]]; then
-            echo "[INFO] Dang tai composer.phar..."
-            curl -sS https://getcomposer.org/download/latest-stable/composer.phar -o "$PROJECT_ROOT/composer.phar"
+    if [[ -n "$COMPOSER_BIN" ]]; then
+        "$PHP_BIN" -d 'include_path=.:/usr/share/php' "$COMPOSER_BIN" install \
+            --working-dir="$DEST/backend" --no-dev --prefer-dist --no-interaction --optimize-autoloader
+    else
+        COMPOSER_PHAR="${TMPDIR:-/tmp}/wealthflow-composer.phar"
+        if [[ ! -f "$COMPOSER_PHAR" ]]; then
+            command -v curl >/dev/null 2>&1 || die "Can curl hoac Composer de cai dependencies."
+            curl --fail --show-error --location \
+                https://getcomposer.org/download/latest-stable/composer.phar \
+                --output "$COMPOSER_PHAR"
         fi
-        COMPOSER_BIN="$PROJECT_ROOT/composer.phar"
-    fi
-    "$PHP_BIN" -d 'include_path=.:/usr/share/php' "$COMPOSER_BIN" install --working-dir="$SOURCE_DIR/backend" --no-dev --prefer-dist --no-interaction --optimize-autoloader
-fi
-
-# 3. Kiem tra va deploy source sang htdocs/wealthflow
-if [[ ! -f "$DEST/index.html" || ! -f "$DEST/backend/config.local.php" ]]; then
-    echo "[INFO] Dong bo ma nguon sang $DEST..."
-    mkdir -p "$DEST"
-    cp -r "$SOURCE_DIR/"* "$DEST/"
-    if [[ ! -f "$DEST/backend/config.local.php" && -f "$DEST/backend/config.example.php" ]]; then
-        cp "$DEST/backend/config.example.php" "$DEST/backend/config.local.php"
+        "$PHP_BIN" "$COMPOSER_PHAR" install --working-dir="$DEST/backend" \
+            --no-dev --prefer-dist --no-interaction --optimize-autoloader
     fi
 fi
 
-# Phan quyen cho Apache
-APACHE_GROUP="$(awk '$1 == "Group" { print $2; exit }' "$XAMPP_DIR/etc/httpd.conf" 2>/dev/null || echo daemon)"
+# setup.php creates config.local.php with a random APP_KEY on first run and only
+# applies migrations that have not already been recorded.
+info "Kiem tra cau hinh va migrations..."
+APP_URL="$APP_URL" APP_ENV=local "$PHP_BIN" "$DEST/backend/bin/setup.php"
+
+HTTPD_CONF="$XAMPP_DIR/etc/httpd.conf"
+[[ -f "$HTTPD_CONF" ]] || die "Khong tim thay cau hinh Apache: $HTTPD_CONF"
+
+need_restart=0
+if ! grep -Eq "^[[:space:]]*Listen[[:space:]]+(127\\.0\\.0\\.1:)?${XAMPP_PORT}[[:space:]]*$" "$HTTPD_CONF"; then
+    info "Cau hinh Apache lang nghe tai 127.0.0.1:$XAMPP_PORT..."
+    sed -i -E "0,/^[[:space:]]*Listen[[:space:]]+([0-9.]+:)?[0-9]+[[:space:]]*$/s//Listen 127.0.0.1:$XAMPP_PORT/" "$HTTPD_CONF"
+    need_restart=1
+fi
+
+if ! grep -Fq "DocumentRoot \"$DEST\"" "$HTTPD_CONF"; then
+    info "Cau hinh DocumentRoot $DEST..."
+    sed -i -E "s|^[[:space:]]*DocumentRoot[[:space:]]+\"[^\"]+\"[[:space:]]*$|DocumentRoot \"$DEST\"|" "$HTTPD_CONF"
+    need_restart=1
+fi
+
+# Remove the routing block generated by the old runner once. Its AllowOverride
+# setting conflicts with the managed block below.
+if grep -q '^# BEGIN WEALTHFLOW$' "$HTTPD_CONF"; then
+    sed -i '/^# BEGIN WEALTHFLOW$/,/^# END WEALTHFLOW$/d' "$HTTPD_CONF"
+    need_restart=1
+fi
+
+# Add the routing/security block only when missing. Rewriting it on every run
+# needlessly restarted Apache and could race with its still-running old PID.
+if ! grep -q '^# BEGIN WEALTHFLOW RUNNER$' "$HTTPD_CONF"; then
+    cat >> "$HTTPD_CONF" <<EOF
+
+# BEGIN WEALTHFLOW RUNNER
+<Directory "$DEST">
+    Options -Indexes +FollowSymLinks
+    AllowOverride None
+    Require all granted
+    RewriteEngine On
+    RewriteRule ^(?:backend|database)(?:/|$) - [F,END,NC]
+    RewriteRule (^|/)\. - [F,END]
+    RewriteRule ^api/(.*)$ backend/public/index.php?route=\$1 [END,QSA]
+    RewriteRule ^app\.html$ backend/app.php [END]
+    RewriteRule ^(?:index\.html|app\.php)$ - [END]
+    RewriteRule ^frontend/(?:css|js|assets)/[A-Za-z0-9_./-]+\.(?:css|js|svg|png|jpe?g)$ - [END]
+    RewriteRule ^$ - [END]
+    RewriteRule . - [F,END]
+</Directory>
+# END WEALTHFLOW RUNNER
+EOF
+    need_restart=1
+fi
+
+"$XAMPP_DIR/bin/httpd" -t -f "$HTTPD_CONF" \
+    || die "Cau hinh Apache khong hop le."
+
+APACHE_GROUP="$(awk '$1 == "Group" { print $2; exit }' "$HTTPD_CONF" 2>/dev/null || true)"
 if [[ -n "$APACHE_GROUP" ]]; then
     chgrp -R "$APACHE_GROUP" "$DEST/backend/storage" "$DEST/backend/config.local.php" 2>/dev/null || true
     chmod 640 "$DEST/backend/config.local.php" 2>/dev/null || true
     chmod 2770 "$DEST/backend/storage" 2>/dev/null || true
 fi
 
-# 4. Kiem tra database wealthflow
-has_users=$("$MYSQL_BIN" -u root -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'wealthflow' AND table_name = 'users';" 2>/dev/null | grep -c "1" || true)
-if [[ "$has_users" -eq 0 ]]; then
-    echo "[INFO] Khoi tao database 'wealthflow' va migrations..."
-    "$MYSQL_BIN" -u root -e "CREATE DATABASE IF NOT EXISTS wealthflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-    for f in "$SOURCE_DIR/database"/*.sql; do
-        if [[ -f "$f" ]]; then
-            echo "  -> Chay migration: $(basename "$f")"
-            "$MYSQL_BIN" -u root wealthflow < "$f"
+if ss -ltn 2>/dev/null | grep -Eq ":${XAMPP_PORT}[[:space:]]"; then
+    apache_listening=1
+elif netstat -ltn 2>/dev/null | grep -Eq ":${XAMPP_PORT}[[:space:]]"; then
+    apache_listening=1
+else
+    apache_listening=0
+fi
+
+if [[ "$need_restart" == 1 && "$apache_listening" == 1 ]]; then
+    info "Khoi dong lai Apache tren cong $XAMPP_PORT..."
+    "$XAMPP_DIR/lampp" stopapache
+    apache_stopped=0
+    for ((attempt=0; attempt<50; attempt++)); do
+        if ! ss -ltn 2>/dev/null | grep -Eq ":${XAMPP_PORT}[[:space:]]"; then
+            apache_stopped=1
+            break
         fi
+        sleep 0.2
     done
-fi
-
-# 5. Cau hinh Apache httpd.conf
-HTTPD_CONF="$XAMPP_DIR/etc/httpd.conf"
-need_restart=0
-
-if ! grep -q "Listen .*$XAMPP_PORT" "$HTTPD_CONF"; then
-    echo "[INFO] Cau hinh Listen $XAMPP_PORT trong $HTTPD_CONF..."
-    sed -i -E "s/^Listen [0-9]+/Listen 127.0.0.1:$XAMPP_PORT/" "$HTTPD_CONF"
-    need_restart=1
-fi
-
-if ! grep -q "DocumentRoot \"$DEST\"" "$HTTPD_CONF"; then
-    echo "[INFO] Cau hinh DocumentRoot \"$DEST\" trong $HTTPD_CONF..."
-    sed -i -E "s|^DocumentRoot \".*\"|DocumentRoot \"$DEST\"|" "$HTTPD_CONF"
-    need_restart=1
-fi
-
-if ! grep -q "<Directory \"$DEST\">" "$HTTPD_CONF"; then
-    cat >> "$HTTPD_CONF" <<EOF
-
-<Directory "$DEST">
-    Options Indexes FollowSymLinks ExecCGI Includes
-    AllowOverride All
-    Require all granted
-</Directory>
-EOF
-    need_restart=1
-fi
-
-# 6. Khoi dong Apache
-apache_listening=$(netstat -tlpn 2>/dev/null | grep -c ":$XAMPP_PORT " || ss -tlpn 2>/dev/null | grep -c ":$XAMPP_PORT " || echo 0)
-if [[ "$need_restart" -eq 1 || "$apache_listening" -eq 0 ]]; then
-    echo "[INFO] Dang khoi dong Apache tren cong $XAMPP_PORT..."
-    "$XAMPP_DIR/lampp" stopapache >/dev/null 2>&1 || true
+    [[ "$apache_stopped" == 1 ]] || die "Apache khong dung hoan toan; hay kiem tra $XAMPP_DIR/logs/error_log."
+    "$XAMPP_DIR/lampp" startapache
+elif [[ "$apache_listening" == 0 ]]; then
+    info "Khoi dong Apache tren cong $XAMPP_PORT..."
     "$XAMPP_DIR/lampp" startapache
 fi
 
-# 7. Kiem tra API Health
-echo "[OK]   Kiem tra ket noi..."
-if command -v curl >/dev/null 2>&1; then
-    curl --retry 3 --retry-connrefused --fail --silent "http://localhost:$XAMPP_PORT/api/health" >/dev/null 2>&1 || true
+info "Kiem tra API Health..."
+command -v curl >/dev/null 2>&1 || die "Can curl de kiem tra API."
+api_ready=0
+for ((attempt=0; attempt<20; attempt++)); do
+    if curl --connect-timeout 2 --max-time 3 --fail --silent \
+        "$APP_URL/api/health" >/dev/null 2>&1; then
+        api_ready=1
+        break
+    fi
+    sleep 1
+done
+if [[ "$api_ready" != 1 ]]; then
+    die "API Health khong phan hoi. Hay kiem tra $XAMPP_DIR/logs/error_log."
 fi
+ok "API Health hoat dong."
 
 echo ""
 echo "==============================================================="
 echo "          WEALTHFLOW DA SAN SANG DE SU DUNG!                   "
 echo "==============================================================="
-echo "  [+] Trang chu:      http://localhost:$XAMPP_PORT/"
-echo "  [+] Dashboard App:  http://localhost:$XAMPP_PORT/app.html"
-echo "  [+] API Health:     http://localhost:$XAMPP_PORT/api/health"
+echo "  [+] Trang chu:      $APP_URL/"
+echo "  [+] Dashboard App:  $APP_URL/app.html"
+echo "  [+] API Health:     $APP_URL/api/health"
 echo "---------------------------------------------------------------"
 echo "  [+] TAI KHOAN MAU (DEMO):"
 echo "      Email:    user1@gmail.com"
 echo "      Mat khau: User1234"
 echo "==============================================================="
 echo ""
-
-# Tu dong mo trinh duyet neu co GUI
-if [[ -n "${DISPLAY:-}" ]]; then
-    if command -v xdg-open >/dev/null 2>&1; then
-        xdg-open "http://localhost:$XAMPP_PORT/" >/dev/null 2>&1 &
-    fi
-fi

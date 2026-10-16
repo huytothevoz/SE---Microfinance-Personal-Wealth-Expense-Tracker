@@ -3,6 +3,7 @@ import { createPages } from './pages.js';
 import { FIELDS } from './forms.js';
 import { transactions } from '../data/fixtures.js';
 import { authApi, errorMessage } from '../services/auth-api.js';
+import { createWalletFeature } from './wallets.js';
 
 let currentUser;
 try {
@@ -27,10 +28,17 @@ const state = {
   txFilter: 'all',
   search: '',
   onlyActiveWallets: true,
-  reportRange: '6m'
+  reportRange: '6m',
+  walletItems: [],
+  walletSummary: null,
+  walletLoading: false,
+  walletError: '',
+  walletRateWarning: '',
+  walletRatesSynced: false
 
 };
 const app = document.querySelector('#app-content'); const nav = document.querySelector('#sidebar-nav'); const sidebar = document.querySelector('#sidebar'); const dialog = document.querySelector('#action-dialog');
+let walletFeature;
 function heading(id, buttons = '') {
   const [name, description] = META[id];
   return `<div class="page-heading">\
@@ -84,6 +92,7 @@ function navigate(page) {
   renderNav();
   document.querySelector('#breadcrumb-name').textContent = META[page][0];
   app.innerHTML = PAGES[page]();
+  if (page === 'wallets') walletFeature?.load();
   closeSidebar();
   const hash = '#' + page;
   if (location.hash !== hash) history.replaceState(null, '', hash);
@@ -97,6 +106,12 @@ function closeSidebar() {
 
 }
 const { PAGES, txTable } = createPages({ state, heading, btn, panel, currentUser });
+walletFeature = createWalletFeature({
+  state,
+  dialog,
+  toast,
+  render: () => { if (state.page === 'wallets') app.innerHTML = PAGES.wallets(); }
+});
 function toast(message) {
   const stack = document.querySelector('#toast-stack');
   const item = document.createElement('div');
@@ -258,7 +273,8 @@ function applyTransactionSearch() {
   if (target) target.innerHTML = txTable(filtered);
 
 }
-function handleAction(action) {
+function handleAction(action, trigger) {
+  if (walletFeature.handleAction(action, trigger)) return;
   if (action === 'password') { openPasswordForm(); return; }
   if (action === 'logout') {
     authApi('logout', {}).then(() => location.replace('index.html?auth=login')).catch(error => toast(errorMessage(error)));
@@ -349,7 +365,7 @@ document.addEventListener('click', event => {
   }
   const action = event.target.closest('[data-action]');
   if (action) {
-    handleAction(action.dataset.action);
+    handleAction(action.dataset.action, action);
     return;
 
   }
@@ -364,7 +380,12 @@ document.addEventListener('input', event => {
   }
 
 });
-document.addEventListener('submit', event => {
+document.addEventListener('submit', async event => {
+  if (['wallet-create-form', 'wallet-adjust-form', 'wallet-edit-form', 'wallet-archive-form', 'wallet-delete-form'].includes(event.target.id)) {
+    event.preventDefault();
+    await walletFeature.handleSubmit(event.target);
+    return;
+  }
   if (event.target.id !== 'action-form') return;
   event.preventDefault();
   dialog.close();

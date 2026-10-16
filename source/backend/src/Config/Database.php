@@ -63,13 +63,19 @@ final class Database
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
+            active_name_key TEXT NULL,
             wallet_type TEXT NOT NULL,
             currency TEXT NOT NULL DEFAULT 'VND',
             cached_balance REAL NOT NULL DEFAULT 0,
             status TEXT NOT NULL DEFAULT 'ACTIVE',
+            icon_key TEXT NULL,
+            color_key TEXT NULL,
+            archived_at DATETIME NULL,
+            deleted_at DATETIME NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id),
-            UNIQUE (user_id, name)
+            UNIQUE (user_id, active_name_key)
         );
 
         CREATE TABLE IF NOT EXISTS categories (
@@ -94,7 +100,7 @@ final class Database
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             from_currency TEXT NOT NULL,
             to_currency TEXT NOT NULL,
-            rate REAL NOT NULL,
+            rate TEXT NOT NULL,
             effective_at DATETIME NOT NULL,
             provider TEXT NULL
         );
@@ -227,11 +233,12 @@ SQL;
         // Seed default wallets for user 1 if empty
         $stmt = $pdo->query('SELECT COUNT(*) FROM wallets WHERE user_id = 1');
         if ((int) $stmt->fetchColumn() === 0) {
-            $pdo->exec("INSERT INTO wallets (id, user_id, name, wallet_type, currency, cached_balance, status) VALUES
-                (1, 1, 'Ví tiền mặt', 'CASH', 'VND', 2500000, 'ACTIVE'),
-                (2, 1, 'Tài khoản Vietcombank', 'BANK', 'VND', 18450000, 'ACTIVE'),
-                (3, 1, 'Ví MoMo', 'E_WALLET', 'VND', 1200000, 'ACTIVE'),
-                (4, 1, 'Ví ngoại tệ USD', 'BANK', 'USD', 200, 'ACTIVE')");
+            $pdo->exec("INSERT INTO wallets
+                (id, user_id, name, active_name_key, wallet_type, currency, cached_balance, status) VALUES
+                (1, 1, 'Ví tiền mặt', 'ví tiền mặt', 'CASH', 'VND', 2500000, 'ACTIVE'),
+                (2, 1, 'Tài khoản Vietcombank', 'tài khoản vietcombank', 'BANK', 'VND', 18450000, 'ACTIVE'),
+                (3, 1, 'Ví MoMo', 'ví momo', 'E_WALLET', 'VND', 1200000, 'ACTIVE'),
+                (4, 1, 'Ví ngoại tệ USD', 'ví ngoại tệ usd', 'BANK', 'USD', 200, 'ACTIVE')");
         }
 
         // Seed default ledger accounts for user 1

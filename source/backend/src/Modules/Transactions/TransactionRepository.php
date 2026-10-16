@@ -48,8 +48,8 @@ final class TransactionRepository
             $data['status'],
             $data['description'],
             $data['currency'],
-            (float) $data['amount'],
-            (float) $data['fxRateSnapshot'],
+            (string) $data['amount'],
+            (string) $data['fxRateSnapshot'],
             $data['occurredOn'],
             $data['postedAt'],
             $data['originalTransactionId'],
@@ -77,10 +77,10 @@ final class TransactionRepository
             $data['transactionId'],
             $data['ledgerAccountId'],
             $data['entrySide'],
-            (float) $data['amountOriginal'],
+            (string) $data['amountOriginal'],
             $data['currency'],
-            (float) $data['amountBase'],
-            (float) $data['fxRateSnapshot'],
+            (string) $data['amountBase'],
+            (string) $data['fxRateSnapshot'],
         ]);
         return (int) $this->pdo->lastInsertId();
     }

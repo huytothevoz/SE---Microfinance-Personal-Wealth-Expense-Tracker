@@ -1,12 +1,5 @@
 /** Fields for the planned business workflows. These forms never write to the database until an API handler is available. */
 export const FIELDS = {
-  'wallet-archive': {
-    title: 'Quản lý & lưu trữ ví',
-    desc: 'Chỉ lưu trữ ví số dư bằng 0',
-    fields: [],
-    note: 'Chỉ lưu trữ ví không còn số dư và không liên kết lịch định kỳ đang hoạt động. Lịch sử của ví được bảo toàn.'
-
-  },
   'budget-manage': {
     title: 'Chỉnh sửa / lưu trữ ngân sách',
     desc: 'Quản lý hạn mức',
@@ -58,13 +51,6 @@ export const FIELDS = {
     note: 'Việc thanh lý vàng cần ghi nhận cả biến động tài sản và dòng tiền.'
 
   },
-  'rate-refresh': {
-    title: 'Cập nhật tỷ giá',
-    desc: 'Dự kiến đồng bộ qua',
-    fields: [],
-    note: 'Tỷ giá chỉ được dùng cho quy đổi khi đã xác định được nguồn và thời điểm cập nhật đáng tin cậy.'
-
-  },
   'tx-add': {
     title: 'Ghi nhận giao dịch',
     desc: 'Tạo giao dịch Thu / Chi / Bản nháp',
@@ -103,30 +89,6 @@ export const FIELDS = {
       ['amount', 'Số tiền nguồn', 'number'],
       ['receive', 'Số tiền đích nếu khác tiền tệ', 'number'],
       ['note', 'Ghi chú', 'text']
-
-    ]
-
-  },
-  'wallet-add': {
-    title: 'Tạo ví / tài khoản',
-    desc: 'Mở ví, ghi nhận số dư đầu kỳ',
-    fields: [
-      ['name', 'Tên ví', 'text'],
-      [
-        'type',
-        'Loại ví',
-        'select',
-        [
-          'Tiền mặt',
-          'Ngân hàng',
-          'Ví điện tử',
-          'Tiết kiệm',
-          'Thẻ tín dụng (ví nợ)'
-
-        ]
-      ],
-      ['currency', 'Tiền tệ', 'select', ['VND', 'USD', 'EUR']],
-      ['balance', 'Số dư đầu kỳ', 'number']
 
     ]
 

@@ -59,4 +59,16 @@ final class AuthContext
             throw new ApiException('FORBIDDEN', 'Bạn không có quyền thực hiện thao tác này.', 403);
         }
     }
+
+    public static function requirePersonalUser(int $userId): int
+    {
+        $user = self::getUser($userId);
+        if ($user === null) {
+            throw new ApiException('UNAUTHORIZED', 'Phiên đăng nhập không hợp lệ.', 401);
+        }
+        if (strtoupper((string) $user['role']) === 'ADMIN') {
+            throw new ApiException('FORBIDDEN', 'Tài khoản quản trị không được truy cập sổ sách cá nhân.', 403);
+        }
+        return $userId;
+    }
 }
