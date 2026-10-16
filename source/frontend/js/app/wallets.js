@@ -15,14 +15,43 @@ const ICON_OPTIONS = [
 ];
 const COLOR_OPTIONS = [
   ['blue', 'Xanh dương'],
+  ['navy', 'Xanh navy'],
+  ['ocean', 'Xanh biển'],
+  ['cyan', 'Xanh cyan'],
+  ['teal', 'Xanh ngọc'],
   ['green', 'Xanh lá'],
-  ['orange', 'Cam'],
-  ['slate', 'Xám']
+  ['emerald', 'Lục bảo'],
+  ['forest', 'Xanh rừng'],
+  ['amber', 'Hổ phách'],
+  ['orange', 'Cam đất'],
+  ['coral', 'San hô'],
+  ['rose', 'Hồng đỏ'],
+  ['purple', 'Tím'],
+  ['indigo', 'Chàm'],
+  ['slate', 'Xám xanh'],
+  ['graphite', 'Than chì']
 ];
 
 const options = (items, selected = '') => items.map(([value, label]) =>
   `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`
 ).join('');
+
+const colorOptions = (selected = 'blue') => {
+  const presetExists = COLOR_OPTIONS.some(([value]) => value === selected);
+  const custom = !presetExists && /^#[0-9a-f]{6}$/i.test(selected || '')
+    ? [[selected.toLowerCase(), 'Màu hiện tại']]
+    : [];
+  return [...custom, ...COLOR_OPTIONS].map(([value, label], index) => {
+    const checked = value === selected || (!presetExists && custom.length === 0 && index === 0);
+    const style = value.startsWith('#') ? ` style="--wallet-custom-color:${value}"` : '';
+    const swatchClass = value.startsWith('#') ? 'wallet-color-swatch--custom' : `wallet-color-swatch--${value}`;
+    return `<label class="wallet-color-option" title="${label}">
+      <input type="radio" name="colorKey" value="${value}" ${checked ? 'checked' : ''}>
+      <span class="wallet-color-swatch ${swatchClass}"${style} aria-hidden="true"></span>
+      <span>${label}</span>
+    </label>`;
+  }).join('');
+};
 
 export function createWalletFeature({ state, dialog, toast, render }) {
   async function load(forceRateSync = false) {
@@ -57,18 +86,18 @@ export function createWalletFeature({ state, dialog, toast, render }) {
     document.querySelector('#modal-overline').textContent = overline;
     document.querySelector('#modal-title').textContent = title;
     document.querySelector('#modal-content').innerHTML = content;
-    dialog.showModal();
+    if (!dialog.open) dialog.showModal();
   }
 
   function openCreate() {
-    showDialog('FR02 · TẠO VÍ', 'Tạo ví / tài khoản', `<form id="wallet-create-form">
+    showDialog('TẠO VÍ', 'Tạo ví / tài khoản', `<form id="wallet-create-form">
       <div class="form-grid">
         <div class="field"><label for="wallet-name">Tên ví *</label><input id="wallet-name" name="name" maxlength="120" required autocomplete="off"></div>
         <div class="field"><label for="wallet-type">Loại ví *</label><select id="wallet-type" name="type" required>${options(TYPE_OPTIONS)}</select></div>
         <div class="field"><label for="wallet-currency">Tiền tệ *</label><select id="wallet-currency" name="currency" required>${options([['VND', 'VND'], ['USD', 'USD'], ['EUR', 'EUR']])}</select></div>
         <div class="field"><label for="wallet-opening-balance">Số dư đầu kỳ *</label><input id="wallet-opening-balance" name="openingBalance" type="number" min="0" step="0.01" value="0" required></div>
         <div class="field"><label for="wallet-icon">Biểu tượng</label><select id="wallet-icon" name="iconKey">${options(ICON_OPTIONS)}</select></div>
-        <div class="field"><label for="wallet-color">Màu hiển thị</label><select id="wallet-color" name="colorKey">${options(COLOR_OPTIONS)}</select></div>
+        <fieldset class="field form-grid-span wallet-color-field"><legend>Màu hiển thị</legend><div class="wallet-color-grid">${colorOptions()}</div></fieldset>
       </div>
       <p class="form-hint">Số dư đầu kỳ lớn hơn 0 được ghi nhận bằng bút toán đối ứng Vốn chủ sở hữu.</p>
       <p id="wallet-form-feedback" role="status" aria-live="polite"></p>
@@ -77,13 +106,17 @@ export function createWalletFeature({ state, dialog, toast, render }) {
   }
 
   function openEdit(wallet) {
-    showDialog('FR02 · CẬP NHẬT VÍ', 'Chỉnh sửa ví', `<form id="wallet-edit-form" data-wallet-id="${wallet.id}">
+    showDialog('CHỈNH SỬA VÍ', 'Chỉnh sửa ví', `<form id="wallet-edit-form" data-wallet-id="${wallet.id}">
       <div class="form-grid">
         <div class="field"><label for="wallet-edit-name">Tên ví *</label><input id="wallet-edit-name" name="name" maxlength="120" value="${safe(wallet.name)}" required autocomplete="off"></div>
         <div class="field"><label for="wallet-edit-icon">Biểu tượng</label><select id="wallet-edit-icon" name="iconKey">${options(ICON_OPTIONS, wallet.iconKey)}</select></div>
-        <div class="field"><label for="wallet-edit-color">Màu hiển thị</label><select id="wallet-edit-color" name="colorKey">${options(COLOR_OPTIONS, wallet.colorKey)}</select></div>
+        <fieldset class="field form-grid-span wallet-color-field"><legend>Màu hiển thị</legend><div class="wallet-color-grid">${colorOptions(wallet.colorKey)}</div></fieldset>
       </div>
       <p class="form-hint">Loại ví, tiền tệ và số dư không thể chỉnh sửa trực tiếp để bảo toàn sổ tài chính.</p>
+      <div class="wallet-edit-actions" aria-label="Thao tác với ví">
+        <button type="button" class="btn btn--outline btn-sm" data-action="wallet-adjust" data-wallet-id="${wallet.id}">Thêm / bớt tiền</button>
+        <button type="button" class="btn btn--outline btn-sm" data-action="wallet-archive-real" data-wallet-id="${wallet.id}">Lưu trữ ví</button>
+      </div>
       <p id="wallet-form-feedback" role="status" aria-live="polite"></p>
       <div class="modal-footer"><button type="button" class="btn btn--outline btn-sm" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary btn-sm">Lưu thay đổi</button></div>
     </form>`);
@@ -91,7 +124,7 @@ export function createWalletFeature({ state, dialog, toast, render }) {
 
   function openAdjustment(wallet) {
     const step = wallet.currency === 'VND' ? '1' : '0.01';
-    showDialog('FR02 · ĐIỀU CHỈNH SỐ DƯ', 'Thêm hoặc bớt tiền', `<form id="wallet-adjust-form" data-wallet-id="${wallet.id}">
+    showDialog('ĐIỀU CHỈNH SỐ DƯ', 'Thêm hoặc bớt tiền', `<form id="wallet-adjust-form" data-wallet-id="${wallet.id}">
       <p class="form-hint">Mỗi điều chỉnh tạo một giao dịch và bút toán đối ứng; lịch sử không bị ghi đè.</p>
       <div class="form-grid">
         <div class="field"><label for="wallet-adjust-direction">Thao tác *</label><select id="wallet-adjust-direction" name="direction" required><option value="INCREASE">Thêm tiền</option><option value="DECREASE">Bớt tiền</option></select></div>
@@ -104,7 +137,7 @@ export function createWalletFeature({ state, dialog, toast, render }) {
   }
 
   function openArchive(wallet) {
-    showDialog('FR02 · LƯU TRỮ VÍ', 'Lưu trữ ví', `<form id="wallet-archive-form" data-wallet-id="${wallet.id}">
+    showDialog('LƯU TRỮ VÍ', 'Lưu trữ ví', `<form id="wallet-archive-form" data-wallet-id="${wallet.id}">
       <p class="description">Lưu trữ “${safe(wallet.name)}”? Ví sẽ được ẩn khỏi danh sách sử dụng nhưng lịch sử tài chính vẫn được bảo toàn.</p>
       <p class="form-hint">Chỉ thực hiện được khi số dư bằng 0 và không còn giao dịch định kỳ hoạt động.</p>
       <p id="wallet-form-feedback" role="status" aria-live="polite"></p>
@@ -113,7 +146,7 @@ export function createWalletFeature({ state, dialog, toast, render }) {
   }
 
   function openPermanentDelete(wallet) {
-    showDialog('FR02 · XÓA VĨNH VIỄN', 'Xóa vĩnh viễn ví', `<form id="wallet-delete-form" data-wallet-id="${wallet.id}">
+    showDialog('XÓA VÍ', 'Xóa vĩnh viễn ví', `<form id="wallet-delete-form" data-wallet-id="${wallet.id}">
       <p class="description">Xóa vĩnh viễn “${safe(wallet.name)}” khỏi danh sách ví? Thao tác này không thể hoàn tác.</p>
       <p class="form-hint">Lịch sử giao dịch và báo cáo tài chính liên quan vẫn được giữ nguyên.</p>
       <p id="wallet-form-feedback" role="status" aria-live="polite"></p>

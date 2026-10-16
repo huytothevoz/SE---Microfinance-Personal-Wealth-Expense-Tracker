@@ -201,14 +201,26 @@ final class TestRunner
         $updatedWallet = $walletService->updateWallet(2, $createdWalletId, [
             'name' => 'Tài khoản FR02',
             'iconKey' => 'bank',
-            'colorKey' => 'green',
+            'colorKey' => 'ocean',
         ]);
         $this->assert(
             'TC-F02.12 Wallet metadata and selected icon are persisted',
             $updatedWallet['wallet']['name'] === 'Tài khoản FR02'
                 && $updatedWallet['wallet']['iconKey'] === 'bank'
-                && $updatedWallet['wallet']['colorKey'] === 'green'
+                && $updatedWallet['wallet']['colorKey'] === 'ocean'
         );
+
+        $invalidColorRejected = false;
+        try {
+            $walletService->updateWallet(2, $createdWalletId, [
+                'name' => 'Tài khoản FR02',
+                'iconKey' => 'bank',
+                'colorKey' => 'red; background: url(test)',
+            ]);
+        } catch (ApiException $error) {
+            $invalidColorRejected = $error->status === 422;
+        }
+        $this->assert('TC-F02.12a Invalid custom color is rejected', $invalidColorRejected);
 
         $nonZeroRejected = false;
         try {

@@ -16,7 +16,10 @@ final class WalletService
     private const TYPES = ['CASH', 'BANK', 'E_WALLET', 'SAVINGS'];
     private const CURRENCIES = ['VND', 'USD', 'EUR'];
     private const ICONS = ['cash', 'bank', 'wallet', 'savings'];
-    private const COLORS = ['blue', 'green', 'orange', 'slate'];
+    private const COLORS = [
+        'blue', 'navy', 'ocean', 'cyan', 'teal', 'green', 'emerald', 'forest',
+        'amber', 'orange', 'coral', 'rose', 'purple', 'indigo', 'slate', 'graphite',
+    ];
 
     private PDO $pdo;
     private WalletRepository $wallets;
@@ -90,7 +93,7 @@ final class WalletService
         $currency = strtoupper(trim((string) ($input['currency'] ?? '')));
         $balance = $this->normalizeAmount($input['openingBalance'] ?? null, $currency);
         $icon = $this->choice((string) ($input['iconKey'] ?? ''), self::ICONS, $this->defaultIcon($type), 'iconKey');
-        $color = $this->choice((string) ($input['colorKey'] ?? ''), self::COLORS, 'blue', 'colorKey');
+        $color = $this->normalizeColor((string) ($input['colorKey'] ?? ''), 'blue');
         $key = $this->validateIdempotencyKey($idempotencyKey);
 
         if (!in_array($type, self::TYPES, true)) {
@@ -210,7 +213,7 @@ final class WalletService
         $name = $this->normalizeName($input['name'] ?? null);
         $nameKey = mb_strtolower($name, 'UTF-8');
         $icon = $this->choice((string) ($input['iconKey'] ?? ''), self::ICONS, (string) $wallet['icon_key'], 'iconKey');
-        $color = $this->choice((string) ($input['colorKey'] ?? ''), self::COLORS, (string) $wallet['color_key'], 'colorKey');
+        $color = $this->normalizeColor((string) ($input['colorKey'] ?? ''), (string) $wallet['color_key']);
         if ($this->wallets->activeNameExists($userId, $nameKey, $walletId)) {
             throw new ApiException('DUPLICATE_WALLET_NAME', 'Tên ví đã tồn tại.', 409, [
                 'name' => 'Tên ví không được trùng với ví đang hoạt động.',
@@ -522,6 +525,20 @@ final class WalletService
             ]);
         }
         return $choice;
+    }
+
+    private function normalizeColor(string $value, string $default): string
+    {
+        $color = strtolower(trim($value));
+        if ($color === '') {
+            return $default;
+        }
+        if (in_array($color, self::COLORS, true) || preg_match('/^#[0-9a-f]{6}$/D', $color)) {
+            return $color;
+        }
+        throw new ApiException('VALIDATION_ERROR', 'Màu hiển thị không hợp lệ.', 422, [
+            'colorKey' => 'Chọn một màu hợp lệ.',
+        ]);
     }
 
     private function defaultIcon(string $type): string

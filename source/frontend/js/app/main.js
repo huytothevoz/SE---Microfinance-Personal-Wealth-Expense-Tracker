@@ -1,9 +1,9 @@
 import { icon, safe, money, USER_NAV, ADMIN_NAV, META } from './ui-core.js';
-import { createPages } from './pages.js';
+import { createPages } from './pages.js?v=wallet-ui-5';
 import { FIELDS } from './forms.js';
 import { transactions } from '../data/fixtures.js';
 import { authApi, errorMessage } from '../services/auth-api.js';
-import { createWalletFeature } from './wallets.js';
+import { createWalletFeature } from './wallets.js?v=wallet-ui-5';
 
 let currentUser;
 try {

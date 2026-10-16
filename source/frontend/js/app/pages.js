@@ -281,20 +281,31 @@ function walletPage() {
   const shown = items.filter(wallet => wallet.status === 'ACTIVE' || !state.onlyActiveWallets);
   const labels = { CASH: 'Tiền mặt', BANK: 'Ngân hàng', E_WALLET: 'Ví điện tử', SAVINGS: 'Tiết kiệm' };
   const amount = (value, currency) => `${Number(value).toLocaleString('vi-VN', { minimumFractionDigits: currency === 'VND' ? 0 : 2, maximumFractionDigits: currency === 'VND' ? 0 : 2 })} ${currency === 'VND' ? 'đ' : currency}`;
+  const cardAttributes = color => {
+    if (!/^#[0-9a-f]{6}$/i.test(color || '')) return `class="wallet-card wallet-card--${safe(color || 'blue')}"`;
+    const red = Number.parseInt(color.slice(1, 3), 16);
+    const green = Number.parseInt(color.slice(3, 5), 16);
+    const blue = Number.parseInt(color.slice(5, 7), 16);
+    const light = red * 0.299 + green * 0.587 + blue * 0.114 > 160;
+    const variables = light
+      ? '--wallet-ink:#102a4d;--wallet-muted:#314b67;--wallet-chip:#0b1f3314;--wallet-danger:#8f1c13'
+      : '--wallet-ink:#fff;--wallet-muted:#d7e3ee;--wallet-chip:#ffffff20;--wallet-danger:#ffd2d2';
+    return `class="wallet-card wallet-card--custom" style="--wallet-color:${color};${variables}"`;
+  };
   const cards = state.walletLoading
     ? '<div class="empty-state"><span class="empty-icon">◷</span><strong>Đang tải dữ liệu ví</strong></div>'
     : state.walletError
       ? `<div class="empty-state"><span class="empty-icon">!</span><strong>Không thể tải dữ liệu ví</strong><p>${safe(state.walletError)}</p><button class="btn btn--outline btn-sm" data-action="wallet-retry">Thử lại</button></div>`
       : shown.length === 0
         ? `<div class="empty-state"><span class="empty-icon">◎</span><strong>${items.length ? 'Không có ví phù hợp' : 'Chưa có ví nào'}</strong><p>${items.length ? 'Không có ví lưu trữ để hiển thị.' : 'Tạo ví đầu tiên để bắt đầu quản lý nguồn tiền.'}</p></div>`
-        : `<div class="card-grid section-gap">${shown.map(wallet => `<article class="wallet-card wallet-card--${safe(wallet.colorKey)}">\
+        : `<div class="card-grid section-gap">${shown.map(wallet => `<article ${cardAttributes(wallet.colorKey)}>\
 <div class="wallet-header">\
 <div class="wallet-identity"><span class="wallet-icon">${icon(wallet.iconKey)}</span><div><span class="wallet-name">${safe(wallet.name)}</span><span class="wallet-sub">${safe(labels[wallet.type] || wallet.type)} · ${safe(wallet.currency)}</span></div></div>\
 <span class="wallet-type">${wallet.status === 'ARCHIVED' ? 'Đã lưu trữ' : safe(labels[wallet.type] || wallet.type)}</span>\
 </div>\
 <div><div class="wallet-balance">${amount(wallet.balance, wallet.currency)}</div>\
 <div class="wallet-meta">${wallet.baseBalance === null ? `Chưa có tỷ giá quy đổi sang ${safe(wallet.baseCurrency)}` : wallet.currency === wallet.baseCurrency ? `Tiền cơ sở ${safe(wallet.baseCurrency)}` : `≈ ${amount(wallet.baseBalance, wallet.baseCurrency)}`}</div>\
-${wallet.status === 'ACTIVE' ? `<div class="wallet-actions"><button class="text-action" data-action="wallet-adjust" data-wallet-id="${wallet.id}">Thêm / bớt tiền</button><button class="text-action" data-action="wallet-edit" data-wallet-id="${wallet.id}">Chỉnh sửa</button><button class="text-action" data-action="wallet-archive-real" data-wallet-id="${wallet.id}">Lưu trữ</button></div>` : `<div class="wallet-actions"><button class="text-action text-action--danger" data-action="wallet-delete-permanent" data-wallet-id="${wallet.id}">Xóa vĩnh viễn</button></div>`}</div></article>`).join('')}</div>`;
+${wallet.status === 'ACTIVE' ? `<div class="wallet-actions"><button class="text-action" data-action="wallet-edit" data-wallet-id="${wallet.id}">Chỉnh sửa ví</button></div>` : `<div class="wallet-actions"><button class="text-action text-action--danger" data-action="wallet-delete-permanent" data-wallet-id="${wallet.id}">Xóa vĩnh viễn</button></div>`}</div></article>`).join('')}</div>`;
   const foreignRates = items.filter(wallet => wallet.status === 'ACTIVE' && wallet.currency !== wallet.baseCurrency)
     .filter((wallet, index, rows) => rows.findIndex(item => item.currency === wallet.currency) === index);
 
