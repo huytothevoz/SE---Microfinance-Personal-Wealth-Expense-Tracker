@@ -21,11 +21,18 @@ os.makedirs(OUT_DIR, exist_ok=True)
 os.makedirs(SOURCES_DIR, exist_ok=True)
 
 TARGETS = [
+    ("cd00_domain_model.mmd", "cd00_domain_model.svg", "Sơ đồ Thực thể Nghiệp vụ Tổng thể (Domain Model)"),
     ("cd01_identity_access.mmd", "cd01_identity_access.svg", "Phân hệ 1: Định danh, Xác thực & Quản trị"),
     ("cd02_wallet_management.mmd", "cd02_wallet_management.svg", "Phân hệ 2: Quản lý Ví tài sản & Số dư Mở sổ"),
     ("cd03_double_entry_ledger.mmd", "cd03_double_entry_ledger.svg", "Phân hệ 3: Ghi nhận Giao dịch & Sổ cái Kế toán kép"),
     ("cd04_reconciliation_csv.mmd", "cd04_reconciliation_csv.svg", "Phân hệ 4: Báo cáo Đối soát Sổ cái & Xuất CSV"),
     ("cd05_recurring_transaction.mmd", "cd05_recurring_transaction.svg", "Phân hệ 5: Quản lý Giao dịch Định kỳ Tự động"),
+    ("cd06_budget_planning.mmd", "cd06_budget_planning.svg", "Phân hệ 6: Thiết lập & Kiểm soát Ngân sách Chi tiêu"),
+    ("cd07_microfinance_loans.mmd", "cd07_microfinance_loans.svg", "Phân hệ 7: Quản lý Khoản vay Vi mô & Phân bổ Gốc/Lãi"),
+    ("cd08_gold_asset_market.mmd", "cd08_gold_asset_market.svg", "Phân hệ 8: Tích lũy Tài sản Vàng & Định giá Thị trường"),
+    ("cd09_goal_saving_earmark.mmd", "cd09_goal_saving_earmark.svg", "Phân hệ 9: Mục tiêu Tiết kiệm & Khóa tiền Earmarking"),
+    ("cd10_networth_analytics.mmd", "cd10_networth_analytics.svg", "Phân hệ 10: Dashboard Sức khỏe Net Worth & Snapshot Nền"),
+    ("cd11_notification_broadcast.mmd", "cd11_notification_broadcast.svg", "Phân hệ 11: Quản trị & Broadcast Thông báo"),
 ]
 
 for idx, (src_file, out_svg, label) in enumerate(TARGETS):
