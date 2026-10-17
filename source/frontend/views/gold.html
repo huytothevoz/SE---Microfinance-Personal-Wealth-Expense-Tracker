@@ -1,0 +1,70 @@
+<div class="page-heading">
+  <div>
+    <h1>Tài sản vàng & tích lũy</h1>
+    <p>Quản lý vàng miếng SJC, vàng nhẫn 9999 theo chỉ/cây và cập nhật giá thị trường tự động.</p>
+  </div>
+  <div class="page-actions">
+    <button type="button" class="btn btn--primary btn-sm" data-action="gold-add">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Thêm tài sản vàng
+    </button>
+    <button type="button" class="btn btn--outline btn-sm" data-action="gold-revalue">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 16l4-5 4 2 5-7"/></svg>
+      Cập nhật định giá
+    </button>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Giá trị tài sản vàng</span>
+      <div class="kpi-icon">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l5 6-11 12L1 9zM1 9h22M6 3l2 6 4 12 4-12 2-6"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="gold-total-value">52.000.000 đ</div>
+    <div class="kpi-desc">
+      <span class="delta">+4,1%</span>Tài sản tích lũy ngoài ví
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Số loại vàng</span>
+      <div class="kpi-icon blue">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="gold-types-count">2 loại</div>
+    <div class="kpi-desc">Nhẫn 9999 · SJC</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Tổng khối lượng</span>
+      <div class="kpi-icon orange">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5c-2-1.5-7-1-7 1.8 0 3 7 1.5 7 4.6 0 3-5 3.4-7 1.7M12 5v14"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="gold-total-weight">5 chỉ</div>
+    <div class="kpi-desc">Đơn vị chỉ vàng</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Ngày định giá</span>
+      <div class="kpi-icon green">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="gold-valuation-date">12/10/2026</div>
+    <div class="kpi-desc">Theo lần định giá gần nhất</div>
+  </div>
+</div>
+
+<div class="card-grid section-gap" id="gold-card-list">
+  <!-- Dynamic gold asset cards rendered by gold.js -->
+</div>
+
+<div class="hint-box">Hỗ trợ theo dõi vàng nhẫn và vàng miếng SJC. Không bao gồm nhà đất, xe cộ hay khấu hao. Định giá vàng có thể biến động và cần dữ liệu thị giá đáng tin cậy khi tích hợp thực tế.</div>

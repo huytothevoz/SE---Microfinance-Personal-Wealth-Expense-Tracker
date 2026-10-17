@@ -1,0 +1,68 @@
+erDiagram
+    %% ========================================================
+    %% ERD04: MICROFINANCE & DEBT MANAGEMENT (FR08)
+    %% ========================================================
+
+    USERS ||--o{ MICRO_LOANS : "quan_ly_vay_no"
+
+    WALLETS ||--o{ MICRO_LOANS : "vi_giai_ngan_thu_hoi"
+
+    MICRO_LOANS ||--o{ LOAN_REPAYMENT_SCHEDULES : "ke_hoach_ky_han"
+    MICRO_LOANS ||--o{ LOAN_PAYMENTS : "lich_su_thanh_toan"
+
+    LOAN_PAYMENTS ||--o| FINANCIAL_TRANSACTIONS : "dinh_khoan_giao_dich"
+
+    USERS {
+        bigint id PK
+        varchar email UK "Email nguoi dung"
+    }
+
+    WALLETS {
+        bigint id PK
+        varchar name "Ten vi tien lien ket"
+        decimal cached_balance "So du vi"
+    }
+
+    MICRO_LOANS {
+        bigint id PK
+        bigint user_id FK "ON DELETE CASCADE"
+        bigint wallet_id FK "ON DELETE SET NULL"
+        varchar title "Tieu de khoan vay"
+        varchar partner_name "Nguoi vay hoac Nguoi cho vay"
+        enum loan_direction "BORROWED / LENT"
+        char currency "ISO-4217 VND"
+        decimal principal_original "No goc ban dau > 0"
+        decimal principal_remaining "No goc con lai >= 0"
+        decimal interest_rate_year "Lai suat nam %"
+        int term_months "Ky han tinh theo thang"
+        date start_date "Ngay giai ngan"
+        date next_due_date "Ngay den han tiep theo"
+        enum status "ACTIVE / PAID_OFF / DEFAULTED"
+    }
+
+    LOAN_REPAYMENT_SCHEDULES {
+        bigint id PK
+        bigint loan_id FK "ON DELETE CASCADE"
+        int period_number "Thu tu ky tra no"
+        date due_date "Ngay den han ky"
+        decimal principal_due "Tien goc phai tra"
+        decimal interest_due "Tien lai phai tra"
+        decimal principal_paid "Tien goc da tra"
+        decimal interest_paid "Tien lai da tra"
+        enum status "PENDING / PARTIAL / PAID / OVERDUE"
+    }
+
+    LOAN_PAYMENTS {
+        bigint id PK
+        bigint loan_id FK "ON DELETE RESTRICT"
+        bigint transaction_id FK "Lien ket giao dich"
+        decimal principal_amount "Can tru no goc >= 0"
+        decimal interest_fee_amount "Tien lai phi >= 0"
+        date paid_on "Ngay tra tien"
+    }
+
+    FINANCIAL_TRANSACTIONS {
+        bigint id PK
+        decimal amount "So tien ghi so"
+        date occurred_on "Ngay thanh toan"
+    }

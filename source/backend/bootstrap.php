@@ -7,4 +7,4 @@ if (!is_file(__DIR__ . '/vendor/autoload.php')) {
 require_once __DIR__ . '/vendor/autoload.php';
 date_default_timezone_set('UTC');
 
-return new WealthFlow\Config(__DIR__);
+return new WealthFlow\Core\Config(__DIR__);

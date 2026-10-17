@@ -3,6 +3,7 @@ import { createPages } from './pages.js';
 import { FIELDS } from './forms.js';
 import { transactions } from '../data/fixtures.js';
 import { authApi, errorMessage } from '../services/auth-api.js';
+import { preloadViews } from './view-loader.js';
 
 let currentUser;
 try {
@@ -76,19 +77,18 @@ ${state.admin ? 'Quay về người dùng' : 'Khu vực quản trị'}\
   document.body.classList.toggle('admin-mode', state.admin);
 
 }
-function navigate(page) {
+async function navigate(page) {
   if (page.startsWith('admin-') && currentUser.role !== 'ADMIN') page = 'overview';
   state.admin = page.startsWith('admin-') && currentUser.role === 'ADMIN';
   if (!META[page]) return;
   state.page = page;
   renderNav();
   document.querySelector('#breadcrumb-name').textContent = META[page][0];
-  app.innerHTML = PAGES[page]();
+  app.innerHTML = await PAGES[page]();
   closeSidebar();
   const hash = '#' + page;
   if (location.hash !== hash) history.replaceState(null, '', hash);
   window.scrollTo({ top: 0, behavior: 'instant' });
-
 }
 function closeSidebar() {
   sidebar.classList.remove('is-open');
@@ -115,102 +115,104 @@ function fieldHTML([name, label, type, options]) {
   const required = !['note', 'receive', 'interest'].includes(name);
   const constraint = required ? 'required' : '';
   let control;
-  if (type === 'select') control = `<select id="field-${safe(name)}" name="${safe(name)}" ${constraint}>${options.map(o => `<option>${safe(o)}</option>`).join('')}</select>`; else if (type === 'textarea') control = `<textarea id="field-${safe(name)}" name="${safe(name)}" rows="3" ${constraint} placeholder="Nhập ${safe(label.toLowerCase())}..."></textarea>`; else control = `<input id="field-${safe(name)}" name="${safe(name)}" type="${type}" ${type === 'number' ? 'min="0" step="any"' : ''} ${constraint} placeholder="${type === 'number' ? '0' : safe(label)}">`;
-  return `<div class="field">\
-<label for="field-${safe(name)}">${safe(label)}${required ? ' *' : ''}</label>${control}</div>`;
-
+  if (type === 'select') {
+    control = `<select id="field-${safe(name)}" name="${safe(name)}" ${constraint}>${options.map(o => `<option>${safe(o)}</option>`).join('')}</select>`;
+  } else if (type === 'textarea') {
+    control = `<textarea id="field-${safe(name)}" name="${safe(name)}" rows="3" ${constraint} placeholder="Nhập ${safe(label.toLowerCase())}..."></textarea>`;
+  } else {
+    control = `<input id="field-${safe(name)}" name="${safe(name)}" type="${type}" ${type === 'number' ? 'min="0" step="any"' : ''} ${constraint} placeholder="${type === 'number' ? '0' : safe(label)}">`;
+  }
+  return `
+    <div class="field">
+      <label for="field-${safe(name)}">${safe(label)}${required ? ' *' : ''}</label>
+      ${control}
+    </div>
+  `;
 }
+
 function openAction(action) {
   const def = FIELDS[action];
   if (!def) {
     toast('Tính năng này đang được phát triển.');
     return;
-
   }
   document.querySelector('#modal-overline').textContent = def.desc;
   document.querySelector('#modal-title').textContent = def.title;
   const content = document.querySelector('#modal-content');
-  content.innerHTML = `<p class="form-hint">\
-${safe(def.note || 'Chức năng lưu đang được phát triển. Dữ liệu nhập sẽ không được ghi nhận.')}</p>${def.fields.length ? `<form id="action-form">\
-<div class="form-grid">\
-${def.fields.map(fieldHTML).join('')}\
-</div>\
-<div class="modal-footer">\
-<button type="button" class="btn btn--outline btn-sm" data-close-modal>Hủy</button>\
-<button type="submit" class="btn btn--primary btn-sm">Kiểm tra biểu mẫu</button>\
-</div>\
-</form>` : `<div class="modal-footer">\
-<button type="button" class="btn btn--primary btn-sm" data-close-modal>Đóng</button>\
-</div>`}`;
+  content.innerHTML = `
+    <p class="form-hint">
+      ${safe(def.note || 'Chức năng lưu đang được phát triển. Dữ liệu nhập sẽ không được ghi nhận.')}
+    </p>
+    ${def.fields.length ? `
+      <form id="action-form">
+        <div class="form-grid">
+          ${def.fields.map(fieldHTML).join('')}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn--outline btn-sm" data-close-modal>Hủy</button>
+          <button type="submit" class="btn btn--primary btn-sm">Kiểm tra biểu mẫu</button>
+        </div>
+      </form>
+    ` : `
+      <div class="modal-footer">
+        <button type="button" class="btn btn--primary btn-sm" data-close-modal>Đóng</button>
+      </div>
+    `}
+  `;
   dialog.showModal();
-
 }
+
 function showDetails(id) {
   const t = transactions.find(row => row.id === id);
   if (!t) return;
   document.querySelector('#modal-overline').textContent = 'CHI TIẾT GIAO DỊCH';
   document.querySelector('#modal-title').textContent = t.name;
-  document.querySelector('#modal-content').innerHTML = `<dl class="detail-grid">\
-<div>\
-<dt>Mã giao dịch</dt>\
-<dd>\
-${safe(t.id)}\
-</dd>\
-</div>\
-<div>\
-<dt>Trạng thái</dt>\
-<dd>\
-${t.status === 'DRAFT' ? 'Bản nháp (chưa ghi sổ)' : 'Posted (đã ghi sổ)'}\
-</dd>\
-</div>\
-<div>\
-<dt>Danh mục</dt>\
-<dd>\
-${safe(t.category)}\
-</dd>\
-</div>\
-<div>\
-<dt>Ngày giao dịch</dt>\
-<dd>\
-${safe(t.date)}\
-</dd>\
-</div>\
-<div>\
-<dt>Ví liên quan</dt>\
-<dd>\
-${safe(t.wallet)}\
-</dd>\
-</div>\
-<div>\
-<dt>Số tiền</dt>\
-<dd>\
-${money(Math.abs(t.amount))}\
-</dd>\
-</div>\
-<div>\
-<dt>Tiền tệ</dt>\
-<dd>\
-${safe(t.currency)}\
-</dd>\
-</div>\
-<div>\
-<dt>Tỷ giá snapshot</dt>\
-<dd>\
-${safe(t.rate)}\
-</dd>\
-</div>\
-</dl>\
-<hr class="modal-rule">\
-<p class="description">\
-${safe(t.details)}\
-</p>\
-<div class="hint-box">\
-<strong>Bút toán Nợ/Có:</strong> xem thông tin ghi sổ và các giao dịch điều chỉnh liên quan trong lịch sử.</div>\
-<div class="modal-footer">\
-<button class="btn btn--outline btn-sm" data-close-modal>Đóng</button>\
-${t.status === 'POSTED' ? `<button class="btn btn--primary btn-sm" data-action="reversal">Xem quy trình đảo giao dịch</button>` : ''}</div>`;
+  document.querySelector('#modal-content').innerHTML = `
+    <dl class="detail-grid">
+      <div>
+        <dt>Mã giao dịch</dt>
+        <dd>${safe(t.id)}</dd>
+      </div>
+      <div>
+        <dt>Trạng thái</dt>
+        <dd>${t.status === 'DRAFT' ? 'Bản nháp (chưa ghi sổ)' : 'Posted (đã ghi sổ)'}</dd>
+      </div>
+      <div>
+        <dt>Danh mục</dt>
+        <dd>${safe(t.category)}</dd>
+      </div>
+      <div>
+        <dt>Ngày giao dịch</dt>
+        <dd>${safe(t.date)}</dd>
+      </div>
+      <div>
+        <dt>Ví liên quan</dt>
+        <dd>${safe(t.wallet)}</dd>
+      </div>
+      <div>
+        <dt>Số tiền</dt>
+        <dd>${money(Math.abs(t.amount))}</dd>
+      </div>
+      <div>
+        <dt>Tiền tệ</dt>
+        <dd>${safe(t.currency)}</dd>
+      </div>
+      <div>
+        <dt>Tỷ giá snapshot</dt>
+        <dd>${safe(t.rate)}</dd>
+      </div>
+    </dl>
+    <hr class="modal-rule">
+    <p class="description">${safe(t.details)}</p>
+    <div class="hint-box">
+      <strong>Bút toán Nợ/Có:</strong> xem thông tin ghi sổ và các giao dịch điều chỉnh liên quan trong lịch sử.
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn--outline btn-sm" data-close-modal>Đóng</button>
+      ${t.status === 'POSTED' ? `<button class="btn btn--primary btn-sm" data-action="reversal">Xem quy trình đảo giao dịch</button>` : ''}
+    </div>
+  `;
   dialog.showModal();
-
 }
 function exportTransactionsCSV() {
   const rows = [
@@ -420,4 +422,5 @@ window.addEventListener('hashchange', () => {
   }
 
 });
+preloadViews(Object.keys(META));
 const initial = decodeURIComponent(location.hash.slice(1)); if (initial.startsWith('admin-')) state.admin = true; navigate(META[initial] ? initial : 'overview');

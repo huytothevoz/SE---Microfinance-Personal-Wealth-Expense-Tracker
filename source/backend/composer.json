@@ -1,6 +1,6 @@
 {
   "name": "voz/wealthflow",
-  "description": "WealthFlow FR01 authentication and registration email",
+  "description": "WealthFlow - Smart Personal Wealth & Microfinance Tracker Backend",
   "type": "project",
   "require": {
     "php": ">=8.2",

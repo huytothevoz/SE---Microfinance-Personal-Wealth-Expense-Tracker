@@ -1,0 +1,104 @@
+erDiagram
+    %% ========================================================
+    %% ERD00: WEALTHFLOW HIGH-LEVEL DOMAIN OVERVIEW
+    %% ========================================================
+
+    USERS ||--o{ AUTH_SESSIONS : "xac_thuc"
+    USERS ||--o{ WALLETS : "so_huu"
+    USERS ||--o{ CATEGORIES : "thiet_lap"
+    USERS ||--o{ FINANCIAL_TRANSACTIONS : "thuc_hien"
+    USERS ||--o{ BUDGETS : "dat_han_muc"
+    USERS ||--o{ RECURRING_SCHEDULES : "len_lich"
+    USERS ||--o{ MICRO_LOANS : "quan_ly_vay"
+    USERS ||--o{ GOLD_ASSETS : "nam_giu_vang"
+    USERS ||--o{ FINANCIAL_GOALS : "tich_luy"
+    USERS ||--o{ NOTIFICATIONS : "nhan_tin"
+
+    WALLETS ||--o{ FINANCIAL_TRANSACTIONS : "nguon_tien"
+    WALLETS ||--o{ RECURRING_SCHEDULES : "nguon_dinh_ky"
+    WALLETS ||--o{ FINANCIAL_GOALS : "phong_toa"
+
+    CATEGORIES ||--o{ FINANCIAL_TRANSACTIONS : "phan_loai"
+    CATEGORIES ||--o{ BUDGETS : "kiem_soat"
+
+    FINANCIAL_TRANSACTIONS ||--o| MICRO_LOANS : "giai_ngan_tra_no"
+    FINANCIAL_TRANSACTIONS ||--o| GOLD_ASSETS : "mua_ban_vang"
+
+    USERS {
+        bigint id PK
+        varchar email UK "Email dang nhap"
+        varchar full_name "Ho ten"
+        enum role "USER / ADMIN"
+    }
+
+    WALLETS {
+        bigint id PK
+        bigint user_id FK
+        varchar name "Ten vi nguon"
+        decimal cached_balance "So du so sach"
+    }
+
+    CATEGORIES {
+        bigint id PK
+        bigint user_id FK
+        varchar name "Ten danh muc"
+        enum category_type "INCOME / EXPENSE"
+    }
+
+    FINANCIAL_TRANSACTIONS {
+        bigint id PK
+        bigint user_id FK
+        bigint category_id FK
+        decimal amount "So tien giao dich"
+        date occurred_on "Ngay phat sinh"
+    }
+
+    BUDGETS {
+        bigint id PK
+        bigint user_id FK
+        bigint category_id FK
+        date budget_month "Thang ap dung"
+        decimal limit_amount "Han muc chi"
+    }
+
+    RECURRING_SCHEDULES {
+        bigint id PK
+        bigint user_id FK
+        bigint wallet_id FK
+        decimal amount "So tien dinh ky"
+        date next_due_date "Ngay den han"
+    }
+
+    MICRO_LOANS {
+        bigint id PK
+        bigint user_id FK
+        enum loan_direction "BORROWED / LENT"
+        decimal principal_remaining "Du no con lai"
+    }
+
+    GOLD_ASSETS {
+        bigint id PK
+        bigint user_id FK
+        enum gold_type "RING_9999 / SJC_BAR"
+        decimal quantity_chi "Khoi luong chi"
+    }
+
+    FINANCIAL_GOALS {
+        bigint id PK
+        bigint user_id FK
+        decimal target_amount "Muc tieu tich luy"
+        decimal current_amount "Da tich luy"
+    }
+
+    NOTIFICATIONS {
+        bigint id PK
+        bigint user_id FK
+        varchar title "Tieu de thong bao"
+        datetime read_at "Trang thai doc"
+    }
+
+    AUTH_SESSIONS {
+        char id PK "Session ID"
+        bigint user_id FK
+        datetime expires_at "Thoi han phien"
+    }

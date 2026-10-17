@@ -11,7 +11,7 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 
-use WealthFlow\Mail\EmailService;
+use WealthFlow\Core\EmailService;
 
 try {
     $config = require dirname(__DIR__) . '/bootstrap.php';

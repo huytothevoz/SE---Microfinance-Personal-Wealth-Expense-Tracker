@@ -1,0 +1,92 @@
+<div class="page-heading">
+  <div>
+    <h1>Đối soát & xuất dữ liệu</h1>
+    <p>So khớp số dư ví với tổng đại số Nợ/Có sổ cái kép và xuất báo cáo CSV chống Formula Injection.</p>
+  </div>
+  <div class="page-actions">
+    <button type="button" class="btn btn--outline btn-sm" data-action="export">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg>
+      Tải Xuất CSV
+    </button>
+    <button type="button" class="btn btn--primary btn-sm" data-action="reconcile">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg>
+      Kiểm tra đối soát
+    </button>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Ví đang theo dõi</span>
+      <div class="kpi-icon">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7V5a2 2 0 0 0-2-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h15a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H5a3 3 0 0 1-3-3"/><path d="M16 14h6"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="recon-tracked-wallets">5 ví</div>
+    <div class="kpi-desc">Bao gồm ví USD</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Ví khớp sổ</span>
+      <div class="kpi-icon green">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="recon-matched-wallets">5 / 5</div>
+    <div class="kpi-desc">Trạng thái đối chiếu</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Giao dịch Posted</span>
+      <div class="kpi-icon blue">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="recon-posted-count">7 bản ghi</div>
+    <div class="kpi-desc">Đã loại trừ bản nháp</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Xuất dữ liệu</span>
+      <div class="kpi-icon orange">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number">CSV UTF-8 BOM</div>
+    <div class="kpi-desc">Có bảo vệ công thức</div>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-title">
+    <div>
+      <h2>Đối chiếu số dư ví</h2>
+      <p>So sánh số dư hiện tại với lịch sử bút toán</p>
+    </div>
+    <div class="panel-tools"></div>
+  </div>
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Ví</th>
+          <th>Số dư ghi nhận</th>
+          <th>Số dư từ sổ cái</th>
+          <th>Chênh lệch</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody id="recon-table-body">
+        <!-- Dynamic reconciliation rows rendered by reports.js -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="hint-box" style="margin-top:18px">
+  <strong>Chưa chạy phép đối soát:</strong> khi triển khai, PHP phải tính lại số dư từ ledger entries của từng ví, so sánh với số dư cache và phát hiện sai khác. Chỉ sử dụng kết quả đối soát do máy chủ xác nhận.
+</div>

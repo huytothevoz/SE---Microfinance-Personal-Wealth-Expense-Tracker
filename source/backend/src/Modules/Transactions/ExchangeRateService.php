@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace WealthFlow\Modules\Transactions;
 
 use PDO;
-use WealthFlow\Config\Database;
+use WealthFlow\Core\Database;
 
 final class ExchangeRateService
 {

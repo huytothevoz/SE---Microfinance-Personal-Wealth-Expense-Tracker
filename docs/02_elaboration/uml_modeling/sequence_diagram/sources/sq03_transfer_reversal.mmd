@@ -1,0 +1,126 @@
+sequenceDiagram
+    autonumber
+    actor User as Người dùng (User)
+    participant TC as <<Boundary>><br/>TransactionController
+    participant LS as <<Control>><br/>LedgerService
+    participant WD as <<DataAccess>><br/>WalletDAO
+    participant LD as <<DataAccess>><br/>LedgerDAO
+    participant DB as <<Storage>><br/>MySQL Database (InnoDB)
+
+    %% ----------------------------------------------------
+    %% Luồng Chuyển tiền nội bộ
+    %% ----------------------------------------------------
+    rect rgb(245, 243, 255)
+        note over User, DB: 1. KỊCH BẢN CHUYỂN TIỀN NỘI BỘ (TRANSFER - CHỐNG DEADLOCK)
+        User ->> TC: POST /api/transactions/transfer (fromWalletId, toWalletId, amount, occurredOn, note)
+        activate TC
+        TC ->> LS: transferBetweenWallets(userId, TransferDTO)
+        activate LS
+
+        alt fromWalletId == toWalletId hoặc amount <= 0
+            LS -->> TC: Ném lỗi BadRequestException("Ví nguồn và ví đích phải khác nhau và số tiền > 0")
+            TC -->> User: 400 Bad Request {"errorCode": "INVALID_TRANSFER_TARGET"}
+        else Tham số hợp lệ
+            %% Kỹ thuật khóa tuần tự tránh Deadlock (minId, maxId)
+            LS ->> LS: sortLockOrder(fromWalletId, toWalletId) -> (firstLockId, secondLockId)
+            
+            LS ->> WD: lockTwoWallets(firstLockId, secondLockId, userId)
+            activate WD
+            WD ->> DB: START TRANSACTION
+            WD ->> DB: SELECT id, cached_balance, earmarked_balance, currency FROM wallets WHERE id IN (firstLockId, secondLockId) AND user_id = ? ORDER BY id FOR UPDATE
+            DB -->> WD: [sourceWalletRow, destWalletRow]
+            WD -->> LS: [sourceWallet, destWallet]
+            deactivate WD
+
+            %% Kiểm tra số dư khả dụng ví nguồn (BR04)
+            alt sourceWallet.cached_balance - sourceWallet.earmarked_balance < amount
+                LS ->> WD: rollback()
+                activate WD
+                WD ->> DB: ROLLBACK
+                deactivate WD
+                LS -->> TC: Ném lỗi UnprocessableEntityException("Ví nguồn không đủ số dư khả dụng")
+                TC -->> User: 422 Unprocessable Entity {"errorCode": "INSUFFICIENT_FUNDS"}
+            else Đủ số dư ví nguồn
+                %% Hạch toán kép Chuyển tiền (Nợ ví đích / Có ví nguồn - BR05)
+                LS ->> LD: recordTransfer(transferData)
+                activate LD
+                LD ->> DB: INSERT INTO financial_transactions (user_id, transaction_type='TRANSFER', status='POSTED', amount, currency, occurred_on, description) VALUES (?, 'TRANSFER', 'POSTED', ?, ?, ?, ?)
+                DB -->> LD: newTxId
+                
+                %% Bút toán Nợ Ví Đích (Tăng tiền)
+                LD ->> DB: INSERT INTO ledger_entries (transaction_id, ledger_account_id, entry_side='DEBIT', amount_original, amount_base) VALUES (newTxId, destAccId, 'DEBIT', amount, amount)
+                %% Bút toán Có Ví Nguồn (Giảm tiền)
+                LD ->> DB: INSERT INTO ledger_entries (transaction_id, ledger_account_id, entry_side='CREDIT', amount_original, amount_base) VALUES (newTxId, sourceAccId, 'CREDIT', amount, amount)
+                
+                %% Cập nhật số dư 2 ví đồng thời
+                LD ->> DB: UPDATE wallets SET cached_balance = cached_balance - ? WHERE id = fromWalletId
+                LD ->> DB: UPDATE wallets SET cached_balance = cached_balance + ? WHERE id = toWalletId
+                LD ->> DB: COMMIT
+                DB -->> LD: Transaction committed
+                LD -->> LS: TransferResult(txId=newTxId, fromBalance, toBalance)
+                deactivate LD
+
+                LS -->> TC: TransferResponse(txId, fromBalance, toBalance)
+                deactivate LS
+                TC -->> User: 200 OK {"status": "success", "transactionId": newTxId}
+            end
+        end
+        deactivate TC
+    end
+
+    %% ----------------------------------------------------
+    %% Luồng Đảo giao dịch (Reversal)
+    %% ----------------------------------------------------
+    rect rgb(254, 243, 199)
+        note over User, DB: 2. KỊCH BẢN ĐẢO GIAO DỊCH ĐÃ GHI SỔ (TRANSACTION REVERSAL)
+        User ->> TC: POST /api/transactions/{id}/reverse (reason)
+        activate TC
+        TC ->> LS: reversePostedTransaction(userId, originalTxId, reason)
+        activate LS
+
+        LS ->> LD: findTransactionWithEntries(originalTxId, userId)
+        activate LD
+        LD ->> DB: SELECT id, status, original_transaction_id, amount, currency FROM financial_transactions WHERE id = ? AND user_id = ?
+        DB -->> LD: originalTxRow (status='POSTED', original_transaction_id=NULL)
+        LD ->> DB: SELECT * FROM ledger_entries WHERE transaction_id = ?
+        DB -->> LD: [originalDebitEntry, originalCreditEntry]
+        LD -->> LS: originalTxEntity: FinancialTransaction
+        deactivate LD
+
+        alt Giao dịch không ở trạng thái POSTED hoặc đã bị đảo trước đó
+            LS -->> TC: Ném lỗi BadRequestException("Giao dịch không hợp lệ để đảo hoặc đã bị đảo trước đó")
+            TC -->> User: 400 Bad Request {"errorCode": "CANNOT_REVERSE_TRANSACTION"}
+        else Giao dịch hợp lệ -> Thực thi đảo bút toán nguyên tử (BR06)
+            LS ->> WD: findWalletWithLock(walletId, userId)
+            activate WD
+            WD ->> DB: START TRANSACTION
+            WD ->> DB: SELECT id, cached_balance FROM wallets WHERE id = ? FOR UPDATE
+            DB -->> WD: walletRow
+            deactivate WD
+
+            LS ->> LD: executeReversal(originalTxId, reason, reverseEntries)
+            activate LD
+            %% Đánh dấu giao dịch gốc là REVERSED
+            LD ->> DB: UPDATE financial_transactions SET status = 'REVERSED' WHERE id = originalTxId
+            
+            %% Tạo giao dịch mới liên kết original_transaction_id
+            LD ->> DB: INSERT INTO financial_transactions (user_id, transaction_type, status='POSTED', original_transaction_id, amount, description) VALUES (?, type, 'POSTED', originalTxId, amount, ?)
+            DB -->> LD: reversalTxId
+
+            %% Đảo ngược chiều Nợ/Có đối ứng hoàn toàn
+            LD ->> DB: INSERT INTO ledger_entries (transaction_id, ledger_account_id, entry_side='CREDIT', amount_original, amount_base) VALUES (reversalTxId, origDebitAccId, 'CREDIT', amount, amount)
+            LD ->> DB: INSERT INTO ledger_entries (transaction_id, ledger_account_id, entry_side='DEBIT', amount_original, amount_base) VALUES (reversalTxId, origCreditAccId, 'DEBIT', amount, amount)
+
+            %% Hoàn trả số dư ví tương ứng
+            LD ->> DB: UPDATE wallets SET cached_balance = cached_balance + ? WHERE id = walletId
+            LD ->> DB: COMMIT
+            DB -->> LD: Transaction committed
+            LD -->> LS: ReversalResult(reversalTxId, restoredBalance)
+            deactivate LD
+
+            LS -->> TC: ReversalResponse(reversalTxId, originalTxId, restoredBalance)
+            deactivate LS
+            TC -->> User: 200 OK {"status": "success", "reversalId": reversalTxId, "message": "Giao dịch đã được đảo thành công"}
+        end
+        deactivate TC
+    end

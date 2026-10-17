@@ -1,0 +1,56 @@
+erDiagram
+    %% ========================================================
+    %% ERD06: FINANCIAL GOALS & NET WORTH TRACKING (FR09, FR10)
+    %% ========================================================
+
+    USERS ||--o{ FINANCIAL_GOALS : "dat_muc_tieu"
+    USERS ||--o{ NET_WORTH_SNAPSHOTS : "chup_anh_tai_san"
+
+    WALLETS ||--o{ FINANCIAL_GOALS : "phong_toa_so_du"
+    WALLETS ||--o{ GOAL_ALLOCATIONS : "trich_nap_rut_tien"
+
+    FINANCIAL_GOALS ||--o{ GOAL_ALLOCATIONS : "nhat_ky_tich_luy"
+
+    USERS {
+        bigint id PK
+        varchar email UK "Email chu tai khoan"
+    }
+
+    WALLETS {
+        bigint id PK
+        varchar name "Ten vi tien"
+        decimal cached_balance "So du so sach"
+        decimal earmarked_balance "So du bi khoa cho muc tieu"
+    }
+
+    FINANCIAL_GOALS {
+        bigint id PK
+        bigint user_id FK "ON DELETE CASCADE"
+        bigint wallet_id FK "ON DELETE SET NULL"
+        varchar name "Tieu de muc tieu tich luy"
+        decimal target_amount "So tien can dat > 0"
+        decimal current_amount "So tien da gom duoc"
+        date deadline "Han chot hoan thanh"
+        enum priority "LOW / MEDIUM / HIGH"
+        enum status "ACTIVE / COMPLETED / CANCELLED"
+    }
+
+    GOAL_ALLOCATIONS {
+        bigint id PK
+        bigint goal_id FK "ON DELETE CASCADE"
+        bigint wallet_id FK "ON DELETE SET NULL"
+        enum allocation_type "DEPOSIT / WITHDRAWAL"
+        decimal amount "So tien phan bo > 0"
+        date allocated_on "Ngay trich nop / rut"
+        varchar note "Ghi chu noi dung"
+    }
+
+    NET_WORTH_SNAPSHOTS {
+        bigint id PK
+        bigint user_id FK "ON DELETE CASCADE"
+        date snapshot_date "Ngay chot so lieu YYYY-MM-DD"
+        decimal total_assets "Tong tai san so huu"
+        decimal total_liabilities "Tong no phai tra"
+        decimal net_worth "Tai san rong hop nhat"
+        json breakdown_json "Co cau chi tiet dang JSON"
+    }

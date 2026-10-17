@@ -7,29 +7,29 @@ namespace WealthFlow\Modules\Transactions;
 use Exception;
 use InvalidArgumentException;
 use RuntimeException;
-use WealthFlow\Http\JsonResponse;
-use WealthFlow\Http\Request;
-use WealthFlow\Modules\Auth\AuthContext;
+use WealthFlow\Core\AuthContext;
+use WealthFlow\Core\JsonResponse;
+use WealthFlow\Core\Request;
 use WealthFlow\Modules\Budgets\BudgetService;
 
 final class TransactionController
 {
     private LedgerService $ledgerService;
-    private TransactionRepository $txRepo;
-    private CategoryRepository $catRepo;
+    private LedgerDAO $txRepo;
+    private CategoryDAO $catRepo;
     private ExchangeRateService $fxService;
     private BudgetService $budgetService;
 
     public function __construct(
         ?LedgerService $ledgerService = null,
-        ?TransactionRepository $txRepo = null,
-        ?CategoryRepository $catRepo = null,
+        ?LedgerDAO $txRepo = null,
+        ?CategoryDAO $catRepo = null,
         ?ExchangeRateService $fxService = null,
         ?BudgetService $budgetService = null
     ) {
         $this->ledgerService = $ledgerService ?? new LedgerService();
-        $this->txRepo = $txRepo ?? new TransactionRepository();
-        $this->catRepo = $catRepo ?? new CategoryRepository();
+        $this->txRepo = $txRepo ?? new LedgerDAO();
+        $this->catRepo = $catRepo ?? new CategoryDAO();
         $this->fxService = $fxService ?? new ExchangeRateService();
         $this->budgetService = $budgetService ?? new BudgetService();
     }
@@ -224,4 +224,31 @@ final class TransactionController
             JsonResponse::error('VALIDATION_ERROR', $e->getMessage(), 422);
         }
     }
+
+    public function updateCategory(Request $request, int $id): void
+    {
+        $userId = AuthContext::getUserId($request);
+        $body = $request->getBody();
+        $name = trim((string) ($body['name'] ?? ''));
+
+        if ($name === '') {
+            JsonResponse::error('VALIDATION_ERROR', 'Tên danh mục không được để trống.', 422);
+            return;
+        }
+
+        try {
+            $this->catRepo->update($id, $userId, $name);
+            JsonResponse::success(['id' => $id, 'name' => $name, 'message' => 'Cập nhật danh mục thành công.']);
+        } catch (Exception $e) {
+            JsonResponse::error('SERVER_ERROR', 'Không thể cập nhật danh mục: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function archiveCategory(Request $request, int $id): void
+    {
+        $userId = AuthContext::getUserId($request);
+        $this->catRepo->archive($id, $userId);
+        JsonResponse::success(['message' => 'Đã lưu trữ danh mục thành công.']);
+    }
 }
+

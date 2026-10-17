@@ -1,0 +1,94 @@
+<div class="page-heading">
+  <div>
+    <h1>Giao dịch thu chi</h1>
+    <p>Theo dõi mọi khoản tiền vào/ra, chuyển ví và kiểm soát tính toàn vẹn của bút toán.</p>
+  </div>
+  <div class="page-actions">
+    <button type="button" class="btn btn--primary btn-sm" data-action="tx-add">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Ghi giao dịch
+    </button>
+    <button type="button" class="btn btn--outline btn-sm" data-action="transfer">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h16m-5-5 5 5-5 5M21 16H5m5-5-5 5 5 5"/></svg>
+      Chuyển ví
+    </button>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Thu nhập tháng</span>
+      <div class="kpi-icon green">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h16m-5-5 5 5-5 5M21 16H5m5-5-5 5 5 5"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="tx-month-income">18.500.000 đ</div>
+    <div class="kpi-desc">Không bao gồm tiền nhận vay</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Chi tiêu tháng</span>
+      <div class="kpi-icon orange">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7V5a2 2 0 0 0-2-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h15a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H5a3 3 0 0 1-3-3"/><path d="M16 14h6"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="tx-month-expense">8.240.000 đ</div>
+    <div class="kpi-desc">Không bao gồm khoản trả nợ gốc</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Chuyển nội bộ</span>
+      <div class="kpi-icon blue">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="tx-month-transfer">2.500.000 đ</div>
+    <div class="kpi-desc">Không tính thu / chi</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Giao dịch nháp</span>
+      <div class="kpi-icon">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="tx-month-drafts">1 bản nháp</div>
+    <div class="kpi-desc">Chưa vào báo cáo</div>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-title">
+    <div>
+      <h2>Lịch sử giao dịch</h2>
+      <p>Theo dõi Posted, Draft và chi tiết bút toán</p>
+    </div>
+    <div class="panel-tools"></div>
+  </div>
+  <div class="filter-row">
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tx-filter="all" role="tab" aria-selected="true">Tất cả</button>
+      <button class="tab" data-tx-filter="income" role="tab" aria-selected="false">Thu nhập</button>
+      <button class="tab" data-tx-filter="expense" role="tab" aria-selected="false">Chi tiêu</button>
+      <button class="tab" data-tx-filter="transfer" role="tab" aria-selected="false">Chuyển ví</button>
+    </div>
+    <div class="filter-controls">
+      <input id="transaction-search" class="input-sm" type="search" placeholder="Tìm tên, mã, danh mục..." aria-label="Tìm kiếm giao dịch">
+      <button class="btn btn--outline btn-sm" data-action="export">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg>
+        Xuất CSV
+      </button>
+    </div>
+  </div>
+  <div id="transaction-table">
+    <!-- Dynamic transaction table rendered by transactions.js -->
+  </div>
+</section>
+
+<div class="hint-box section-gap" style="margin-top:18px">
+  <strong>Nguyên tắc ghi sổ:</strong> bản ghi đã Posted không sửa/xóa vật lý; thao tác điều chỉnh về sau phải tạo bút toán đảo (Reversal) và giao dịch thay thế.
+</div>

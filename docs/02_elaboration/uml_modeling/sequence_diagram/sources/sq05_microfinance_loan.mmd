@@ -1,0 +1,155 @@
+sequenceDiagram
+    autonumber
+    actor User as Người dùng (Người vay / Cho vay)
+    participant LC as <<Boundary>><br/>LoanController
+    participant LS as <<Control>><br/>LoanService
+    participant LE as <<Entity>><br/>loan: Loan
+    participant LD as <<DataAccess>><br/>LoanDAO
+    participant WD as <<DataAccess>><br/>WalletDAO
+    participant LedgerD as <<DataAccess>><br/>LedgerDAO
+    participant DB as <<Storage>><br/>MySQL Database (InnoDB)
+
+    %% ----------------------------------------------------
+    %% Luồng Tạo khoản vay
+    %% ----------------------------------------------------
+    rect rgb(245, 243, 255)
+        note over User, DB: 1. KỊCH BẢN KHỞI TẠO KHOẢN VAY (BORROWING)
+        User ->> LC: POST /api/loans (title, partnerName, loanDirection='BORROWED', principal, interestRate, termMonths, isDisbursed, walletId)
+        activate LC
+        LC ->> LS: createLoan(userId, CreateLoanDTO)
+        activate LS
+
+        alt Có giải ngân tiền vào ví (isDisbursed == true)
+            LS ->> WD: findWalletWithLock(walletId, userId)
+            activate WD
+            WD ->> DB: START TRANSACTION
+            WD ->> DB: SELECT id, cached_balance FROM wallets WHERE id = ? FOR UPDATE
+            DB -->> WD: walletRow
+            deactivate WD
+
+            %% Lưu thông tin hợp đồng vay vào micro_loans
+            LS ->> LD: insertMicroLoan(loanData)
+            activate LD
+            LD ->> DB: INSERT INTO micro_loans (user_id, wallet_id, title, partner_name, loan_direction='BORROWED', principal_original, principal_remaining, status='ACTIVE') VALUES (?, ?, ?, ?, 'BORROWED', ?, ?, 'ACTIVE')
+            DB -->> LD: newLoanId
+            deactivate LD
+
+            %% Sinh bút toán kép giải ngân (BR17: CẤM TÍNH VÀO THU NHẬP)
+            LS ->> LedgerD: recordDisbursement(userId, newLoanId, walletId, principal)
+            activate LedgerD
+            LedgerD ->> DB: INSERT INTO financial_transactions (user_id, transaction_type='LOAN_DISBURSEMENT', status='POSTED', amount=principal, description='Giải ngân khoản vay') VALUES (...)
+            DB -->> LedgerD: txId
+            %% Tăng tài sản ví: Nợ Ví
+            LedgerD ->> DB: INSERT INTO ledger_entries (transaction_id, ledger_account_id, entry_side='DEBIT', amount_base=principal) VALUES (txId, walletAccId, 'DEBIT', principal)
+            %% Tăng nghĩa vụ nợ: Có Nợ phải trả (Liability)
+            LedgerD ->> DB: INSERT INTO ledger_entries (transaction_id, ledger_account_id, entry_side='CREDIT', amount_base=principal) VALUES (txId, loanLiabilityAccId, 'CREDIT', principal)
+            %% Cập nhật số dư ví nhận tiền
+            LedgerD ->> DB: UPDATE wallets SET cached_balance = cached_balance + ? WHERE id = walletId
+            LedgerD ->> DB: COMMIT
+            DB -->> LedgerD: Transaction committed
+            deactivate LedgerD
+
+        else Không giải ngân vào ví (chỉ ghi nhận nghĩa vụ nợ bên ngoài)
+            LS ->> LD: insertMicroLoan(loanData)
+            activate LD
+            LD ->> DB: INSERT INTO micro_loans (user_id, title, partner_name, loan_direction='BORROWED', principal_original, principal_remaining, status='ACTIVE') VALUES (...)
+            DB -->> LD: newLoanId
+            deactivate LD
+        end
+
+        LS -->> LC: LoanResponse(newLoanId, status='ACTIVE')
+        deactivate LS
+        LC -->> User: 201 Created {"status": "ACTIVE", "loanId": newLoanId}
+        deactivate LC
+    end
+
+    %% ----------------------------------------------------
+    %% Luồng Thanh toán trả nợ
+    %% ----------------------------------------------------
+    rect rgb(224, 242, 254)
+        note over User, DB: 2. KỊCH BẢN THANH TOÁN TRẢ NỢ VAY (LOAN REPAYMENT)
+        User ->> LC: POST /api/loans/{id}/payments (principalPaid, interestPaid, walletId, paidOn)
+        activate LC
+        LC ->> LS: processRepayment(userId, loanId, RepaymentDTO)
+        activate LS
+
+        %% 1. Truy vấn khoản nợ và khóa dòng
+        LS ->> LD: findLoanWithLock(loanId, userId)
+        activate LD
+        LD ->> DB: START TRANSACTION
+        LD ->> DB: SELECT id, user_id, principal_remaining, status FROM micro_loans WHERE id = ? AND user_id = ? FOR UPDATE
+        DB -->> LD: loanRow (principal_remaining=10.000.000, status='ACTIVE')
+        LD -->> LS: loanEntity: Loan
+        deactivate LD
+
+        %% Thẩm định nợ gốc trả không vượt quá dư nợ còn lại
+        alt principalPaid > loan.principal_remaining
+            LS ->> LD: rollback()
+            activate LD
+            LD ->> DB: ROLLBACK
+            deactivate LD
+            LS -->> LC: Ném lỗi UnprocessableEntityException("Tiền gốc trả vượt quá số dư nợ còn lại")
+            LC -->> User: 422 Unprocessable Entity {"errorCode": "EXCEEDS_REMAINING_PRINCIPAL"}
+        else Kiểm tra số dư ví chi trả
+            LS ->> WD: findWalletWithLock(walletId, userId)
+            activate WD
+            WD ->> DB: SELECT cached_balance, earmarked_balance FROM wallets WHERE id = ? FOR UPDATE
+            DB -->> WD: walletRow (cached_balance=5.000.000, earmarked=0)
+            WD -->> LS: walletEntity: Wallet
+            deactivate WD
+
+            alt cached_balance - earmarked_balance < (principalPaid + interestPaid)
+                LS ->> WD: rollback()
+                activate WD
+                WD ->> DB: ROLLBACK
+                deactivate WD
+                LS -->> LC: Ném lỗi UnprocessableEntityException("Ví chi trả không đủ số dư khả dụng")
+                LC -->> User: 422 Unprocessable Entity {"errorCode": "INSUFFICIENT_FUNDS"}
+            else Hợp lệ -> Thực thi hạch toán bóc tách gốc/lãi nguyên tử (BR17)
+                %% 2. Tạo giao dịch và các bút toán kép
+                LS ->> LedgerD: recordLoanPayment(userId, loanId, walletId, principalPaid, interestPaid)
+                activate LedgerD
+                LedgerD ->> DB: INSERT INTO financial_transactions (user_id, transaction_type='LOAN_PAYMENT', status='POSTED', amount=(principalPaid + interestPaid), description='Thanh toán trả nợ vay') VALUES (...)
+                DB -->> LedgerD: txId
+                
+                %% Bút toán Giảm Nợ phải trả: Nợ Liability (Cấn trừ gốc)
+                LedgerD ->> DB: INSERT INTO ledger_entries (transaction_id, ledger_account_id, entry_side='DEBIT', amount_base=principalPaid) VALUES (txId, loanLiabilityAccId, 'DEBIT', principalPaid)
+                %% Bút toán Chi phí tài chính: Nợ Expense (Lãi vay)
+                alt interestPaid > 0
+                    LedgerD ->> DB: INSERT INTO ledger_entries (transaction_id, ledger_account_id, entry_side='DEBIT', amount_base=interestPaid) VALUES (txId, interestExpenseAccId, 'DEBIT', interestPaid)
+                end
+                %% Bút toán Giảm tiền ví: Có Asset Wallet (Tổng tiền gốc + lãi)
+                LedgerD ->> DB: INSERT INTO ledger_entries (transaction_id, ledger_account_id, entry_side='CREDIT', amount_base=(principalPaid + interestPaid)) VALUES (txId, walletAccId, 'CREDIT', (principalPaid + interestPaid))
+                
+                %% Trừ số dư đệm ví
+                LedgerD ->> DB: UPDATE wallets SET cached_balance = cached_balance - ? WHERE id = walletId
+                deactivate LedgerD
+
+                %% 3. Lưu lịch sử trả nợ vào loan_payments
+                LS ->> LD: recordPaymentLog(loanId, txId, principalPaid, interestPaid, paidOn)
+                activate LD
+                LD ->> DB: INSERT INTO loan_payments (loan_id, transaction_id, principal_amount, interest_fee_amount, paid_on) VALUES (?, txId, ?, ?, ?)
+                
+                %% 4. Cập nhật số dư nợ còn lại của hợp đồng vay
+                LS ->> LE: applyRepayment(principalPaid)
+                activate LE
+                LE -->> LS: newRemainingPrincipal
+                deactivate LE
+
+                alt newRemainingPrincipal == 0 (Đã tất toán toàn bộ)
+                    LD ->> DB: UPDATE micro_loans SET principal_remaining = 0, status = 'PAID_OFF' WHERE id = ?
+                else Còn nợ tiếp
+                    LD ->> DB: UPDATE micro_loans SET principal_remaining = ? WHERE id = ?
+                end
+                LD ->> DB: COMMIT
+                DB -->> LD: Transaction committed
+                LD -->> LS: PaymentResult(txId, newRemainingPrincipal, loanStatus)
+                deactivate LD
+
+                LS -->> LC: RepaymentResponse(txId, newRemainingPrincipal, loanStatus)
+                deactivate LS
+                LC -->> User: 200 OK {"status": "success", "remainingPrincipal": newRemainingPrincipal}
+            end
+        end
+        deactivate LC
+    end

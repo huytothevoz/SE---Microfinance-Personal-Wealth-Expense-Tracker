@@ -2,20 +2,21 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/src/bootstrap.php';
+require_once dirname(__DIR__) . '/bootstrap.php';
 
-use WealthFlow\Config\Database;
-use WealthFlow\Modules\Budgets\BudgetRepository;
+use WealthFlow\Core\Database;
+use WealthFlow\Modules\Budgets\BudgetDAO;
 use WealthFlow\Modules\Budgets\BudgetService;
+use WealthFlow\Modules\Notifications\NotificationDAO;
 use WealthFlow\Modules\Notifications\NotificationService;
-use WealthFlow\Modules\Recurring\RecurringRepository;
+use WealthFlow\Modules\Recurring\RecurringRuleDAO;
 use WealthFlow\Modules\Recurring\RecurringService;
 use WealthFlow\Modules\Recurring\RecurringWorker;
-use WealthFlow\Modules\Transactions\CategoryRepository;
+use WealthFlow\Modules\Transactions\CategoryDAO;
 use WealthFlow\Modules\Transactions\ExchangeRateService;
+use WealthFlow\Modules\Transactions\LedgerDAO;
 use WealthFlow\Modules\Transactions\LedgerService;
-use WealthFlow\Modules\Transactions\TransactionRepository;
-use WealthFlow\Modules\Wallets\WalletRepository;
+use WealthFlow\Modules\Wallets\WalletDAO;
 
 final class TestRunner
 {
@@ -47,17 +48,24 @@ final class TestRunner
         Database::initSqliteSchema($pdo);
         Database::setConnection($pdo, 'sqlite');
 
-        $walletRepo = new WalletRepository($pdo);
-        $catRepo = new CategoryRepository($pdo);
-        $txRepo = new TransactionRepository($pdo);
+        $walletDao = new WalletDAO($pdo);
+        $catDao = new CategoryDAO($pdo);
+        $txDao = new LedgerDAO($pdo);
         $fxService = new ExchangeRateService($pdo);
-        $notifService = new NotificationService($pdo);
-        $budgetRepo = new BudgetRepository($pdo);
-        $budgetService = new BudgetService($budgetRepo, $catRepo, $notifService);
-        $ledgerService = new LedgerService($txRepo, $walletRepo, $catRepo, $fxService);
-        $recRepo = new RecurringRepository($pdo);
-        $recService = new RecurringService($recRepo, $walletRepo);
-        $recWorker = new RecurringWorker($recRepo, $ledgerService, $txRepo, $notifService);
+        $notifDao = new NotificationDAO($pdo);
+        $notifService = new NotificationService($notifDao);
+        $budgetDao = new BudgetDAO($pdo);
+        $budgetService = new BudgetService($budgetDao, $catDao, $notifService);
+        $ledgerService = new LedgerService($txDao, $walletDao, $catDao, $fxService);
+        $recDao = new RecurringRuleDAO($pdo);
+        $recService = new RecurringService($recDao, $walletDao);
+        $recWorker = new RecurringWorker($recDao, $ledgerService, $txDao, $notifService);
+
+        $walletRepo = $walletDao;
+        $catRepo = $catDao;
+        $txRepo = $txDao;
+        $recRepo = $recDao;
+        $budgetRepo = $budgetDao;
 
         $userId = 1;
 

@@ -1,0 +1,88 @@
+erDiagram
+    %% ========================================================
+    %% ERD02: CORE WALLETS, CATEGORIES & DOUBLE-ENTRY LEDGER (FR03, FR04)
+    %% ========================================================
+
+    USERS ||--o{ WALLETS : "so_huu"
+    USERS ||--o{ CATEGORIES : "dinh_nghia"
+    USERS ||--o{ FINANCIAL_TRANSACTIONS : "thuc_hien"
+
+    WALLETS ||--o{ LEDGER_ACCOUNTS : "anh_xa"
+    CATEGORIES ||--o{ FINANCIAL_TRANSACTIONS : "phan_loai"
+
+    LEDGER_ACCOUNTS ||--o{ LEDGER_ENTRIES : "ghi_so"
+    FINANCIAL_TRANSACTIONS ||--|{ LEDGER_ENTRIES : "but_toan"
+    FINANCIAL_TRANSACTIONS ||--o| IDEMPOTENCY_KEYS : "chong_trung"
+
+    USERS {
+        bigint id PK
+        varchar email UK "Email dang nhap"
+        char base_currency "Tien te goc VND"
+    }
+
+    WALLETS {
+        bigint id PK
+        bigint user_id FK "ON DELETE RESTRICT"
+        varchar name "Ten vi tien"
+        enum wallet_type "CASH / BANK / E_WALLET / SAVINGS / CREDIT"
+        char currency "ISO-4217"
+        decimal cached_balance "So du so sach"
+        decimal earmarked_balance "So du phong toa"
+        enum status "ACTIVE / ARCHIVED"
+        timestamp created_at "Ngay tao"
+    }
+
+    CATEGORIES {
+        bigint id PK
+        bigint user_id FK "ON DELETE RESTRICT"
+        varchar name "Ten danh muc"
+        enum category_type "INCOME / EXPENSE"
+        timestamp archived_at "Xoa mem / Luu tru"
+    }
+
+    LEDGER_ACCOUNTS {
+        bigint id PK
+        bigint user_id FK "ON DELETE RESTRICT"
+        bigint wallet_id FK "Lien ket vi nguon"
+        varchar code UK "Ma tai khoan ke toan"
+        enum account_type "ASSET / LIABILITY / EQUITY / INCOME / EXPENSE"
+    }
+
+    FINANCIAL_TRANSACTIONS {
+        bigint id PK
+        bigint user_id FK "ON DELETE RESTRICT"
+        bigint category_id FK "ON DELETE RESTRICT"
+        enum transaction_type "INCOME / EXPENSE / TRANSFER / OTHER"
+        enum status "DRAFT / POSTED / REVERSED"
+        varchar description "Noi dung giao dich"
+        char currency "Tien te nguyen te"
+        decimal amount "So tien phat sinh > 0"
+        decimal fx_rate_snapshot "Ty gia co dinh quy doi"
+        date occurred_on "Ngay phat sinh thuc te"
+        datetime posted_at "Thoi diem ghi so"
+        bigint original_transaction_id FK "Giao dich bi dao"
+        timestamp created_at "Ngay tao"
+    }
+
+    LEDGER_ENTRIES {
+        bigint id PK
+        bigint transaction_id FK "ON DELETE RESTRICT"
+        bigint ledger_account_id FK "ON DELETE RESTRICT"
+        enum entry_side "DEBIT / CREDIT"
+        decimal amount_original "Tien nguyen te > 0"
+        char currency "ISO-4217"
+        decimal amount_base "Tien quy doi base > 0"
+        decimal fx_rate_snapshot "Ty gia ap dung"
+        timestamp created_at "Ngay ghi so"
+    }
+
+    IDEMPOTENCY_KEYS {
+        bigint id PK
+        bigint user_id FK "ON DELETE CASCADE"
+        char request_key UK "UUIDv4 tu Header"
+        char request_hash "SHA-256 payload"
+        bigint transaction_id FK "Giao dich da sinh"
+        smallint result_code "HTTP Status Code"
+        json response_json "Payload phan hoi cache"
+        timestamp created_at "Ngay tao"
+    }

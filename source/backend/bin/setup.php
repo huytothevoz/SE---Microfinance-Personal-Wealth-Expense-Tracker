@@ -25,7 +25,7 @@ try {
     }
     $config = require $directory . '/bootstrap.php';
     $config->validate();
-    $db = WealthFlow\Database::connect($config, false);
+    $db = WealthFlow\Core\Database::connect($config, false);
     $name = $config->get('DB_NAME');
     $db->exec("CREATE DATABASE IF NOT EXISTS `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
     $db->exec("USE `{$name}`");

@@ -5,15 +5,24 @@ declare(strict_types=1);
 namespace WealthFlow\Modules\Notifications;
 
 use PDO;
-use WealthFlow\Config\Database;
+use WealthFlow\Core\Database;
 
 final class NotificationService
 {
-    private PDO $pdo;
+    private NotificationDAO $dao;
 
-    public function __construct(?PDO $pdo = null)
+    public function __construct(?NotificationDAO $dao = null, ?PDO $pdo = null)
     {
-        $this->pdo = $pdo ?? Database::getConnection();
+        if ($dao !== null) {
+            $this->dao = $dao;
+        } else {
+            $this->dao = new NotificationDAO($pdo ?? Database::getConnection());
+        }
+    }
+
+    public function getDao(): NotificationDAO
+    {
+        return $this->dao;
     }
 
     /**
@@ -22,40 +31,27 @@ final class NotificationService
      */
     public function notify(int $userId, string $title, string $body, string $type, ?string $dedupKey = null): bool
     {
-        if ($dedupKey !== null) {
-            $stmt = $this->pdo->prepare('SELECT id FROM notifications WHERE user_id = ? AND dedup_key = ?');
-            $stmt->execute([$userId, $dedupKey]);
-            if ($stmt->fetchColumn() !== false) {
-                // Already notified for this dedup key
-                return false;
-            }
-        }
-
-        $stmt = $this->pdo->prepare('INSERT INTO notifications (user_id, title, body, notification_type, dedup_key)
-            VALUES (?, ?, ?, ?, ?)');
-        $stmt->execute([$userId, $title, $body, strtoupper($type), $dedupKey]);
-        return true;
+        return $this->dao->create($userId, $title, $body, $type, $dedupKey);
     }
 
     /** @return array<int, array<string, mixed>> */
     public function getNotificationsForUser(int $userId, int $limit = 30): array
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?');
-        $stmt->bindValue(1, $userId, PDO::PARAM_INT);
-        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll();
+        return $this->dao->findAllByUser($userId, $limit);
     }
 
     public function markAsRead(int $id, int $userId): bool
     {
-        $stmt = $this->pdo->prepare('UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?');
-        return $stmt->execute([$id, $userId]);
+        return $this->dao->markAsRead($id, $userId);
     }
 
     public function markAllAsRead(int $userId): bool
     {
-        $stmt = $this->pdo->prepare('UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND read_at IS NULL');
-        return $stmt->execute([$userId]);
+        return $this->dao->markAllAsRead($userId);
+    }
+
+    public function broadcast(string $title, string $body, string $priority = 'NORMAL'): int
+    {
+        return $this->dao->broadcast($title, $body, $priority);
     }
 }
