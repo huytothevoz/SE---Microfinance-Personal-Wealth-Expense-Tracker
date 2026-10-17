@@ -1,0 +1,200 @@
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% ACTORS (Tác nhân tương tác)
+    %% ==========================================
+    class EndUserActor {
+        <<Actor: Người dùng A01>>
+        +createRecurringRule(walletId, categoryId, amount, freq, anchorDay, isAutoPost)
+        +getRecurringRules(status)
+        +pauseRecurringRule(ruleId)
+        +resumeRecurringRule(ruleId)
+        +cancelRecurringRule(ruleId)
+        +changeWallet(ruleId, newWalletId)
+    }
+
+    class SchedulerActor {
+        <<Actor: Tiến trình hệ thống SYS02>>
+        +triggerDailyScan()
+    }
+
+    %% ==========================================
+    %% BOUNDARY LAYER (Controllers & Scheduler Jobs)
+    %% ==========================================
+    class RecurringTransactionController {
+        <<Boundary>>
+        +createRecurring(dto: CreateRecurringDTO): ResponseEntity
+        +getRecurringList(userId: UUID, status: RecurringStatus): ResponseEntity
+        +pauseRecurring(ruleId: UUID): ResponseEntity
+        +resumeRecurring(ruleId: UUID): ResponseEntity
+        +cancelRecurring(ruleId: UUID): ResponseEntity
+        +changeWallet(ruleId: UUID, dto: ChangeWalletDTO): ResponseEntity
+    }
+
+    class RecurringSchedulerJob {
+        <<Boundary / Job>>
+        -executionWorker: RecurringExecutionWorker
+        +executeDailyScan(): void
+    }
+
+    %% ==========================================
+    %% CONTROL LAYER (Services & Workers)
+    %% ==========================================
+    class RecurringTransactionService {
+        <<Control>>
+        -recurringRepo: RecurringRuleRepository
+        -walletPort: IWalletQueryPort
+        +createRule(userId: UUID, dto: CreateRecurringDTO): RecurringRule
+        +getRulesByUser(userId: UUID, status: RecurringStatus): List~RecurringRule~
+        +pauseRule(userId: UUID, ruleId: UUID): void
+        +resumeRule(userId: UUID, ruleId: UUID): void
+        +cancelRule(userId: UUID, ruleId: UUID): void
+        +changeLinkedWallet(userId: UUID, ruleId: UUID, newWalletId: UUID): void
+        +calculateInitialDueDate(freq: RecurrenceFrequency, anchorDay: int, startDate: Date): Date
+    }
+
+    class RecurringExecutionWorker {
+        <<Control>>
+        -recurringRepo: RecurringRuleRepository
+        -logRepo: RecurringExecutionLogRepository
+        -walletPort: IWalletQueryPort
+        -ledgerPort: ILedgerPostPort
+        -notifyPort: INotificationPort
+        +processDueRules(currentDate: Date): ExecutionSummary
+        +processSingleRule(rule: RecurringRule, currentDate: Date): void
+        +calculateNextDueDate(freq: RecurrenceFrequency, anchorDay: int, currentDate: Date): Date
+    }
+
+    %% ==========================================
+    %% INTERFACES / PORTS (Decoupling)
+    %% ==========================================
+    class ILedgerPostPort {
+        <<Interface / Port>>
+        +postRecurringExpense(userId: UUID, walletId: UUID, categoryId: UUID, amount: Decimal, currency: String, desc: String, idempKey: String): UUID
+        +createDraftTransaction(userId: UUID, walletId: UUID, categoryId: UUID, amount: Decimal, currency: String, desc: String): UUID
+    }
+
+    class IWalletQueryPort {
+        <<Interface / Port>>
+        +checkWalletBalance(walletId: UUID): Decimal
+        +isWalletActive(walletId: UUID): boolean
+    }
+
+    class INotificationPort {
+        <<Interface / Port>>
+        +sendNotification(userId: UUID, title: String, content: String, type: String): void
+    }
+
+    %% ==========================================
+    %% ENTITY / PERSISTENCE LAYER (Repositories)
+    %% ==========================================
+    class RecurringRuleRepository {
+        <<Entity / Repository>>
+        +save(rule: RecurringRule): RecurringRule
+        +findById(id: UUID): Optional~RecurringRule~
+        +findByUserId(userId: UUID, status: RecurringStatus): List~RecurringRule~
+        +findDueRules(currentDate: Date): List~RecurringRule~
+        +updateExecutionSchedule(id: UUID, nextDueDate: Date, lastExecutedAt: DateTime): void
+    }
+
+    class RecurringExecutionLogRepository {
+        <<Entity / Repository>>
+        +save(log: RecurringExecutionLog): void
+        +findByRuleId(ruleId: UUID): List~RecurringExecutionLog~
+    }
+
+    %% ==========================================
+    %% DOMAIN ENTITIES & ENUMS
+    %% ==========================================
+    class RecurringRule {
+        <<Entity / Aggregate Root>>
+        -id: UUID
+        -userId: UUID
+        -walletId: UUID
+        -categoryId: UUID
+        -name: String
+        -amount: Decimal
+        -currency: String
+        -frequency: RecurrenceFrequency
+        -anchorDay: int
+        -startDate: Date
+        -endDate: Date
+        -nextDueDate: Date
+        -lastExecutedAt: DateTime
+        -isAutoPost: boolean
+        -status: RecurringStatus
+        -createdAt: DateTime
+        +calculateNextDueDate(currentDate: Date): Date
+        +pause(): void
+        +resume(): void
+        +cancel(): void
+        +changeWallet(newWalletId: UUID): void
+        +isDue(currentDate: Date): boolean
+    }
+
+    class RecurringExecutionLog {
+        <<Entity>>
+        -id: UUID
+        -recurringRuleId: UUID
+        -scheduledDate: Date
+        -executedAt: DateTime
+        -generatedTransactionId: UUID
+        -status: ExecutionStatus
+        -errorMessage: String
+    }
+
+    class RecurrenceFrequency {
+        <<enumeration>>
+        DAILY
+        WEEKLY
+        MONTHLY
+        YEARLY
+    }
+
+    class RecurringStatus {
+        <<enumeration>>
+        ACTIVE
+        PAUSED
+        CANCELLED
+    }
+
+    class ExecutionStatus {
+        <<enumeration>>
+        SUCCESS_POSTED
+        DRAFT_INSUFFICIENT_FUNDS
+        DRAFT_MANUAL_REMINDER
+        FAILED
+    }
+
+    %% ==========================================
+    %% RELATIONSHIPS & INTERACTIONS
+    %% ==========================================
+    %% Actors -> Boundaries
+    EndUserActor ..> RecurringTransactionController : interacts (HTTP/REST)
+    SchedulerActor ..> RecurringSchedulerJob : triggers_cron_daily
+
+    %% Boundaries -> Controls
+    RecurringTransactionController --> RecurringTransactionService : delegates
+    RecurringSchedulerJob --> RecurringExecutionWorker : triggers_batch
+
+    %% Controls -> Repositories
+    RecurringTransactionService --> RecurringRuleRepository : manages_rules
+    RecurringExecutionWorker --> RecurringRuleRepository : queries_due_and_updates
+    RecurringExecutionWorker --> RecurringExecutionLogRepository : logs_execution
+
+    %% Controls -> Ports (Decoupling)
+    RecurringTransactionService ..> IWalletQueryPort : validates_wallet (AF04.03)
+    RecurringExecutionWorker ..> IWalletQueryPort : checks_funds (BR04)
+    RecurringExecutionWorker ..> ILedgerPostPort : posts_transactions (BR09, BR12)
+    RecurringExecutionWorker ..> INotificationPort : pushes_alerts (SYS01)
+
+    %% Repositories -> Entities
+    RecurringRuleRepository ..> RecurringRule : persists
+    RecurringExecutionLogRepository ..> RecurringExecutionLog : persists
+
+    %% Entity Structure & Enums
+    RecurringRule "1" o-- "0..*" RecurringExecutionLog : tracks_history
+    RecurringRule --> RecurrenceFrequency : repeated_by
+    RecurringRule --> RecurringStatus : state_of
+    RecurringExecutionLog --> ExecutionStatus : outcome_of

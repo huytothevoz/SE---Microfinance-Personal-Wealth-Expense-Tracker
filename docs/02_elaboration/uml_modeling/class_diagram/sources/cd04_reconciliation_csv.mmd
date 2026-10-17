@@ -1,0 +1,90 @@
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% ACTORS (Tác nhân tương tác)
+    %% ==========================================
+    class EndUserActor {
+        <<Actor: Người dùng A01>>
+        +viewTrialBalance(asOfDate)
+        +exportLedgerCsv(dateRange, walletId, categoryId)
+    }
+
+    %% ==========================================
+    %% BOUNDARY LAYER (Controllers)
+    %% ==========================================
+    class ReportController {
+        <<Boundary>>
+        +getTrialBalance(userId: UUID, asOfDate: Date): ResponseEntity
+        +exportLedgerCsv(userId: UUID, filter: ExportFilterDTO): ResponseEntity
+    }
+
+    %% ==========================================
+    %% CONTROL LAYER (Services)
+    %% ==========================================
+    class ReconciliationService {
+        <<Control>>
+        -ledgerQueryPort: ILedgerQueryPort
+        +generateTrialBalance(userId: UUID, asOfDate: Date): TrialBalanceReport
+        +verifyLedgerIntegrity(userId: UUID): boolean
+    }
+
+    class ExportService {
+        <<Control>>
+        -ledgerQueryPort: ILedgerQueryPort
+        +sanitizeCsvField(input: String): String
+        +generateSecureCsv(transactions: List~ExportTransactionRow~): byte[]
+    }
+
+    class ILedgerQueryPort {
+        <<Interface / Port>>
+        +getTrialBalanceBalances(userId: UUID, asOfDate: Date): Map~UUID, BalancePair~
+        +findPostedTransactions(userId: UUID, filter: ExportFilterDTO): List~ExportTransactionRow~
+    }
+
+    %% ==========================================
+    %% VALUE OBJECTS & REPORT DTOs
+    %% ==========================================
+    class TrialBalanceReport {
+        <<Value Object>>
+        -asOfDate: Date
+        -totalDebit: Decimal
+        -totalCredit: Decimal
+        -isBalanced: boolean
+        -accounts: List~AccountTrialBalanceRow~
+        +checkEquilibrium(): boolean
+    }
+
+    class AccountTrialBalanceRow {
+        <<Value Object>>
+        -accountCode: String
+        -accountName: String
+        -accountType: String
+        -debitAmount: Decimal
+        -creditAmount: Decimal
+        -endingBalance: Decimal
+    }
+
+    class ExportTransactionRow {
+        <<Value Object>>
+        -transactionId: UUID
+        -occurredOn: Date
+        -description: String
+        -categoryName: String
+        -walletName: String
+        -amount: Decimal
+        -currency: String
+        -status: String
+    }
+
+    %% ==========================================
+    %% RELATIONSHIPS & INTERACTIONS
+    %% ==========================================
+    EndUserActor ..> ReportController : interacts (HTTP/REST)
+    ReportController --> ReconciliationService : requests_trial_balance
+    ReportController --> ExportService : requests_csv_export
+    ReconciliationService ..> ILedgerQueryPort : queries_ledger_balances
+    ExportService ..> ILedgerQueryPort : queries_posted_rows
+    ReconciliationService ..> TrialBalanceReport : produces
+    TrialBalanceReport *-- AccountTrialBalanceRow : aggregates
+    ExportService ..> ExportTransactionRow : sanitizes_and_encodes

@@ -27,6 +27,7 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
 | **CD02** | Phân hệ 2: Quản lý Ví tài sản & Số dư Mở sổ | [UC02](../SRS.md#uc02) | `WalletController`, `WalletService`, `Wallet`, `ILedgerEquityPort` | [cd02_wallet_management.svg](./class_diagram/cd02_wallet_management.svg) |
 | **CD03** | Phân hệ 3: Ghi nhận Giao dịch Thu chi & Sổ cái Kế toán kép | [UC03](../SRS.md#uc03) | `TransactionController`, `LedgerService`, `FinancialTransaction`, `JournalEntry` | [cd03_double_entry_ledger.svg](./class_diagram/cd03_double_entry_ledger.svg) |
 | **CD04** | Phân hệ 4: Báo cáo Đối soát Sổ cái & Xuất CSV An toàn | [UC11](../SRS.md#uc11) | `ReportController`, `ReconciliationService`, `ExportService`, `TrialBalanceReport` | [cd04_reconciliation_csv.svg](./class_diagram/cd04_reconciliation_csv.svg) |
+| **CD05** | Phân hệ 5: Quản lý Giao dịch Định kỳ Tự động | [UC04](../SRS.md#uc04), [SYS02](../SRS.md#sys02) | `RecurringTransactionController`, `RecurringExecutionWorker`, `RecurringRule`, `ILedgerPostPort` | [cd05_recurring_transaction.svg](./class_diagram/cd05_recurring_transaction.svg) |
 
 ---
 
@@ -41,225 +42,6 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
 
 ![CD01 Class Diagram](./class_diagram/cd01_identity_access.svg)
 
-<details>
-<summary>🔍 <b>Nhấn để xem mã nguồn Mermaid (CD01)</b></summary>
-
-```mermaid
-classDiagram
-    direction TB
-
-    %% ==========================================
-    %% ACTORS (Tác nhân tương tác)
-    %% ==========================================
-    class GuestActor {
-        <<Actor: Khách vãng lai A01-G>>
-        +register(fullName, email, password, currency)
-        +login(email, password)
-        +requestPasswordReset(email)
-        +submitOtpResetPassword(email, otp, newPassword)
-    }
-
-    class EndUserActor {
-        <<Actor: Người dùng A01>>
-        +getProfile()
-        +updateProfile(fullName, baseCurrency)
-        +changePassword(oldPassword, newPassword)
-        +logout()
-    }
-
-    class AdminActor {
-        <<Actor: Quản trị viên A02>>
-        +listUsers(page, filter)
-        +lockUser(userId, reason)
-        +unlockUser(userId)
-        +viewAuditLogs(page)
-    }
-
-    %% ==========================================
-    %% BOUNDARY LAYER (Controllers)
-    %% ==========================================
-    class AuthController {
-        <<Boundary>>
-        +register(dto: RegisterRequestDTO): ResponseEntity
-        +login(dto: LoginRequestDTO): ResponseEntity
-        +refreshToken(refreshToken: String): ResponseEntity
-        +requestPasswordReset(dto: ForgotPasswordDTO): ResponseEntity
-        +verifyOtpAndResetPassword(dto: ResetPasswordDTO): ResponseEntity
-        +logout(userId: UUID): ResponseEntity
-    }
-
-    class UserController {
-        <<Boundary>>
-        +getProfile(userId: UUID): ResponseEntity
-        +updateProfile(userId: UUID, dto: UpdateProfileDTO): ResponseEntity
-        +changePassword(userId: UUID, dto: ChangePasswordDTO): ResponseEntity
-    }
-
-    class AdminController {
-        <<Boundary>>
-        +getUsers(page: int, search: String): ResponseEntity
-        +lockUser(userId: UUID, dto: LockUserDTO): ResponseEntity
-        +unlockUser(userId: UUID): ResponseEntity
-        +getAuditLogs(page: int): ResponseEntity
-    }
-
-    %% ==========================================
-    %% CONTROL LAYER (Services)
-    %% ==========================================
-    class AuthService {
-        <<Control>>
-        -userRepository: UserRepository
-        -tokenRepository: PasswordResetRepository
-        -jwtProvider: JwtTokenProvider
-        -passwordEncoder: Argon2PasswordEncoder
-        +register(dto: RegisterRequestDTO): User
-        +authenticate(email: String, password: String): TokenPair
-        +refreshAccessToken(refreshToken: String): TokenPair
-        +initiatePasswordReset(email: String): void
-        +resetPasswordWithOtp(email: String, otp: String, newPassword: String): boolean
-        +revokeUserTokens(userId: UUID): void
-    }
-
-    class UserService {
-        <<Control>>
-        -userRepository: UserRepository
-        -passwordEncoder: Argon2PasswordEncoder
-        +getUserProfile(userId: UUID): User
-        +updateProfile(userId: UUID, dto: UpdateProfileDTO): User
-        +changePassword(userId: UUID, oldPass: String, newPass: String): void
-    }
-
-    class AdminService {
-        <<Control>>
-        -userRepository: UserRepository
-        -auditRepository: AuditLogRepository
-        -authService: AuthService
-        +listUsers(page: int, search: String): Page~User~
-        +lockUserAccount(adminId: UUID, targetUserId: UUID, reason: String): void
-        +unlockUserAccount(adminId: UUID, targetUserId: UUID): void
-        +getAuditHistory(page: int): Page~AdminAuditLog~
-    }
-
-    %% ==========================================
-    %% ENTITY / PERSISTENCE LAYER (Repositories)
-    %% ==========================================
-    class UserRepository {
-        <<Entity / Repository>>
-        +findById(id: UUID): Optional~User~
-        +findByEmail(email: String): Optional~User~
-        +existsByEmail(email: String): boolean
-        +save(user: User): User
-        +updateStatus(id: UUID, status: UserStatus): void
-        +findUsers(page: int, search: String): Page~User~
-    }
-
-    class PasswordResetRepository {
-        <<Entity / Repository>>
-        +findByUserId(userId: UUID): Optional~PasswordResetToken~
-        +save(token: PasswordResetToken): void
-        +deleteByUserId(userId: UUID): void
-    }
-
-    class AuditLogRepository {
-        <<Entity / Repository>>
-        +save(log: AdminAuditLog): void
-        +findAll(page: int): Page~AdminAuditLog~
-        +findByTargetUserId(targetId: UUID): List~AdminAuditLog~
-    }
-
-    %% ==========================================
-    %% DOMAIN ENTITIES & VALUE OBJECTS
-    %% ==========================================
-    class User {
-        <<Entity>>
-        -id: UUID
-        -fullName: String
-        -email: String
-        -passwordHash: String
-        -role: UserRole
-        -status: UserStatus
-        -baseCurrency: String
-        -createdAt: DateTime
-        -updatedAt: DateTime
-        +validatePassword(plainPassword: String, encoder: PasswordEncoder): boolean
-        +changePassword(newPasswordHash: String): void
-        +updateProfile(fullName: String, baseCurrency: String): void
-        +lock(): void
-        +unlock(): void
-        +isActive(): boolean
-    }
-
-    class PasswordResetToken {
-        <<Entity>>
-        -userId: UUID
-        -tokenHash: String
-        -attempts: int
-        -expiresAt: DateTime
-        -createdAt: DateTime
-        +verifyOtp(inputOtp: String): boolean
-        +incrementAttempts(): void
-        +isExpired(): boolean
-        +isExceededAttempts(): boolean
-    }
-
-    class AdminAuditLog {
-        <<Entity>>
-        -id: UUID
-        -adminUserId: UUID
-        -targetUserId: UUID
-        -action: String
-        -reason: String
-        -createdAt: DateTime
-    }
-
-    class UserRole {
-        <<enumeration>>
-        USER
-        ADMIN
-    }
-
-    class UserStatus {
-        <<enumeration>>
-        ACTIVE
-        LOCKED
-    }
-
-    %% ==========================================
-    %% RELATIONSHIPS & INTERACTIONS
-    %% ==========================================
-    %% Actors -> Boundary
-    GuestActor ..> AuthController : interacts (HTTP/REST)
-    EndUserActor ..> AuthController : logout
-    EndUserActor ..> UserController : interacts (HTTP/REST)
-    AdminActor ..> AdminController : moderates (HTTP/REST)
-
-    %% Boundary -> Control
-    AuthController --> AuthService : delegates
-    UserController --> UserService : delegates
-    AdminController --> AdminService : delegates
-
-    %% Control -> Control / Boundary coordination
-    AdminService --> AuthService : revokes_tokens (BR11)
-
-    %% Control -> Repositories
-    AuthService --> UserRepository : queries/persists
-    AuthService --> PasswordResetRepository : manages_otp
-    UserService --> UserRepository : queries/updates
-    AdminService --> UserRepository : locks/unlocks
-    AdminService --> AuditLogRepository : logs_action
-
-    %% Repositories -> Entities
-    UserRepository ..> User : persists
-    PasswordResetRepository ..> PasswordResetToken : persists
-    AuditLogRepository ..> AdminAuditLog : persists
-
-    %% Entity Relationships
-    User "1" o-- "0..1" PasswordResetToken : requests (FR01)
-    User "1" o-- "0..*" AdminAuditLog : targeted_in (FR13)
-    User --> UserRole : typed_by
-    User --> UserStatus : state_of
-```
-</details>
 
 #### Thuyết minh Chi tiết Trách nhiệm & Phương thức Nghiệp vụ (Class Responsibilities):
 
@@ -296,114 +78,6 @@ classDiagram
 
 ![CD02 Class Diagram](./class_diagram/cd02_wallet_management.svg)
 
-<details>
-<summary>🔍 <b>Nhấn để xem mã nguồn Mermaid (CD02)</b></summary>
-
-```mermaid
-classDiagram
-    direction TB
-
-    %% ==========================================
-    %% ACTORS (Tác nhân tương tác)
-    %% ==========================================
-    class EndUserActor {
-        <<Actor: Người dùng A01>>
-        +createWallet(name, type, currency, openingBalance)
-        +getWallets()
-        +archiveWallet(walletId)
-        +adjustBalance(walletId, actualBalance, reason)
-    }
-
-    %% ==========================================
-    %% BOUNDARY LAYER (Controllers)
-    %% ==========================================
-    class WalletController {
-        <<Boundary>>
-        +createWallet(dto: CreateWalletDTO): ResponseEntity
-        +getWallets(userId: UUID): ResponseEntity
-        +archiveWallet(walletId: UUID): ResponseEntity
-        +adjustBalance(walletId: UUID, dto: AdjustBalanceDTO): ResponseEntity
-    }
-
-    %% ==========================================
-    %% CONTROL LAYER (Services)
-    %% ==========================================
-    class WalletService {
-        <<Control>>
-        -walletRepository: WalletRepository
-        -ledgerPort: ILedgerEquityPort
-        +createWalletWithOpeningBalance(userId: UUID, dto: CreateWalletDTO): Wallet
-        +archiveWallet(userId: UUID, walletId: UUID): void
-        +getWalletDetails(walletId: UUID): Wallet
-        +validateWalletAvailable(walletId: UUID, amount: Decimal): boolean
-    }
-
-    class ILedgerEquityPort {
-        <<Interface / Port>>
-        +createOpeningEquityEntry(userId: UUID, walletId: UUID, openingBalance: Decimal, currency: String): void
-    }
-
-    %% ==========================================
-    %% ENTITY / PERSISTENCE LAYER (Repositories)
-    %% ==========================================
-    class WalletRepository {
-        <<Entity / Repository>>
-        +findById(id: UUID): Optional~Wallet~
-        +findByUserId(userId: UUID): List~Wallet~
-        +findWithLock(id: UUID): Optional~Wallet~
-        +save(wallet: Wallet): Wallet
-        +hasTransactions(walletId: UUID): boolean
-        +updateCachedBalance(walletId: UUID, delta: Decimal): void
-    }
-
-    %% ==========================================
-    %% DOMAIN ENTITIES & VALUE OBJECTS
-    %% ==========================================
-    class Wallet {
-        <<Entity>>
-        -id: UUID
-        -userId: UUID
-        -name: String
-        -walletType: WalletType
-        -currency: String
-        -cachedBalance: Decimal
-        -status: WalletStatus
-        -createdAt: DateTime
-        +deposit(amount: Decimal): void
-        +withdraw(amount: Decimal): void
-        +canWithdraw(amount: Decimal): boolean
-        +archive(): void
-        +isArchived(): boolean
-    }
-
-    class WalletType {
-        <<enumeration>>
-        CASH
-        BANK
-        E_WALLET
-        SAVINGS
-        CREDIT
-    }
-
-    class WalletStatus {
-        <<enumeration>>
-        ACTIVE
-        ARCHIVED
-    }
-
-    %% ==========================================
-    %% RELATIONSHIPS & INTERACTIONS
-    %% ==========================================
-    EndUserActor ..> WalletController : interacts (HTTP/REST)
-    WalletController --> WalletService : delegates
-    WalletService --> WalletRepository : queries/locks
-    WalletService ..> ILedgerEquityPort : creates_opening_equity (BR01)
-    WalletRepository ..> Wallet : persists
-    Wallet --> WalletType : categorized_as
-    Wallet --> WalletStatus : state_of
-```
-</details>
-
 > 🔗 **Liên kết ánh xạ liên phân hệ:** Cổng `ILedgerEquityPort` được hiện thực hóa bởi `LedgerService` tại [Phân hệ 3 (Sổ cái Kế toán kép)](#23-phân-hệ-3-ghi-nhận-giao-dịch-thu-chi--sổ-cái-kế-toán-kép-double-entry-ledger-context---uc03) nhằm hạch toán đối ứng số dư đầu kỳ vào tài khoản Vốn chủ sở hữu (`Equity`).
 
 #### Thuyết minh Trách nhiệm & Phương thức Nghiệp vụ (Class Responsibilities - UC02):
@@ -428,192 +102,6 @@ classDiagram
 #### Sơ đồ Lớp Trực quan (Vector SVG):
 
 ![CD03 Class Diagram](./class_diagram/cd03_double_entry_ledger.svg)
-
-<details>
-<summary>🔍 <b>Nhấn để xem mã nguồn Mermaid (CD03)</b></summary>
-
-```mermaid
-classDiagram
-    direction TB
-
-    %% ==========================================
-    %% ACTORS (Tác nhân tương tác)
-    %% ==========================================
-    class EndUserActor {
-        <<Actor: Người dùng A01>>
-        +createExpense(walletId, categoryId, amount, date)
-        +createIncome(walletId, categoryId, amount, date)
-        +transfer(srcWalletId, dstWalletId, amount)
-        +reverseTransaction(transactionId, reason)
-        +getTransactions(filter, page)
-    }
-
-    %% ==========================================
-    %% BOUNDARY LAYER (Controllers)
-    %% ==========================================
-    class TransactionController {
-        <<Boundary>>
-        +createExpense(dto: CreateExpenseDTO, idempKey: String): ResponseEntity
-        +createIncome(dto: CreateIncomeDTO, idempKey: String): ResponseEntity
-        +transfer(dto: TransferDTO, idempKey: String): ResponseEntity
-        +reverseTransaction(txId: UUID, dto: ReverseDTO): ResponseEntity
-        +getTransactions(filter: TransactionFilterDTO, page: int): ResponseEntity
-    }
-
-    %% ==========================================
-    %% CONTROL LAYER (Services & Ports)
-    %% ==========================================
-    class LedgerService {
-        <<Control>>
-        -ledgerRepository: LedgerRepository
-        -categoryRepository: CategoryRepository
-        -idempotencyRepository: IdempotencyRepository
-        -walletPort: IWalletLockPort
-        -fxPort: IExchangeRatePort
-        +recordExpense(userId: UUID, dto: CreateExpenseDTO, idempKey: String): FinancialTransaction
-        +recordIncome(userId: UUID, dto: CreateIncomeDTO, idempKey: String): FinancialTransaction
-        +transferBetweenWallets(userId: UUID, dto: TransferDTO, idempKey: String): FinancialTransaction
-        +reversePostedTransaction(userId: UUID, txId: UUID, reason: String): FinancialTransaction
-        +createOpeningEquityEntry(userId: UUID, walletId: UUID, amount: Decimal, currency: String): void
-        +validateDoubleEntry(entries: List~JournalEntry~): boolean
-    }
-
-    class IWalletLockPort {
-        <<Interface / Port>>
-        +findWithLock(walletId: UUID): Optional~WalletRef~
-        +updateCachedBalance(walletId: UUID, delta: Decimal): void
-    }
-
-    class IExchangeRatePort {
-        <<Interface / Port>>
-        +getLatestRate(fromCurr: String, toCurr: String): Decimal
-        +calculateWeightedAverageRate(walletId: UUID, amount: Decimal): Decimal
-    }
-
-    %% ==========================================
-    %% ENTITY / PERSISTENCE LAYER (Repositories)
-    %% ==========================================
-    class LedgerRepository {
-        <<Entity / Repository>>
-        +saveTransactionWithEntries(tx: FinancialTransaction, entries: List~JournalEntry~): FinancialTransaction
-        +findTransactionById(id: UUID): Optional~FinancialTransaction~
-        +findTransactionsByUser(userId: UUID, filter: TransactionFilterDTO, page: int): Page~FinancialTransaction~
-    }
-
-    class CategoryRepository {
-        <<Entity / Repository>>
-        +findById(id: UUID): Optional~Category~
-        +findByUserId(userId: UUID): List~Category~
-        +save(category: Category): Category
-    }
-
-    class IdempotencyRepository {
-        <<Entity / Repository>>
-        +findByKey(userId: UUID, key: String): Optional~IdempotencyRecord~
-        +save(record: IdempotencyRecord): void
-    }
-
-    %% ==========================================
-    %% DOMAIN ENTITIES & ENUMS
-    %% ==========================================
-    class Category {
-        <<Entity>>
-        -id: UUID
-        -userId: UUID
-        -name: String
-        -categoryType: CategoryType
-        -isArchived: boolean
-    }
-
-    class CategoryType {
-        <<enumeration>>
-        INCOME
-        EXPENSE
-    }
-
-    class FinancialTransaction {
-        <<Entity / Aggregate Root>>
-        -id: UUID
-        -userId: UUID
-        -categoryId: UUID
-        -transactionType: TransactionType
-        -status: TransactionStatus
-        -description: String
-        -currency: String
-        -amount: Decimal
-        -fxRateSnapshot: Decimal
-        -occurredOn: Date
-        -postedAt: DateTime
-        -originalTransactionId: UUID
-        -entries: List~JournalEntry~
-        +addEntry(entry: JournalEntry): void
-        +validateBalance(): boolean
-        +post(): void
-        +createReversal(reversalReason: String): FinancialTransaction
-    }
-
-    class TransactionType {
-        <<enumeration>>
-        INCOME
-        EXPENSE
-        TRANSFER
-        ADJUSTMENT
-    }
-
-    class TransactionStatus {
-        <<enumeration>>
-        DRAFT
-        POSTED
-        REVERSED
-    }
-
-    class JournalEntry {
-        <<Entity>>
-        -id: UUID
-        -transactionId: UUID
-        -walletId: UUID
-        -entrySide: EntrySide
-        -amountOriginal: Decimal
-        -currency: String
-        -amountBase: Decimal
-        -fxRateSnapshot: Decimal
-        +isDebit(): boolean
-        +isCredit(): boolean
-    }
-
-    class EntrySide {
-        <<enumeration>>
-        DEBIT
-        CREDIT
-    }
-
-    %% ==========================================
-    %% RELATIONSHIPS & INTERACTIONS
-    %% ==========================================
-    %% Central Spine: Actor -> Controller -> Service -> Repository -> Aggregate Root -> Child
-    EndUserActor ..> TransactionController : interacts (HTTP/REST)
-    TransactionController --> LedgerService : delegates
-    LedgerService --> LedgerRepository : persists_acid (BR12)
-    LedgerRepository ..> FinancialTransaction : persists_aggregate
-    FinancialTransaction "1" *-- "2..*" JournalEntry : balances (BR01)
-    JournalEntry --> EntrySide : side_of
-
-    %% Left Ports (Wallet & FX)
-    LedgerService ..> IWalletLockPort : locks_wallet (BR13)
-    LedgerService ..> IExchangeRatePort : gets_snapshot_rate (BR15)
-
-    %% Right Branch (Idempotency & Category Hierarchy)
-    LedgerService --> IdempotencyRepository : checks_dedup (BR13)
-    LedgerService --> CategoryRepository : verifies_category
-    CategoryRepository ..> Category : persists
-    Category --> CategoryType : typed_by
-
-    %% Enums and Association
-    FinancialTransaction ..> Category : categorizes
-    FinancialTransaction --> TransactionType : typed_by
-    FinancialTransaction --> TransactionStatus : state_of
-```
-</details>
 
 > 🔗 **Liên kết ánh xạ liên phân hệ:**
 > - Cổng `IWalletLockPort` được liên kết trực tiếp với `WalletRepository` tại [Phân hệ 2 (Quản lý Ví)](#22-phân-hệ-2-quản-lý-ví-tài-sản--số-dư-mở-sổ-wallet-management-context---uc02), đồng thời trường `walletId` của `JournalEntry` tham chiếu đến thực thể `Wallet`.
@@ -642,103 +130,6 @@ classDiagram
 
 ![CD04 Class Diagram](./class_diagram/cd04_reconciliation_csv.svg)
 
-<details>
-<summary>🔍 <b>Nhấn để xem mã nguồn Mermaid (CD04)</b></summary>
-
-```mermaid
-classDiagram
-    direction TB
-
-    %% ==========================================
-    %% ACTORS (Tác nhân tương tác)
-    %% ==========================================
-    class EndUserActor {
-        <<Actor: Người dùng A01>>
-        +viewTrialBalance(asOfDate)
-        +exportLedgerCsv(dateRange, walletId, categoryId)
-    }
-
-    %% ==========================================
-    %% BOUNDARY LAYER (Controllers)
-    %% ==========================================
-    class ReportController {
-        <<Boundary>>
-        +getTrialBalance(userId: UUID, asOfDate: Date): ResponseEntity
-        +exportLedgerCsv(userId: UUID, filter: ExportFilterDTO): ResponseEntity
-    }
-
-    %% ==========================================
-    %% CONTROL LAYER (Services)
-    %% ==========================================
-    class ReconciliationService {
-        <<Control>>
-        -ledgerQueryPort: ILedgerQueryPort
-        +generateTrialBalance(userId: UUID, asOfDate: Date): TrialBalanceReport
-        +verifyLedgerIntegrity(userId: UUID): boolean
-    }
-
-    class ExportService {
-        <<Control>>
-        -ledgerQueryPort: ILedgerQueryPort
-        +sanitizeCsvField(input: String): String
-        +generateSecureCsv(transactions: List~ExportTransactionRow~): byte[]
-    }
-
-    class ILedgerQueryPort {
-        <<Interface / Port>>
-        +getTrialBalanceBalances(userId: UUID, asOfDate: Date): Map~UUID, BalancePair~
-        +findPostedTransactions(userId: UUID, filter: ExportFilterDTO): List~ExportTransactionRow~
-    }
-
-    %% ==========================================
-    %% VALUE OBJECTS & REPORT DTOs
-    %% ==========================================
-    class TrialBalanceReport {
-        <<Value Object>>
-        -asOfDate: Date
-        -totalDebit: Decimal
-        -totalCredit: Decimal
-        -isBalanced: boolean
-        -accounts: List~AccountTrialBalanceRow~
-        +checkEquilibrium(): boolean
-    }
-
-    class AccountTrialBalanceRow {
-        <<Value Object>>
-        -accountCode: String
-        -accountName: String
-        -accountType: String
-        -debitAmount: Decimal
-        -creditAmount: Decimal
-        -endingBalance: Decimal
-    }
-
-    class ExportTransactionRow {
-        <<Value Object>>
-        -transactionId: UUID
-        -occurredOn: Date
-        -description: String
-        -categoryName: String
-        -walletName: String
-        -amount: Decimal
-        -currency: String
-        -status: String
-    }
-
-    %% ==========================================
-    %% RELATIONSHIPS & INTERACTIONS
-    %% ==========================================
-    EndUserActor ..> ReportController : interacts (HTTP/REST)
-    ReportController --> ReconciliationService : requests_trial_balance
-    ReportController --> ExportService : requests_csv_export
-    ReconciliationService ..> ILedgerQueryPort : queries_ledger_balances
-    ExportService ..> ILedgerQueryPort : queries_posted_rows
-    ReconciliationService ..> TrialBalanceReport : produces
-    TrialBalanceReport *-- AccountTrialBalanceRow : aggregates
-    ExportService ..> ExportTransactionRow : sanitizes_and_encodes
-```
-</details>
-
 > 🔗 **Liên kết ánh xạ liên phân hệ:** Cổng truy vấn `ILedgerQueryPort` được hiện thực hóa trực tiếp bởi `LedgerRepository` tại [Phân hệ 3 (Sổ cái Kế toán kép)](#23-phân-hệ-3-ghi-nhận-giao-dịch-thu-chi--sổ-cái-kế-toán-kép-double-entry-ledger-context---uc03).
 
 #### Thuyết minh Trách nhiệm & Phương thức Nghiệp vụ (Class Responsibilities - UC11):
@@ -754,8 +145,45 @@ classDiagram
 
 ---
 
+### 2.5. Phân hệ 5: Quản lý Giao dịch Định kỳ Tự động (Recurring Transaction Context - UC04, SYS02)
+
+> **Tham chiếu nghiệp vụ:** [FR06](../SRS.md#fr06), [FR15](../SRS.md#fr15)  
+> **Use Case:** [UC04](../SRS.md#uc04) (Thiết lập & Xử lý giao dịch định kỳ), [SYS02](../SRS.md#sys02) (Tiến trình quét subscription nền 00:05 hàng ngày)  
+> **Sequence Diagram:** [SQ04](./sequence_diagram/sq04_subscription_cron.md)  
+> **Quy tắc cốt lõi:** [BR09](../SRS.md#br09) (Quy tắc ngày neo cuối tháng thiếu ngày), [BR12](../SRS.md#br12) (ACID nguyên tử), [BR13](../SRS.md#br13) (Khóa chống lặp `subscriptionId, dueDate`)
+
+#### Sơ đồ Lớp Trực quan (Vector SVG):
+
+![CD05 Class Diagram](./class_diagram/cd05_recurring_transaction.svg)
+
+> 🔗 **Liên kết ánh xạ liên phân hệ:**
+> - Cổng `ILedgerPostPort` gọi sang [Phân hệ 3 (Sổ cái Kế toán kép)](#23-phân-hệ-3-ghi-nhận-giao-dịch-thu-chi--sổ-cái-kế-toán-kép-double-entry-ledger-context---uc03) để tự động sinh giao dịch chi tiêu kế toán kép ở trạng thái `POSTED` (nếu đủ tiền và bật Auto-Post) hoặc tạo bản nháp `DRAFT`.
+> - Cổng `IWalletQueryPort` liên kết với [Phân hệ 2 (Quản lý Ví)](#22-phân-hệ-2-quản-lý-ví-tài-sản--số-dư-mở-sổ-wallet-management-context---uc02) để kiểm tra số dư ví và thẩm định tính khả dụng khi đổi ví ([AF04.03](../SRS.md#af0403)).
+> - Cổng `INotificationPort` gọi sang phân hệ Thông báo ([SYS01](../SRS.md#sys01), [UC13](../SRS.md#uc13)) để đẩy thông báo thành công hoặc cảnh báo ví thiếu tiền đến người dùng.
+
+#### Thuyết minh Trách nhiệm & Phương thức Nghiệp vụ (Class Responsibilities - UC04, SYS02):
+
+1. **Tầng Boundary (Biên tiếp nhận & Khởi chạy Tác vụ):**
+   - **`RecurringTransactionController`**: Cung cấp giao diện RESTful API cho Người dùng (`EndUserActor`): tạo quy tắc định kỳ (`createRecurring`), xem danh sách theo trạng thái (`getRecurringList`), tạm dừng (`pauseRecurring`), tái kích hoạt (`resumeRecurring`), hủy lịch (`cancelRecurring`) và chuyển đổi ví thanh toán liên kết (`changeWallet` theo [AF04.03](../SRS.md#af0403)).
+   - **`RecurringSchedulerJob`**: Điểm tiếp nhận kích hoạt từ bộ lập lịch hệ thống (`SchedulerActor` - tiến trình `SYS02` chạy định kỳ lúc 00:05 hàng ngày). Đóng vai trò cầu nối kích hoạt tác vụ xử lý hàng loạt của `RecurringExecutionWorker`.
+
+2. **Tầng Control (Dịch vụ Điều khiển & Tiến trình Xử lý Nền):**
+   - **`RecurringTransactionService`**: Xử lý các nghiệp vụ tương tác trực tiếp của người dùng. Thẩm định số tiền $> 0$, kiểm tra ví thanh toán hợp lệ và tính toán ngày đến hạn đầu tiên (`calculateInitialDueDate`) theo ngày bắt đầu và chu kỳ lặp.
+   - **`RecurringExecutionWorker` (Trọng tâm Cron Batch Engine):**
+     - **Quét các khoản đến hạn:** Truy vấn toàn bộ các quy tắc định kỳ đang ở trạng thái `ACTIVE` có `nextDueDate <= currentDate`.
+     - **Chống xử lý trùng lặp ([BR13](../SRS.md#br13)):** Tự động sinh khóa định danh duy nhất theo cặp `Idempotency-Key = (recurringRuleId, dueDate)` để bảo đảm mỗi kỳ định kỳ chỉ sinh đúng 1 giao dịch duy nhất.
+     - **Kiểm soát thanh toán & Rẽ nhánh thông minh ([BR09](../SRS.md#br09)):**
+       - Nếu `isAutoPost == true`: Kiểm tra số dư ví qua `IWalletQueryPort`. Nếu đủ tiền $\rightarrow$ gọi `ILedgerPostPort.postRecurringExpense()` để ghi nhận giao dịch `POSTED` và trừ số dư ví, đồng thời đẩy thông báo thành công. Nếu thiếu tiền $\rightarrow$ tạo giao dịch nháp `DRAFT` và đẩy cảnh báo khẩn cấp ([EF04.02](../SRS.md#ef0402)).
+       - Nếu `isAutoPost == false`: Tự động tạo giao dịch nháp `DRAFT` và gửi thông báo nhắc nhở duyệt chi trả ([AF04.01](../SRS.md#af0401)).
+     - **Thuật toán Ngày neo Tháng thiếu ngày ([BR09](../SRS.md#br09), [TC-F06.01-P](../SRS.md#tc-f06)):** Gọi phương thức `calculateNextDueDate()`: nếu ngày neo là 29, 30, hoặc 31 nhưng tháng kế tiếp không đủ ngày (ví dụ tháng 2 chỉ có 28 ngày), hệ thống tự động lùi ngày đến hạn về ngày cuối tháng (28/02), đồng thời **bảo lưu nguyên vẹn ngày neo gốc** (anchorDay = 31) cho các tháng tiếp theo.
+
+3. **Tầng Entity & Persistence (Thực thể miền & Lưu trữ):**
+   - **`RecurringRule` (Rich Domain Entity / Aggregate Root):** Đóng gói trọn vẹn thông tin lịch định kỳ: chu kỳ (`RecurrenceFrequency`), ngày neo (`anchorDay`), trạng thái (`RecurringStatus`), cờ `isAutoPost`. Chứa các phương thức tự thay đổi trạng thái `pause()`, `resume()`, `cancel()`, `changeWallet()` và tự tính toán ngày đến hạn tiếp theo.
+   - **`RecurringExecutionLog`**: Thực thể lưu trữ vết thực thi lịch sử của từng kỳ chạy (ngày dự kiến, thời điểm thực tế, mã giao dịch sinh ra, trạng thái `ExecutionStatus`, thông báo lỗi nếu có).
+   - **`RecurringRuleRepository` & `RecurringExecutionLogRepository`**: Cung cấp giao diện truy vấn chuyên biệt phục vụ quét theo ngày đến hạn (`findDueRules`) và cập nhật lịch trình sau thực thi (`updateExecutionSchedule`).
+
 ---
 
 ## 3. Bảng Ánh xạ Nhanh (Traceability)
 
-*(Nội dung phần này sẽ được tổng hợp đầy đủ sau khi hoàn tất thiết kế chi tiết 6 phân hệ).*
+*(Nội dung phần này sẽ được tổng hợp đầy đủ sau khi hoàn tất thiết kế chi tiết các phân hệ).*

@@ -1,10 +1,11 @@
 import os
 import sys
-import re
 import zlib
 import base64
 import json
 import urllib.request
+import re
+import time
 
 if sys.stdout:
     try:
@@ -12,31 +13,29 @@ if sys.stdout:
     except Exception:
         pass
 
-OUT_DIR = os.path.join("docs", "02_elaboration", "uml_modeling", "class_diagram")
-MD_FILE = os.path.join("docs", "02_elaboration", "uml_modeling", "class_diagram.md")
+BASE_DIR = os.path.join("docs", "02_elaboration", "uml_modeling", "class_diagram")
+SOURCES_DIR = os.path.join(BASE_DIR, "sources")
+OUT_DIR = BASE_DIR
 
 os.makedirs(OUT_DIR, exist_ok=True)
-
-with open(MD_FILE, "r", encoding="utf-8") as f:
-    md_content = f.read()
-
-# Extract all mermaid classDiagram blocks
-blocks = re.findall(r"```mermaid\n(classDiagram[\s\S]*?)\n```", md_content)
-print(f"Found {len(blocks)} classDiagram blocks in {MD_FILE}")
+os.makedirs(SOURCES_DIR, exist_ok=True)
 
 TARGETS = [
-    ("cd01_identity_access.svg", "Phân hệ 1: Định danh, Xác thực & Quản trị"),
-    ("cd02_wallet_management.svg", "Phân hệ 2: Quản lý Ví tài sản & Số dư Mở sổ"),
-    ("cd03_double_entry_ledger.svg", "Phân hệ 3: Ghi nhận Giao dịch & Sổ cái Kế toán kép"),
-    ("cd04_reconciliation_csv.svg", "Phân hệ 4: Báo cáo Đối soát Sổ cái & Xuất CSV"),
+    ("cd01_identity_access.mmd", "cd01_identity_access.svg", "Phân hệ 1: Định danh, Xác thực & Quản trị"),
+    ("cd02_wallet_management.mmd", "cd02_wallet_management.svg", "Phân hệ 2: Quản lý Ví tài sản & Số dư Mở sổ"),
+    ("cd03_double_entry_ledger.mmd", "cd03_double_entry_ledger.svg", "Phân hệ 3: Ghi nhận Giao dịch & Sổ cái Kế toán kép"),
+    ("cd04_reconciliation_csv.mmd", "cd04_reconciliation_csv.svg", "Phân hệ 4: Báo cáo Đối soát Sổ cái & Xuất CSV"),
+    ("cd05_recurring_transaction.mmd", "cd05_recurring_transaction.svg", "Phân hệ 5: Quản lý Giao dịch Định kỳ Tự động"),
 ]
 
-for idx, (filename, label) in enumerate(TARGETS):
-    if idx >= len(blocks):
-        print(f"Skipping {filename}: not enough blocks found.")
+for idx, (src_file, out_svg, label) in enumerate(TARGETS):
+    src_path = os.path.join(SOURCES_DIR, src_file)
+    if not os.path.exists(src_path):
+        print(f"Skipping {src_file}: source file not found at {src_path}")
         continue
     
-    code = blocks[idx]
+    with open(src_path, "r", encoding="utf-8") as f:
+        code = f.read().strip()
     
     # Configure high contrast theme with solid background
     payload = {
@@ -66,9 +65,9 @@ for idx, (filename, label) in enumerate(TARGETS):
     b64 = base64.urlsafe_b64encode(compressed).decode("ascii")
     url = f"https://mermaid.ink/svg/pako:{b64}"
 
-    target_path = os.path.join(OUT_DIR, filename)
+    target_path = os.path.join(OUT_DIR, out_svg)
 
-    print(f"Generating [{idx+1}/4] {filename} ({label})...")
+    print(f"Generating [{idx+1}/{len(TARGETS)}] {out_svg} ({label})...")
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
     
     success = False
@@ -98,11 +97,10 @@ for idx, (filename, label) in enumerate(TARGETS):
             success = True
             break
         except Exception as e:
-            print(f" -> Attempt {attempt} failed for {filename}: {e}")
-            import time
+            print(f" -> Attempt {attempt} failed for {out_svg}: {e}")
             time.sleep(2)
             
     if not success:
-        print(f" -> FAILED to generate {filename} after 3 attempts.")
+        print(f" -> FAILED to generate {out_svg} after 3 attempts.")
 
-print("All 4 class diagram SVGs processed successfully!")
+print("All class diagram SVGs processed successfully!")
