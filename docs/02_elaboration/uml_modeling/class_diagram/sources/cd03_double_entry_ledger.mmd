@@ -177,3 +177,22 @@ classDiagram
     FinancialTransaction ..> Category : categorizes
     FinancialTransaction --> TransactionType : typed_by
     FinancialTransaction --> TransactionStatus : state_of
+
+    %% ==========================================
+    %% STYLES & HIGHLIGHTS (BCE+D Color Palette)
+    %% ==========================================
+    style TransactionController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style LedgerService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style IWalletLockPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style IExchangeRatePort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style LedgerDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style CategoryDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style IdempotencyDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style FinancialTransaction fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style JournalEntry fill:#ECFDF5,stroke:#059669,stroke-width:1px
+    style Category fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style ExchangeRateSnapshotVO fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style TransactionType fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style TransactionStatus fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style CategoryType fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style EntrySide fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px

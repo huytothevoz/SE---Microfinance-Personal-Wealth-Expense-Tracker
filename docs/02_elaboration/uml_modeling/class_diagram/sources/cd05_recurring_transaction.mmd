@@ -198,3 +198,21 @@ classDiagram
     RecurringRule --> RecurrenceFrequency : repeated_by
     RecurringRule --> RecurringStatus : state_of
     RecurringExecutionLog --> ExecutionStatus : outcome_of
+
+    %% ==========================================
+    %% STYLES & HIGHLIGHTS (BCE+D Color Palette)
+    %% ==========================================
+    style RecurringTransactionController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style RecurringSchedulerJob fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style RecurringTransactionService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style RecurringExecutionWorker fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style ILedgerPostPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style IWalletQueryPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style INotificationPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style RecurringRuleDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style RecurringExecutionLogDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style RecurringRule fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style RecurringExecutionLog fill:#ECFDF5,stroke:#059669,stroke-width:1px
+    style RecurrenceFrequency fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style RecurringStatus fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style ExecutionStatus fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px

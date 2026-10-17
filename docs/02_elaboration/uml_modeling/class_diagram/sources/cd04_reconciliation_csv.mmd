@@ -111,3 +111,18 @@ classDiagram
     ReconciliationService ..> TrialBalanceReport : produces
     TrialBalanceReport *-- AccountTrialBalanceRow : aggregates
     ExportService ..> ExportTransactionRow : sanitizes_and_encodes
+
+    %% ==========================================
+    %% STYLES & HIGHLIGHTS (BCE+D Color Palette)
+    %% ==========================================
+    style ReportController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style ReconciliationService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style ExportService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style ILedgerQueryPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style AuditLogDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style LedgerDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style ExportAuditLog fill:#ECFDF5,stroke:#059669,stroke-width:1px
+    style TrialBalanceReport fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style AccountTrialBalanceRow fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style ExportTransactionRow fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style ExportFormat fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
