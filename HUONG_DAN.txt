@@ -1,0 +1,50 @@
+SE / WealthFlow - BO SETUP AN TOAN CHO XAMPP TREN WINDOWS
+=========================================================
+YEU CAU
+- XAMPP da cai tai C:\xampp, PHP 8.2+ (pdo_mysql, mbstring, openssl).
+- Thu muc project: C:\xampp\htdocs\SE\
+- Ben trong SE phai co: source\index.html, source\backend\router.php,
+  source\backend\bin\setup.php, source\database\001_initial_schema.sql, ...
+- Project ZIP duoc cung cap da co thu muc source\backend\vendor, KHONG CAN Composer.
+
+CAI DAT VA CHAY (CHI CAN 1 LAN NHAN)
+1) Giai nen file ZIP BO SETUP nay.
+2) Chep 4 file sau VAO THU MUC C:\xampp\htdocs\SE\ :
+   CHAY_SE.bat, setup-se.ps1, DUNG_SE.bat, stop-se.ps1
+   KHONG chay script setup-run-version-windows.ps1 CU trong SE.
+3) Double-click CHAY_SE.bat. Cho den khi bao Everything is ready.
+   Lan dau se tao mot MySQL RIENG tai C:\xampp\se-instance\mysql-data
+   tu bo mau sach C:\xampp\mysql\backup (KHONG copy tu mysql\data dang chay).
+   Script se khoi dong MySQL cong 3307, nap schema qua cac SQL migrations
+   su dung backend\bin\setup.php (chay lai an toan, khong DROP database),
+   roi mo PHP server tai http://localhost:8080/ va tu mo trinh duyet.
+4) Nhung lan sau: van double-click CHAY_SE.bat; no dung lai DB/migrations,
+   khong tao lai hay xoa du lieu dang co.
+5) Muon dung rieng SE: double-click DUNG_SE.bat (dung MySQL an toan qua mysqladmin).
+
+THONG SO
+- SE: http://localhost:8080/ | MySQL 127.0.0.1:3307 | DB wealthflow
+- LTW: du kien localhost:8000 | MySQL 127.0.0.1:3306 | DB flexidiet
+- App web SE chay bang PHP development server, KHONG PHAI Apache.
+- Apache cong 80/8000 va MySQL 3306 cua XAMPP KHONG BI DOI CAU HINH.
+- Du lieu/bao loi SE: C:\xampp\se-instance\
+- PHP app-key duoc luu tai C:\xampp\se-instance\app-key.txt
+- Email duoc chuyen sang che do LOG cho test local, khong gui SMTP that.
+
+NEU BAO LOI
+- Port 8080 / 3307 already occupied: dung dung chuong trinh dang giu cong.
+  Script se KHONG kill mot process khac.
+- MySQL fails to start: doc C:\xampp\se-instance\mysql-error.log
+- Web fails: doc C:\xampp\se-instance\php-8080-error.log
+- Missing mysql backup template: can kiem tra C:\xampp\mysql\backup\mysql.
+- Migration fails: gui chi tiet loi + ket qua cua mySQL error log, KHONG gui secrets.
+- Muon dat mat khau root cua SE instance: thiet lap env var SE_DB_PASSWORD
+  trong phien Windows truoc khi chay (neu da doi password root cua SE DB).
+- Neu phat hien file config.local.php trong project co mat khau email that,
+  nen doi Gmail App Password (revoke ban cu) va xoa secrets khoi Git history.
+
+AN TOAN
+- KHONG can bam Start Apache hoac Start MySQL tu XAMPP cho SE.
+- Khong dung script cu cua WealthFlow vi no thay the ca htdocs va reset DB.
+- Khong xoa, ghi de C:\xampp\mysql\data va C:\xampp\se-instance\mysql-data.
+- PHP built-in server chi dung de test LOCAL tren may; khong phai production.
