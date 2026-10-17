@@ -152,6 +152,14 @@ classDiagram
         CREDIT
     }
 
+    class ExchangeRateSnapshotVO {
+        <<ValueObject>>
+        +fromCurrency: String
+        +toCurrency: String
+        +rate: Decimal
+        +snapshotAt: DateTime
+    }
+
     %% ==========================================
     %% RELATIONSHIPS & INTERACTIONS
     %% ==========================================

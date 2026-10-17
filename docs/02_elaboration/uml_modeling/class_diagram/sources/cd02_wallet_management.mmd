@@ -74,6 +74,16 @@ classDiagram
         +isArchived(): boolean
     }
 
+    class WalletBalanceAdjustmentVO {
+        <<ValueObject>>
+        +walletId: UUID
+        +oldBalance: Decimal
+        +newBalance: Decimal
+        +difference: Decimal
+        +adjustedAt: DateTime
+        +reason: String
+    }
+
     class WalletType {
         <<Enumeration>>
         CASH

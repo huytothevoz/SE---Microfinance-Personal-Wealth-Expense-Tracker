@@ -52,6 +52,12 @@ classDiagram
         +saveExportAudit(log: ExportAuditLog): void
     }
 
+    class LedgerDAO {
+        <<DataAccess>>
+        +getTrialBalanceBalances(userId: UUID, asOfDate: Date): Map~UUID, BalancePair~
+        +findPostedTransactions(userId: UUID, filter: ExportFilterDTO): List~ExportTransactionRow~
+    }
+
     %% ==========================================
     %% ENTITIES & REPORT VALUE OBJECTS
     %% ==========================================
@@ -98,6 +104,12 @@ classDiagram
         -status: String
     }
 
+    class ExportFormat {
+        <<Enumeration>>
+        CSV_EXCEL_SAFE
+        CSV_STANDARD
+    }
+
     %% ==========================================
     %% RELATIONSHIPS & INTERACTIONS
     %% ==========================================
@@ -106,6 +118,7 @@ classDiagram
     ReportController --> ExportService : requests_csv_export
     ReconciliationService ..> ILedgerQueryPort : queries_ledger_balances
     ExportService ..> ILedgerQueryPort : queries_posted_rows
+    LedgerDAO ..|> ILedgerQueryPort : implements
     ExportService --> AuditLogDAO : logs_export (BR16)
     AuditLogDAO ..> ExportAuditLog : maps/persists
     ReconciliationService ..> TrialBalanceReport : produces
