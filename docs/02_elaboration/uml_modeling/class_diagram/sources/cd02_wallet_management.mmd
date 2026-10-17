@@ -37,7 +37,7 @@ classDiagram
     }
 
     class ILedgerEquityPort {
-        <<Interface / Port>>
+        <<Port / Interface>>
         +createOpeningEquityEntry(userId: UUID, walletId: UUID, openingBalance: Decimal, currency: String): void
     }
 
@@ -75,7 +75,7 @@ classDiagram
     }
 
     class WalletType {
-        <<enumeration>>
+        <<Enumeration>>
         CASH
         BANK
         E_WALLET
@@ -84,7 +84,7 @@ classDiagram
     }
 
     class WalletStatus {
-        <<enumeration>>
+        <<Enumeration>>
         ACTIVE
         ARCHIVED
     }

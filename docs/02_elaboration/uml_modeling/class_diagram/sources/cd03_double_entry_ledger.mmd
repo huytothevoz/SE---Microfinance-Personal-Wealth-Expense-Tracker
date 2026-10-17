@@ -44,13 +44,13 @@ classDiagram
     }
 
     class IWalletLockPort {
-        <<Interface / Port>>
+        <<Port / Interface>>
         +findWithLock(walletId: UUID): Optional~WalletRef~
         +updateCachedBalance(walletId: UUID, delta: Decimal): void
     }
 
     class IExchangeRatePort {
-        <<Interface / Port>>
+        <<Port / Interface>>
         +getLatestRate(fromCurr: String, toCurr: String): Decimal
         +calculateWeightedAverageRate(walletId: UUID, amount: Decimal): Decimal
     }
@@ -91,13 +91,13 @@ classDiagram
     }
 
     class CategoryType {
-        <<enumeration>>
+        <<Enumeration>>
         INCOME
         EXPENSE
     }
 
     class FinancialTransaction {
-        <<Entity / Aggregate Root>>
+        <<Aggregate Root>>
         -id: UUID
         -userId: UUID
         -categoryId: UUID
@@ -118,7 +118,7 @@ classDiagram
     }
 
     class TransactionType {
-        <<enumeration>>
+        <<Enumeration>>
         INCOME
         EXPENSE
         TRANSFER
@@ -126,7 +126,7 @@ classDiagram
     }
 
     class TransactionStatus {
-        <<enumeration>>
+        <<Enumeration>>
         DRAFT
         POSTED
         REVERSED
@@ -147,7 +147,7 @@ classDiagram
     }
 
     class EntrySide {
-        <<enumeration>>
+        <<Enumeration>>
         DEBIT
         CREDIT
     }

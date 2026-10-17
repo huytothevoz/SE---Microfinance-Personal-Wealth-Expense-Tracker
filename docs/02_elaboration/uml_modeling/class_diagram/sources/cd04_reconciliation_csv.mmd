@@ -39,7 +39,7 @@ classDiagram
     }
 
     class ILedgerQueryPort {
-        <<Interface / Port>>
+        <<Port / Interface>>
         +getTrialBalanceBalances(userId: UUID, asOfDate: Date): Map~UUID, BalancePair~
         +findPostedTransactions(userId: UUID, filter: ExportFilterDTO): List~ExportTransactionRow~
     }
@@ -67,7 +67,7 @@ classDiagram
     }
 
     class TrialBalanceReport {
-        <<Value Object>>
+        <<ValueObject>>
         -asOfDate: Date
         -totalDebit: Decimal
         -totalCredit: Decimal
@@ -77,7 +77,7 @@ classDiagram
     }
 
     class AccountTrialBalanceRow {
-        <<Value Object>>
+        <<ValueObject>>
         -accountCode: String
         -accountName: String
         -accountType: String
@@ -87,7 +87,7 @@ classDiagram
     }
 
     class ExportTransactionRow {
-        <<Value Object>>
+        <<ValueObject>>
         -transactionId: UUID
         -occurredOn: Date
         -description: String

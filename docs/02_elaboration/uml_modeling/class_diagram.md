@@ -30,13 +30,61 @@ Sơ đồ Thực thể Miền (Domain Model) thể hiện bức tranh toàn cả
 
 ## 2. Sơ đồ Lớp Thiết kế Chi tiết (Kiến trúc BCE + D)
 
-Mô hình phân bổ trách nhiệm hướng đối tượng được thiết kế theo kiến trúc mở rộng **Boundary - Control - Entity - DataAccess (BCE + D)**:
-- **Boundary (Tầng Biên / Giao diện)**: Tiếp nhận yêu cầu từ Actor (REST Controllers tiếp nhận HTTP requests, Schedulers/Workers tiếp nhận trigger nền).
-- **Control (Tầng Điều khiển / Dịch vụ Nghiệp vụ)**: Thực thi logic tài chính, điều phối giao dịch nguyên tử ACID và kiểm soát các quy tắc nghiệp vụ ([BR01] - [BR18]).
-- **Entity (Tầng Thực thể Miền)**: Gồm các Rich Domain Entities & Value Objects mang dữ liệu và hành vi nghiệp vụ nội tại (như `User`, `Wallet`, `FinancialTransaction`).
-- **DataAccess (Tầng Truy cập CSDL / DAO)**: Chuyên trách bắn các câu lệnh truy vấn CSDL (SQL queries, khóa dòng bi quan `SELECT ... FOR UPDATE`, map dữ liệu quan hệ sang đối tượng), quy chuẩn theo mẫu thiết kế **Data Access Object (hậu tố `*DAO`)**.
+Mô hình phân bổ trách nhiệm hướng đối tượng trong hệ thống **WealthFlow** được thiết kế dựa trên sự kết hợp hài hòa giữa **Mẫu phân tích BCE (Boundary - Control - Entity)** kinh điển của Ivar Jacobson và **Kiến trúc miền chuyên sâu (Domain-Driven Design - DDD)** kết hợp mẫu **Data Access Object (DAO)**. 
 
-### 2.0. Danh mục Sơ đồ Lớp Trực quan (Vector SVG Catalog)
+Nhằm triệt tiêu sự mơ hồ khi đọc hiểu thiết kế và quy định rõ ràng vị trí của từng thành phần mã nguồn, toàn bộ các lớp trong 11 phân hệ và sơ đồ miền đều được gắn nhãn định danh ngữ nghĩa (**UML Stereotypes**) chặt chẽ.
+
+---
+
+### 2.0. Bảng Quy chuẩn & Định nghĩa Toàn diện các Stereotype trong Mô hình Thiết kế
+
+Bảng dưới đây định nghĩa chi tiết ngữ nghĩa nghiệp vụ, trách nhiệm kỹ nghệ, quy ước định danh và biểu diễn màu sắc nhận diện trực quan của toàn bộ 10 Stereotypes xuất hiện trong các sơ đồ lớp:
+
+| Nhóm Kiến trúc | Ký hiệu Stereotype (UML) | Ngữ nghĩa Nghiệp vụ & Trách nhiệm Thiết kế (Semantic & Responsibilities) | Quy ước Định danh | Ví dụ Thực tế trong Hệ thống | Màu Nhận diện trên SVG |
+| :---: | :---: | :--- | :--- | :--- | :---: |
+| **Actor** | `<<Actor: ...>>` | Đại diện cho các tác nhân bên ngoài hệ thống (con người, hệ thống ngoài hoặc tiến trình tự động) đóng vai trò kích hoạt các luồng tương tác tại Tầng Biên. | Danh xưng tác nhân kèm mã ký hiệu | `Actor: Người dùng A01`, `Actor: Quản trị viên A02`, `Actor: Tiến trình hệ thống SYS02`, `Actor: API Thị trường SJC / DOJI` | Khung xám viền nét mảnh |
+| **Boundary** | `<<Boundary>>` | **Điểm biên tiếp nhận yêu cầu từ người dùng (REST API Endpoints):** Giải nén HTTP request, xác thực định dạng DTO (Data Transfer Object), kiểm tra tính hợp lệ sơ bộ của tham số đầu vào và chuyển tiếp tới Tầng Điều khiển; không chứa logic nghiệp vụ tài chính. | Hậu tố `*Controller` | `AuthController`, `WalletController`, `TransactionController`, `BudgetController`, `LoanController`, `GoldController` | Tím Indigo nhạt (`#E0E7FF`), viền `#4338CA` |
+| **Boundary** | `<<Boundary / Job>>`<br>`<<Boundary / Worker>>` | **Điểm biên kích hoạt tác vụ nền tự động (Background Trigger):** Tiếp nhận tín hiệu kích hoạt từ bộ lập lịch (Cron Job) hoặc hàng đợi sự kiện bất đồng bộ; đóng vai trò cầu nối chuyển giao nhiệm vụ vào Tầng Điều khiển mà không qua giao diện HTTP. | Hậu tố `*Job`, `*Worker` | `RecurringSchedulerJob`, `LoanReminderSchedulerJob`, `DailySnapshotSchedulerJob`, `NotificationBroadcastWorker` | Tím Indigo nhạt (`#E0E7FF`), viền `#4338CA` |
+| **Control** | `<<Control>>` | **Dịch vụ điều phối nghiệp vụ cốt lõi (Domain Business Service):** Đóng vai trò bộ não của phân hệ; thực thi toàn bộ các quy tắc nghiệp vụ tài chính ([BR01] - [BR18]), quản trị ranh giới giao dịch nguyên tử ACID ([BR12]), điều phối luồng gọi sang các cổng Port liên phân hệ hoặc tầng DataAccess. | Hậu tố `*Service`, `*Worker` | `AuthService`, `LedgerService`, `BudgetService`, `LoanService`, `GoldAssetService`, `RecurringExecutionWorker` | Vàng hổ phách (`#FEF3C7`), viền `#D97706` |
+| **Control** | `<<Port / Interface>>` | **Cổng trừu tượng hóa giao tiếp liên phân hệ (Outbound/Inbound Ports):** Thiết kế theo mẫu Kiến trúc Lục giác (Hexagonal / Ports & Adapters) và nguyên lý Nghịch đảo Phụ thuộc (DIP); định nghĩa hợp đồng giao tiếp giữa các phân hệ độc lập, giúp loại bỏ phụ thuộc trực tiếp (Decoupling) và hỗ trợ Mocking khi kiểm thử tự động. | Tiền tố `I*Port` | `ILedgerEquityPort`, `IWalletLockPort`, `IBudgetLedgerPort`, `ILoanLedgerPort`, `IGoldPriceFeedPort`, `ISystemConfigPort` | Xanh lục ngọc (`#ECFDF5`), viền `#059669` |
+| **Entity** | `<<Aggregate Root>>` | **Thực thể miền trung tâm (Gốc tập hợp - DDD Aggregate Root):** Đại diện cho một ranh giới toàn vẹn nghiệp vụ; trực tiếp quản lý và bảo vệ tính bất biến của các thực thể con phụ thuộc. Mọi truy cập hay biến động trạng thái từ bên ngoài tập hợp bắt buộc phải thông qua phương thức của Aggregate Root. | Danh từ số ít, định danh thực thể | `User`, `Wallet`, `FinancialTransaction`, `Loan`, `GoldHolding`, `FinancialGoal` | Xanh lục ngọc (`#ECFDF5`), viền đậm `#059669` (hoặc Vàng `#FEF3C7`) |
+| **Entity** | `<<Entity>>` | **Thực thể miền nghiệp vụ (Rich Domain Entity):** Đại diện cho đối tượng nghiệp vụ cụ thể, sở hữu định danh duy nhất (`UUID id`) và vòng đời thay đổi trạng thái theo thời gian. Đóng gói cả dữ liệu (State) lẫn hành vi nội tại (Behavior/Invariant methods) tự thẩm định tính hợp lệ. | Danh từ số ít | `JournalEntry`, `RecurringRule`, `Budget`, `RepaymentScheduleItem`, `GoalAllocation`, `Notification` | Xanh lục ngọc (`#ECFDF5`), viền `#059669` |
+| **Entity** | `<<ValueObject>>` | **Đối tượng giá trị bất biến (Value Object - DDD):** Đại diện cho các khái niệm nghiệp vụ được định danh hoàn toàn bằng giá trị của các thuộc tính cấu thành, không có khóa ID độc lập (`no identity`), mang tính bất biến (`immutable`). Dùng để tổng hợp kết quả tính toán, báo cáo hoặc biên lai đối soát. | Hậu tố `*VO`, `*Report`, `*Row` | `BudgetUsageVO`, `RepaymentReceiptVO`, `GoldPortfolioSummaryVO`, `CashFlowReportVO`, `FinancialHealthScoreVO`, `TrialBalanceReport` | Xám sáng Slate (`#F1F5F9`), viền `#64748B` |
+| **DataAccess** | `<<DataAccess>>` | **Đối tượng truy cập cơ sở dữ liệu (Data Access Object - DAO):** Chuyên trách bắn các câu lệnh truy vấn SQL thuần túy hoặc qua ORM (SELECT, INSERT, UPDATE, DELETE), áp dụng kỹ thuật khóa mức dòng bi quan `SELECT ... FOR UPDATE` ([BR13]), và thực hiện ánh xạ kết quả bảng quan hệ (Relational Rows) sang Domain Entity / Value Object. | Hậu tố `*DAO` | `UserDAO`, `WalletDAO`, `LedgerDAO`, `BudgetDAO`, `LoanDAO`, `GoldHoldingDAO`, `NetWorthSnapshotDAO`, `NotificationDAO` | Hồng Pink tím (`#FCE7F3`), viền `#DB2777` |
+| **Supporting** | `<<Enumeration>>` | **Tập hợp hằng số miền cố định (Type-safe Enumeration):** Định nghĩa danh mục hữu hạn các giá trị chuẩn hóa, đóng vai trò kiểm soát trạng thái thực thể, loại tài khoản kế toán hoặc phân cấp cảnh báo. | Danh từ mô tả tập hợp | `AccountStatus`, `WalletType`, `TransactionType`, `BudgetAlertLevel`, `LoanType`, `HealthRating`, `NotificationPriority` | Trắng xám nhạt (`#F8FAFC`), viền `#94A3B8` |
+
+#### Thuyết minh Luồng Điều khiển Chuẩn giữa các Stereotype (Stereotype Interaction Workflow):
+
+```
+[<<Actor: ...>>]
+       │
+       │  (1) Gửi HTTP Request / Kích hoạt Cron
+       ▼
+[<<Boundary>> / <<Boundary / Job>>]
+       │
+       │  (2) Validate DTO sơ bộ & Chuyển giao
+       ▼
+[<<Control>> (Service)] ──(Gọi Cổng trừu tượng)──► [<<Port / Interface>>]
+       │                                                    │
+       │ (3) Thực thi nghiệp vụ & ACID                      │ (Gọi sang phân hệ khác)
+       ├──────────────────────────┐                         ▼
+       ▼                          ▼                [Control của Phân hệ khác]
+[<<Aggregate Root>> / <<Entity>>]  [<<DataAccess>> (*DAO)]
+       │ (Đổi trạng thái tự thân) │ (Khóa dòng & Bắn SQL)
+       ▼                          ▼
+[<<ValueObject>> (Kết quả)]   [PostgreSQL Database]
+```
+
+1. **Luồng Ghi (Mutation Path - Thêm / Sửa / Khóa):**  
+   `Actor` $\rightarrow$ `Boundary (Controller)` $\rightarrow$ `Control (Service)` $\rightarrow$ thẩm định quy tắc và cập nhật hành vi trong `Entity / Aggregate Root` $\rightarrow$ `DataAccess (DAO)` áp dụng khóa dòng bi quan `SELECT ... FOR UPDATE` và thực thi câu lệnh SQL vào CSDL.
+2. **Luồng Đọc (Query Path - Thống kê / Tra cứu):**  
+   `Actor` $\rightarrow$ `Boundary (Controller)` $\rightarrow$ `Control (Service)` gọi `DataAccess (DAO)` truy vấn CSDL $\rightarrow$ ánh xạ dữ liệu và đóng gói vào `ValueObject` $\rightarrow$ trả về cho giao diện người dùng.
+3. **Luồng Tương tác Liên phân hệ (Cross-subsystem Integration):**  
+   `Control (Service)` của phân hệ nguồn không bao giờ gọi trực tiếp Service hay DAO của phân hệ đích, mà luôn thông qua `<<Port / Interface>>`. Phân hệ đích sẽ cung cấp lớp hiện thực hóa (Adapter) cho Port đó, bảo đảm tính độc lập mô-đun tuyệt đối.
+
+---
+
+### 2.0.1. Danh mục Sơ đồ Lớp Trực quan (Vector SVG Catalog)
 
 Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG chất lượng cao lưu tại [./class_diagram/](./class_diagram/), mã nguồn Mermaid độc lập tại [./class_diagram/sources/](./class_diagram/sources/), nền trắng tương phản cao, hiển thị tức thì và bảo đảm 100% không bị quá tải hay sụp đổ Markdown Renderer:
 
