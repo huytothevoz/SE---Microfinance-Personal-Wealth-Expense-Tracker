@@ -10,24 +10,25 @@
 
 ---
 
-## 2. Sơ đồ Lớp Thiết kế Chi tiết (BCE Architecture)
+## 2. Sơ đồ Lớp Thiết kế Chi tiết (Kiến trúc BCE + D)
 
-Mô hình phân bổ trách nhiệm hướng đối tượng được thiết kế theo kiến trúc **Boundary - Control - Entity (BCE)** (Ivar Jacobson / UP-RUP):
+Mô hình phân bổ trách nhiệm hướng đối tượng được thiết kế theo kiến trúc mở rộng **Boundary - Control - Entity - DataAccess (BCE + D)**:
 - **Boundary (Tầng Biên / Giao diện)**: Tiếp nhận yêu cầu từ Actor (REST Controllers tiếp nhận HTTP requests, Schedulers/Workers tiếp nhận trigger nền).
 - **Control (Tầng Điều khiển / Dịch vụ Nghiệp vụ)**: Thực thi logic tài chính, điều phối giao dịch nguyên tử ACID và kiểm soát các quy tắc nghiệp vụ ([BR01] - [BR18]).
-- **Entity (Tầng Thực thể & Lưu trữ Bền vững)**: Gồm các Rich Domain Entities mang dữ liệu và hành vi nghiệp vụ, kết hợp cùng Repositories trừu tượng hóa thao tác CSDL.
+- **Entity (Tầng Thực thể Miền)**: Gồm các Rich Domain Entities & Value Objects mang dữ liệu và hành vi nghiệp vụ nội tại (như `User`, `Wallet`, `FinancialTransaction`).
+- **DataAccess (Tầng Truy cập CSDL / DAO)**: Chuyên trách bắn các câu lệnh truy vấn CSDL (SQL queries, khóa dòng bi quan `SELECT ... FOR UPDATE`, map dữ liệu quan hệ sang đối tượng), quy chuẩn theo mẫu thiết kế **Data Access Object (hậu tố `*DAO`)**.
 
 ### 2.0. Danh mục Sơ đồ Lớp Trực quan (Vector SVG Catalog)
 
-Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG chất lượng cao lưu tại [./class_diagram/](./class_diagram/), nền trắng tương phản cao, hiển thị tức thì và bảo đảm 100% không bị quá tải hay sụp đổ Markdown Renderer:
+Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG chất lượng cao lưu tại [./class_diagram/](./class_diagram/), mã nguồn Mermaid độc lập tại [./class_diagram/sources/](./class_diagram/sources/), nền trắng tương phản cao, hiển thị tức thì và bảo đảm 100% không bị quá tải hay sụp đổ Markdown Renderer:
 
-| Mã Phân hệ | Tên Phân hệ Nghiệp vụ (BCE Context) | Use Cases bao phủ | Các Lớp Trọng tâm | Ảnh Vector Trực quan |
+| Mã Phân hệ | Tên Phân hệ Nghiệp vụ (BCE + D Context) | Use Cases bao phủ | Các Lớp Trọng tâm | Ảnh Vector Trực quan |
 | :---: | :--- | :---: | :--- | :---: |
-| **CD01** | Phân hệ 1: Định danh, Xác thực & Quản trị Tài khoản | [UC01](../SRS.md#uc01), [UC12](../SRS.md#uc12) | `AuthController`, `AuthService`, `User`, `AdminService` | [cd01_identity_access.svg](./class_diagram/cd01_identity_access.svg) |
-| **CD02** | Phân hệ 2: Quản lý Ví tài sản & Số dư Mở sổ | [UC02](../SRS.md#uc02) | `WalletController`, `WalletService`, `Wallet`, `ILedgerEquityPort` | [cd02_wallet_management.svg](./class_diagram/cd02_wallet_management.svg) |
-| **CD03** | Phân hệ 3: Ghi nhận Giao dịch Thu chi & Sổ cái Kế toán kép | [UC03](../SRS.md#uc03) | `TransactionController`, `LedgerService`, `FinancialTransaction`, `JournalEntry` | [cd03_double_entry_ledger.svg](./class_diagram/cd03_double_entry_ledger.svg) |
-| **CD04** | Phân hệ 4: Báo cáo Đối soát Sổ cái & Xuất CSV An toàn | [UC11](../SRS.md#uc11) | `ReportController`, `ReconciliationService`, `ExportService`, `TrialBalanceReport` | [cd04_reconciliation_csv.svg](./class_diagram/cd04_reconciliation_csv.svg) |
-| **CD05** | Phân hệ 5: Quản lý Giao dịch Định kỳ Tự động | [UC04](../SRS.md#uc04), [SYS02](../SRS.md#sys02) | `RecurringTransactionController`, `RecurringExecutionWorker`, `RecurringRule`, `ILedgerPostPort` | [cd05_recurring_transaction.svg](./class_diagram/cd05_recurring_transaction.svg) |
+| **CD01** | Phân hệ 1: Định danh, Xác thực & Quản trị Tài khoản | [UC01](../SRS.md#uc01), [UC12](../SRS.md#uc12) | `AuthController`, `AuthService`, `User`, `UserDAO` | [cd01_identity_access.svg](./class_diagram/cd01_identity_access.svg) |
+| **CD02** | Phân hệ 2: Quản lý Ví tài sản & Số dư Mở sổ | [UC02](../SRS.md#uc02) | `WalletController`, `WalletService`, `Wallet`, `WalletDAO` | [cd02_wallet_management.svg](./class_diagram/cd02_wallet_management.svg) |
+| **CD03** | Phân hệ 3: Ghi nhận Giao dịch Thu chi & Sổ cái Kế toán kép | [UC03](../SRS.md#uc03) | `TransactionController`, `LedgerService`, `FinancialTransaction`, `LedgerDAO` | [cd03_double_entry_ledger.svg](./class_diagram/cd03_double_entry_ledger.svg) |
+| **CD04** | Phân hệ 4: Báo cáo Đối soát Sổ cái & Xuất CSV An toàn | [UC11](../SRS.md#uc11) | `ReportController`, `ReconciliationService`, `AuditLogDAO`, `TrialBalanceReport` | [cd04_reconciliation_csv.svg](./class_diagram/cd04_reconciliation_csv.svg) |
+| **CD05** | Phân hệ 5: Quản lý Giao dịch Định kỳ Tự động | [UC04](../SRS.md#uc04), [SYS02](../SRS.md#sys02) | `RecurringTransactionController`, `RecurringExecutionWorker`, `RecurringRule`, `RecurringRuleDAO` | [cd05_recurring_transaction.svg](./class_diagram/cd05_recurring_transaction.svg) |
 
 ---
 
@@ -61,11 +62,15 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
      - Tự động ghi nhận một bản ghi kiểm toán bất biến vào `AdminAuditLog` gồm `adminId`, `targetUserId`, `action = 'LOCK_USER'`, `reason` và thời điểm xảy ra.
      - **Ràng buộc cách ly tuyệt đối ([BR11](../SRS.md#br11)):** `AdminService` hoàn toàn không có bất kỳ kết nối hay tham chiếu nào đến các Service tài chính cá nhân (`WalletService`, `LedgerService`), bảo đảm Quản trị viên tuyệt đối không thể đọc hay can thiệp vào số dư và giao dịch cá nhân của người dùng.
 
-3. **Tầng Entity & Persistence (Thực thể & Kho lưu trữ bền vững):**
+3. **Tầng Entity (Thực thể Miền & Giá trị):**
    - **`User` (Rich Domain Entity)**: Thực thể trung tâm đại diện cho chủ sở hữu tài khoản. Chứa các phương thức tự thẩm định như `validatePassword()`, `lock()`, `unlock()`, `isActive()`.
    - **`PasswordResetToken`**: Thực thể chứa mã OTP đã băm, thời hạn `expiresAt`, biến đếm `attempts`, kèm phương thức tự kiểm tra `verifyOtp()`, `isExpired()`, `isExceededAttempts()`.
    - **`AdminAuditLog`**: Thực thể lưu trữ bất biến phục vụ truy vết pháp lý và giám sát an ninh hệ thống.
-   - **`UserRepository`, `PasswordResetRepository`, `AuditLogRepository`**: Đóng gói toàn bộ câu lệnh truy vấn CSDL, cung cấp giao diện trừu tượng hóa việc lưu trữ bền vững.
+
+4. **Tầng DataAccess (Truy cập CSDL - DAOs):**
+   - **`UserDAO`**: Thực thi câu lệnh SQL truy vấn/lưu bảng `users` (`findById`, `findByEmail`, `existsByEmail`, `save`, `updateStatus`, `findUsers`).
+   - **`PasswordResetDAO`**: Thao tác bảng `password_reset_tokens` (`findByUserId`, `save`, `deleteByUserId`).
+   - **`AuditLogDAO`**: Thao tác ghi và đọc bảng nhật ký kiểm toán quản trị `admin_audit_logs`.
 
 ### 2.2. Phân hệ 2: Quản lý Ví tài sản & Số dư Mở sổ (Wallet Management Context - UC02)
 
@@ -85,10 +90,10 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
 1. **`WalletController` (Boundary):** Tiếp nhận yêu cầu mở ví, xem danh sách ví, đóng ví (`archiveWallet`) và điều chỉnh số dư đối soát (`adjustBalance`).
 2. **`WalletService` (Control):**
    - **Mở ví kèm số dư ban đầu ([BR01](../SRS.md#br01), [BR02](../SRS.md#br02)):** Khi tạo ví có `openingBalance > 0`, service gọi qua cổng `ILedgerEquityPort` sang phân hệ Sổ cái để sinh một bút toán kế toán kép cân bằng đối ứng: Ghi Nợ (Debit) Ví tài sản và Ghi Có (Credit) Vốn chủ sở hữu (`Equity`).
-   - **Bảo toàn lịch sử ví, cấm xóa cứng ([BR02](../SRS.md#br02)):** Khi người dùng muốn xóa ví, `WalletService` gọi `WalletRepository.hasTransactions()`. Nếu ví đã từng phát sinh giao dịch trong lịch sử sổ cái, hệ thống từ chối xóa cứng (`Hard Delete`) mà chuyển trạng thái sang `ARCHIVED` (đóng ví) để bảo toàn khả năng kiểm toán.
+   - **Bảo toàn lịch sử ví, cấm xóa cứng ([BR02](../SRS.md#br02)):** Khi người dùng muốn xóa ví, `WalletService` gọi `WalletDAO.hasTransactions()`. Nếu ví đã từng phát sinh giao dịch trong lịch sử sổ cái, hệ thống từ chối xóa cứng (`Hard Delete`) mà chuyển trạng thái sang `ARCHIVED` (đóng ví) để bảo toàn khả năng kiểm toán.
    - **Thẩm định chặn âm ví ([BR04](../SRS.md#br04)):** Phương thức `validateWalletAvailable()` chặn các giao dịch chi vượt số dư đối với tiền mặt, ngân hàng, ví điện tử; chỉ riêng ví Thẻ tín dụng (`CREDIT`) mới được phép mang số dư âm trong hạn mức thấu chi.
 3. **`Wallet` (Rich Domain Entity):** Tự đóng gói logic biến động số dư qua `deposit()`, `withdraw()`, tự kiểm tra khả năng chi trả qua `canWithdraw()` và chuyển trạng thái qua `archive()`.
-4. **`WalletRepository` (Persistence):** Hỗ trợ phương thức `findWithLock(id)` áp dụng khóa mức dòng (`SELECT ... FOR UPDATE`) để ngăn ngừa Race Condition khi phát sinh giao dịch đồng thời ([BR13](../SRS.md#br13)).
+4. **`WalletDAO` (DataAccess):** Thao tác bảng `wallets`, hỗ trợ phương thức `findWithLock(id)` áp dụng khóa mức dòng (`SELECT ... FOR UPDATE`) để ngăn ngừa Race Condition khi phát sinh giao dịch đồng thời ([BR13](../SRS.md#br13)).
 
 ---
 
@@ -104,7 +109,7 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
 ![CD03 Class Diagram](./class_diagram/cd03_double_entry_ledger.svg)
 
 > 🔗 **Liên kết ánh xạ liên phân hệ:**
-> - Cổng `IWalletLockPort` được liên kết trực tiếp với `WalletRepository` tại [Phân hệ 2 (Quản lý Ví)](#22-phân-hệ-2-quản-lý-ví-tài-sản--số-dư-mở-sổ-wallet-management-context---uc02), đồng thời trường `walletId` của `JournalEntry` tham chiếu đến thực thể `Wallet`.
+> - Cổng `IWalletLockPort` được liên kết trực tiếp với `WalletDAO` tại [Phân hệ 2 (Quản lý Ví)](#22-phân-hệ-2-quản-lý-ví-tài-sản--số-dư-mở-sổ-wallet-management-context---uc02), đồng thời trường `walletId` của `JournalEntry` tham chiếu đến thực thể `Wallet`.
 > - Cổng `IExchangeRatePort` cung cấp tỷ giá hối đoái snapshot và tính bình quân gia quyền ([BR15](../SRS.md#br15)).
 
 #### Thuyết minh Trách nhiệm & Phương thức Nghiệp vụ (Class Responsibilities - UC03):
@@ -112,10 +117,14 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
 1. **`TransactionController` (Boundary):** Cổng tiếp nhận toàn bộ các giao dịch tài chính thu chi, chuyển tiền liên ví và yêu cầu đảo giao dịch. Bắt buộc nhận `Idempotency-Key` từ HTTP header để chống gửi trùng lặp ([BR13](../SRS.md#br13)).
 2. **`LedgerService` (Control - Trọng tâm Kế toán kép & ACID):**
    - **Nguyên tắc kế toán kép bất biến ([BR01](../SRS.md#br01)):** Mọi phát sinh thu, chi, chuyển tiền đều được phân rã thành tối thiểu 2 dòng `JournalEntry` (Nợ / Có). Phương thức `validateDoubleEntry()` bảo đảm $\sum Debit = \sum Credit$; nếu phát hiện mất cân bằng dù chỉ 1 đồng, toàn bộ thao tác bị hủy bỏ và Rollback tức thì.
-   - **Giao dịch nguyên tử ACID & Khóa dòng ([BR12](../SRS.md#br12), [BR13](../SRS.md#br13)):** Tương tác với ví thông qua cổng `IWalletLockPort` với lệnh khóa mức dòng (`SELECT ... FOR UPDATE`), đồng thời lưu vết vào `IdempotencyRepository` để loại bỏ triệt để xung đột Race Condition khi người dùng bấm đúp.
+   - **Giao dịch nguyên tử ACID & Khóa dòng ([BR12](../SRS.md#br12), [BR13](../SRS.md#br13)):** Tương tác với ví thông qua cổng `IWalletLockPort` với lệnh khóa mức dòng (`SELECT ... FOR UPDATE`), đồng thời lưu vết vào `IdempotencyDAO` để loại bỏ triệt để xung đột Race Condition khi người dùng bấm đúp.
    - **Cơ chế đảo giao dịch an toàn ([BR06](../SRS.md#br06)):** Giao dịch đã ở trạng thái `POSTED` tuyệt đối không được sửa hay xóa; phương thức `reversePostedTransaction()` tạo ra một giao dịch mới mang trạng thái `REVERSED` với các dòng Nợ/Có đối ứng ngược lại hoàn toàn, tự trỏ đến `originalTransactionId`.
 3. **`IExchangeRatePort` (Control / Port):** Cung cấp giao diện tỷ giá đa tiền tệ ([BR15](../SRS.md#br15)). Ghi nhận snapshot tỷ giá tại thời điểm phát sinh giao dịch và áp dụng phương pháp bình quân gia quyền khi xuất ngoại tệ khỏi ví.
-4. **`FinancialTransaction` (Rich Entity / Aggregate Root):** Đóng gói toàn bộ các dòng sổ cái cấu thành (`JournalEntry`). Tự kiểm tra cân bằng Nợ/Có qua `validateBalance()` và tự sinh bút toán đảo đối ứng qua `createReversal()`.
+4. **`FinancialTransaction` & `JournalEntry` (Rich Entities / Aggregate Root):** Đóng gói toàn bộ các dòng sổ cái cấu thành. Tự kiểm tra cân bằng Nợ/Có qua `validateBalance()` và tự sinh bút toán đảo đối ứng qua `createReversal()`.
+5. **Tầng DataAccess (Truy cập CSDL - DAOs):**
+   - **`LedgerDAO`**: Quản lý lưu trữ nguyên tử các bảng `financial_transactions` và `journal_entries` theo chuẩn ACID ([BR12](../SRS.md#br12)).
+   - **`CategoryDAO`**: Thao tác bảng `categories` (truy vấn danh mục theo người dùng, kiểm tra trạng thái hoạt động).
+   - **`IdempotencyDAO`**: Thao tác bảng `idempotency_records` để kiểm tra và lưu vết khóa trùng lặp ([BR13](../SRS.md#br13)).
 
 ---
 
@@ -130,7 +139,7 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
 
 ![CD04 Class Diagram](./class_diagram/cd04_reconciliation_csv.svg)
 
-> 🔗 **Liên kết ánh xạ liên phân hệ:** Cổng truy vấn `ILedgerQueryPort` được hiện thực hóa trực tiếp bởi `LedgerRepository` tại [Phân hệ 3 (Sổ cái Kế toán kép)](#23-phân-hệ-3-ghi-nhận-giao-dịch-thu-chi--sổ-cái-kế-toán-kép-double-entry-ledger-context---uc03).
+> 🔗 **Liên kết ánh xạ liên phân hệ:** Cổng truy vấn `ILedgerQueryPort` được hiện thực hóa trực tiếp bởi `LedgerDAO` tại [Phân hệ 3 (Sổ cái Kế toán kép)](#23-phân-hệ-3-ghi-nhận-giao-dịch-thu-chi--sổ-cái-kế-toán-kép-double-entry-ledger-context---uc03).
 
 #### Thuyết minh Trách nhiệm & Phương thức Nghiệp vụ (Class Responsibilities - UC11):
 
@@ -141,7 +150,8 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
 3. **`ExportService` (Control - Xuất CSV Bảo mật):**
    - **Khử độc CSV Formula Injection ([BR16](../SRS.md#br16)):** Tự động duyệt qua từng ô dữ liệu chuỗi (mô tả, tên danh mục, tên ví). Nếu phát hiện ký tự bắt đầu là `=, +, -, @, \t, \r`, phương thức `sanitizeCsvField()` tự động chèn thêm ký tự nháy đơn `'` ở đầu để ngăn chặn triệt để mã độc thực thi khi mở file trên Microsoft Excel hoặc LibreOffice.
    - **Chuẩn hóa hiển thị tiếng Việt:** Tự động chèn 3 bytes BOM UTF-8 (`\xEF\xBB\xBF`) vào đầu tệp CSV để phần mềm bảng tính mở trực tiếp không bị lỗi font tiếng Việt.
-4. **`TrialBalanceReport` & `AccountTrialBalanceRow` (Value Objects):** Các đối tượng giá trị mang kết quả kiểm toán, không có định danh độc lập, bảo đảm tính bất biến của báo cáo đối soát.
+4. **`TrialBalanceReport`, `AccountTrialBalanceRow`, `ExportTransactionRow` (Value Objects):** Các đối tượng giá trị mang kết quả kiểm toán và dòng xuất báo cáo, không có định danh độc lập, bảo đảm tính bất biến.
+5. **`AuditLogDAO` (DataAccess):** Thao tác ghi vết nhật ký xuất báo cáo vào bảng `export_audit_logs` (`saveExportAudit`) gồm mã người dùng, số lượng dòng, hash file SHA-256 và IP client để truy vết an ninh dữ liệu ([BR16](../SRS.md#br16)).
 
 ---
 
@@ -177,10 +187,13 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
        - Nếu `isAutoPost == false`: Tự động tạo giao dịch nháp `DRAFT` và gửi thông báo nhắc nhở duyệt chi trả ([AF04.01](../SRS.md#af0401)).
      - **Thuật toán Ngày neo Tháng thiếu ngày ([BR09](../SRS.md#br09), [TC-F06.01-P](../SRS.md#tc-f06)):** Gọi phương thức `calculateNextDueDate()`: nếu ngày neo là 29, 30, hoặc 31 nhưng tháng kế tiếp không đủ ngày (ví dụ tháng 2 chỉ có 28 ngày), hệ thống tự động lùi ngày đến hạn về ngày cuối tháng (28/02), đồng thời **bảo lưu nguyên vẹn ngày neo gốc** (anchorDay = 31) cho các tháng tiếp theo.
 
-3. **Tầng Entity & Persistence (Thực thể miền & Lưu trữ):**
+3. **Tầng Entity (Thực thể Miền):**
    - **`RecurringRule` (Rich Domain Entity / Aggregate Root):** Đóng gói trọn vẹn thông tin lịch định kỳ: chu kỳ (`RecurrenceFrequency`), ngày neo (`anchorDay`), trạng thái (`RecurringStatus`), cờ `isAutoPost`. Chứa các phương thức tự thay đổi trạng thái `pause()`, `resume()`, `cancel()`, `changeWallet()` và tự tính toán ngày đến hạn tiếp theo.
    - **`RecurringExecutionLog`**: Thực thể lưu trữ vết thực thi lịch sử của từng kỳ chạy (ngày dự kiến, thời điểm thực tế, mã giao dịch sinh ra, trạng thái `ExecutionStatus`, thông báo lỗi nếu có).
-   - **`RecurringRuleRepository` & `RecurringExecutionLogRepository`**: Cung cấp giao diện truy vấn chuyên biệt phục vụ quét theo ngày đến hạn (`findDueRules`) và cập nhật lịch trình sau thực thi (`updateExecutionSchedule`).
+
+4. **Tầng DataAccess (Truy cập CSDL - DAOs):**
+   - **`RecurringRuleDAO`**: Quản lý truy vấn và lưu trữ bảng cấu hình giao dịch định kỳ (tìm các quy tắc đến hạn `findDueRules`, cập nhật lịch trình `updateExecutionSchedule`).
+   - **`RecurringExecutionLogDAO`**: Lưu trữ vết thực thi lịch sử của từng kỳ chạy vào bảng nhật ký thực thi.
 
 ---
 

@@ -43,7 +43,7 @@ classDiagram
     %% ==========================================
     class RecurringTransactionService {
         <<Control>>
-        -recurringRepo: RecurringRuleRepository
+        -recurringDAO: RecurringRuleDAO
         -walletPort: IWalletQueryPort
         +createRule(userId: UUID, dto: CreateRecurringDTO): RecurringRule
         +getRulesByUser(userId: UUID, status: RecurringStatus): List~RecurringRule~
@@ -56,8 +56,8 @@ classDiagram
 
     class RecurringExecutionWorker {
         <<Control>>
-        -recurringRepo: RecurringRuleRepository
-        -logRepo: RecurringExecutionLogRepository
+        -recurringDAO: RecurringRuleDAO
+        -logDAO: RecurringExecutionLogDAO
         -walletPort: IWalletQueryPort
         -ledgerPort: ILedgerPostPort
         -notifyPort: INotificationPort
@@ -87,10 +87,10 @@ classDiagram
     }
 
     %% ==========================================
-    %% ENTITY / PERSISTENCE LAYER (Repositories)
+    %% DATA ACCESS LAYER (DAOs)
     %% ==========================================
-    class RecurringRuleRepository {
-        <<Entity / Repository>>
+    class RecurringRuleDAO {
+        <<DataAccess>>
         +save(rule: RecurringRule): RecurringRule
         +findById(id: UUID): Optional~RecurringRule~
         +findByUserId(userId: UUID, status: RecurringStatus): List~RecurringRule~
@@ -98,8 +98,8 @@ classDiagram
         +updateExecutionSchedule(id: UUID, nextDueDate: Date, lastExecutedAt: DateTime): void
     }
 
-    class RecurringExecutionLogRepository {
-        <<Entity / Repository>>
+    class RecurringExecutionLogDAO {
+        <<DataAccess>>
         +save(log: RecurringExecutionLog): void
         +findByRuleId(ruleId: UUID): List~RecurringExecutionLog~
     }
@@ -178,10 +178,10 @@ classDiagram
     RecurringTransactionController --> RecurringTransactionService : delegates
     RecurringSchedulerJob --> RecurringExecutionWorker : triggers_batch
 
-    %% Controls -> Repositories
-    RecurringTransactionService --> RecurringRuleRepository : manages_rules
-    RecurringExecutionWorker --> RecurringRuleRepository : queries_due_and_updates
-    RecurringExecutionWorker --> RecurringExecutionLogRepository : logs_execution
+    %% Controls -> DataAccess
+    RecurringTransactionService --> RecurringRuleDAO : manages_rules
+    RecurringExecutionWorker --> RecurringRuleDAO : queries_due_and_updates
+    RecurringExecutionWorker --> RecurringExecutionLogDAO : logs_execution
 
     %% Controls -> Ports (Decoupling)
     RecurringTransactionService ..> IWalletQueryPort : validates_wallet (AF04.03)
@@ -189,9 +189,9 @@ classDiagram
     RecurringExecutionWorker ..> ILedgerPostPort : posts_transactions (BR09, BR12)
     RecurringExecutionWorker ..> INotificationPort : pushes_alerts (SYS01)
 
-    %% Repositories -> Entities
-    RecurringRuleRepository ..> RecurringRule : persists
-    RecurringExecutionLogRepository ..> RecurringExecutionLog : persists
+    %% DataAccess -> Entities
+    RecurringRuleDAO ..> RecurringRule : maps/persists
+    RecurringExecutionLogDAO ..> RecurringExecutionLog : maps/persists
 
     %% Entity Structure & Enums
     RecurringRule "1" o-- "0..*" RecurringExecutionLog : tracks_history

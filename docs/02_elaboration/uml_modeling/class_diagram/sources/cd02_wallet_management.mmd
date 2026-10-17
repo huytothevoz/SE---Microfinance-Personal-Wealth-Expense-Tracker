@@ -28,7 +28,7 @@ classDiagram
     %% ==========================================
     class WalletService {
         <<Control>>
-        -walletRepository: WalletRepository
+        -walletDAO: WalletDAO
         -ledgerPort: ILedgerEquityPort
         +createWalletWithOpeningBalance(userId: UUID, dto: CreateWalletDTO): Wallet
         +archiveWallet(userId: UUID, walletId: UUID): void
@@ -42,10 +42,10 @@ classDiagram
     }
 
     %% ==========================================
-    %% ENTITY / PERSISTENCE LAYER (Repositories)
+    %% DATA ACCESS LAYER (DAOs)
     %% ==========================================
-    class WalletRepository {
-        <<Entity / Repository>>
+    class WalletDAO {
+        <<DataAccess>>
         +findById(id: UUID): Optional~Wallet~
         +findByUserId(userId: UUID): List~Wallet~
         +findWithLock(id: UUID): Optional~Wallet~
@@ -94,8 +94,8 @@ classDiagram
     %% ==========================================
     EndUserActor ..> WalletController : interacts (HTTP/REST)
     WalletController --> WalletService : delegates
-    WalletService --> WalletRepository : queries/locks
+    WalletService --> WalletDAO : queries/locks
     WalletService ..> ILedgerEquityPort : creates_opening_equity (BR01)
-    WalletRepository ..> Wallet : persists
+    WalletDAO ..> Wallet : maps/persists
     Wallet --> WalletType : categorized_as
     Wallet --> WalletStatus : state_of

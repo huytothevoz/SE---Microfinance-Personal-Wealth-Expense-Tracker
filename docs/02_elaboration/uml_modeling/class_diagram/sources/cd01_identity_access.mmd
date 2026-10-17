@@ -61,8 +61,8 @@ classDiagram
     %% ==========================================
     class AuthService {
         <<Control>>
-        -userRepository: UserRepository
-        -tokenRepository: PasswordResetRepository
+        -userDAO: UserDAO
+        -tokenDAO: PasswordResetDAO
         -jwtProvider: JwtTokenProvider
         -passwordEncoder: Argon2PasswordEncoder
         +register(dto: RegisterRequestDTO): User
@@ -75,7 +75,7 @@ classDiagram
 
     class UserService {
         <<Control>>
-        -userRepository: UserRepository
+        -userDAO: UserDAO
         -passwordEncoder: Argon2PasswordEncoder
         +getUserProfile(userId: UUID): User
         +updateProfile(userId: UUID, dto: UpdateProfileDTO): User
@@ -84,8 +84,8 @@ classDiagram
 
     class AdminService {
         <<Control>>
-        -userRepository: UserRepository
-        -auditRepository: AuditLogRepository
+        -userDAO: UserDAO
+        -auditDAO: AuditLogDAO
         -authService: AuthService
         +listUsers(page: int, search: String): Page~User~
         +lockUserAccount(adminId: UUID, targetUserId: UUID, reason: String): void
@@ -94,10 +94,10 @@ classDiagram
     }
 
     %% ==========================================
-    %% ENTITY / PERSISTENCE LAYER (Repositories)
+    %% DATA ACCESS LAYER (DAOs)
     %% ==========================================
-    class UserRepository {
-        <<Entity / Repository>>
+    class UserDAO {
+        <<DataAccess>>
         +findById(id: UUID): Optional~User~
         +findByEmail(email: String): Optional~User~
         +existsByEmail(email: String): boolean
@@ -106,15 +106,15 @@ classDiagram
         +findUsers(page: int, search: String): Page~User~
     }
 
-    class PasswordResetRepository {
-        <<Entity / Repository>>
+    class PasswordResetDAO {
+        <<DataAccess>>
         +findByUserId(userId: UUID): Optional~PasswordResetToken~
         +save(token: PasswordResetToken): void
         +deleteByUserId(userId: UUID): void
     }
 
-    class AuditLogRepository {
-        <<Entity / Repository>>
+    class AuditLogDAO {
+        <<DataAccess>>
         +save(log: AdminAuditLog): void
         +findAll(page: int): Page~AdminAuditLog~
         +findByTargetUserId(targetId: UUID): List~AdminAuditLog~
@@ -194,17 +194,17 @@ classDiagram
     %% Control -> Control / Boundary coordination
     AdminService --> AuthService : revokes_tokens (BR11)
 
-    %% Control -> Repositories
-    AuthService --> UserRepository : queries/persists
-    AuthService --> PasswordResetRepository : manages_otp
-    UserService --> UserRepository : queries/updates
-    AdminService --> UserRepository : locks/unlocks
-    AdminService --> AuditLogRepository : logs_action
+    %% Control -> DataAccess
+    AuthService --> UserDAO : queries/persists
+    AuthService --> PasswordResetDAO : manages_otp
+    UserService --> UserDAO : queries/updates
+    AdminService --> UserDAO : locks/unlocks
+    AdminService --> AuditLogDAO : logs_action
 
-    %% Repositories -> Entities
-    UserRepository ..> User : persists
-    PasswordResetRepository ..> PasswordResetToken : persists
-    AuditLogRepository ..> AdminAuditLog : persists
+    %% DataAccess -> Entities
+    UserDAO ..> User : maps/persists
+    PasswordResetDAO ..> PasswordResetToken : maps/persists
+    AuditLogDAO ..> AdminAuditLog : maps/persists
 
     %% Entity Relationships
     User "1" o-- "0..1" PasswordResetToken : requests (FR01)

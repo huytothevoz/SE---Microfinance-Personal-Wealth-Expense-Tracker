@@ -32,8 +32,10 @@ classDiagram
     class ExportService {
         <<Control>>
         -ledgerQueryPort: ILedgerQueryPort
+        -auditDAO: AuditLogDAO
         +sanitizeCsvField(input: String): String
         +generateSecureCsv(transactions: List~ExportTransactionRow~): byte[]
+        +logExportAudit(userId: UUID, type: String, count: int, hash: String): void
     }
 
     class ILedgerQueryPort {
@@ -43,8 +45,27 @@ classDiagram
     }
 
     %% ==========================================
-    %% VALUE OBJECTS & REPORT DTOs
+    %% DATA ACCESS LAYER (DAOs)
     %% ==========================================
+    class AuditLogDAO {
+        <<DataAccess>>
+        +saveExportAudit(log: ExportAuditLog): void
+    }
+
+    %% ==========================================
+    %% ENTITIES & REPORT VALUE OBJECTS
+    %% ==========================================
+    class ExportAuditLog {
+        <<Entity>>
+        -id: UUID
+        -userId: UUID
+        -exportType: String
+        -rowCount: int
+        -fileHash: String
+        -ipAddress: String
+        -createdAt: DateTime
+    }
+
     class TrialBalanceReport {
         <<Value Object>>
         -asOfDate: Date
@@ -85,6 +106,8 @@ classDiagram
     ReportController --> ExportService : requests_csv_export
     ReconciliationService ..> ILedgerQueryPort : queries_ledger_balances
     ExportService ..> ILedgerQueryPort : queries_posted_rows
+    ExportService --> AuditLogDAO : logs_export (BR16)
+    AuditLogDAO ..> ExportAuditLog : maps/persists
     ReconciliationService ..> TrialBalanceReport : produces
     TrialBalanceReport *-- AccountTrialBalanceRow : aggregates
     ExportService ..> ExportTransactionRow : sanitizes_and_encodes

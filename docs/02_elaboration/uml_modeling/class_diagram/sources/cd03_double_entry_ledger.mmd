@@ -30,9 +30,9 @@ classDiagram
     %% ==========================================
     class LedgerService {
         <<Control>>
-        -ledgerRepository: LedgerRepository
-        -categoryRepository: CategoryRepository
-        -idempotencyRepository: IdempotencyRepository
+        -ledgerDAO: LedgerDAO
+        -categoryDAO: CategoryDAO
+        -idempotencyDAO: IdempotencyDAO
         -walletPort: IWalletLockPort
         -fxPort: IExchangeRatePort
         +recordExpense(userId: UUID, dto: CreateExpenseDTO, idempKey: String): FinancialTransaction
@@ -56,24 +56,24 @@ classDiagram
     }
 
     %% ==========================================
-    %% ENTITY / PERSISTENCE LAYER (Repositories)
+    %% DATA ACCESS LAYER (DAOs)
     %% ==========================================
-    class LedgerRepository {
-        <<Entity / Repository>>
+    class LedgerDAO {
+        <<DataAccess>>
         +saveTransactionWithEntries(tx: FinancialTransaction, entries: List~JournalEntry~): FinancialTransaction
         +findTransactionById(id: UUID): Optional~FinancialTransaction~
         +findTransactionsByUser(userId: UUID, filter: TransactionFilterDTO, page: int): Page~FinancialTransaction~
     }
 
-    class CategoryRepository {
-        <<Entity / Repository>>
+    class CategoryDAO {
+        <<DataAccess>>
         +findById(id: UUID): Optional~Category~
         +findByUserId(userId: UUID): List~Category~
         +save(category: Category): Category
     }
 
-    class IdempotencyRepository {
-        <<Entity / Repository>>
+    class IdempotencyDAO {
+        <<DataAccess>>
         +findByKey(userId: UUID, key: String): Optional~IdempotencyRecord~
         +save(record: IdempotencyRecord): void
     }
@@ -155,11 +155,11 @@ classDiagram
     %% ==========================================
     %% RELATIONSHIPS & INTERACTIONS
     %% ==========================================
-    %% Central Spine: Actor -> Controller -> Service -> Repository -> Aggregate Root -> Child
+    %% Central Spine: Actor -> Controller -> Service -> DAO -> Aggregate Root -> Child
     EndUserActor ..> TransactionController : interacts (HTTP/REST)
     TransactionController --> LedgerService : delegates
-    LedgerService --> LedgerRepository : persists_acid (BR12)
-    LedgerRepository ..> FinancialTransaction : persists_aggregate
+    LedgerService --> LedgerDAO : persists_acid (BR12)
+    LedgerDAO ..> FinancialTransaction : maps/persists_aggregate
     FinancialTransaction "1" *-- "2..*" JournalEntry : balances (BR01)
     JournalEntry --> EntrySide : side_of
 
@@ -168,9 +168,9 @@ classDiagram
     LedgerService ..> IExchangeRatePort : gets_snapshot_rate (BR15)
 
     %% Right Branch (Idempotency & Category Hierarchy)
-    LedgerService --> IdempotencyRepository : checks_dedup (BR13)
-    LedgerService --> CategoryRepository : verifies_category
-    CategoryRepository ..> Category : persists
+    LedgerService --> IdempotencyDAO : checks_dedup (BR13)
+    LedgerService --> CategoryDAO : verifies_category
+    CategoryDAO ..> Category : maps/persists
     Category --> CategoryType : typed_by
 
     %% Enums and Association
