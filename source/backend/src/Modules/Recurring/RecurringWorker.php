@@ -6,25 +6,25 @@ namespace WealthFlow\Modules\Recurring;
 
 use Exception;
 use WealthFlow\Modules\Notifications\NotificationService;
+use WealthFlow\Modules\Transactions\LedgerDAO;
 use WealthFlow\Modules\Transactions\LedgerService;
-use WealthFlow\Modules\Transactions\TransactionRepository;
 
 final class RecurringWorker
 {
-    private RecurringRepository $repo;
+    private RecurringRuleDAO $recurringDao;
     private LedgerService $ledgerService;
-    private TransactionRepository $txRepo;
+    private LedgerDAO $ledgerDao;
     private NotificationService $notifService;
 
     public function __construct(
-        ?RecurringRepository $repo = null,
+        ?RecurringRuleDAO $recurringDao = null,
         ?LedgerService $ledgerService = null,
-        ?TransactionRepository $txRepo = null,
+        ?LedgerDAO $ledgerDao = null,
         ?NotificationService $notifService = null
     ) {
-        $this->repo = $repo ?? new RecurringRepository();
+        $this->recurringDao = $recurringDao ?? new RecurringRuleDAO();
         $this->ledgerService = $ledgerService ?? new LedgerService();
-        $this->txRepo = $txRepo ?? new TransactionRepository();
+        $this->ledgerDao = $ledgerDao ?? new LedgerDAO();
         $this->notifService = $notifService ?? new NotificationService();
     }
 
@@ -34,7 +34,7 @@ final class RecurringWorker
      */
     public function processDueSchedules(?string $asOfDate = null): array
     {
-        $pdo = $this->txRepo->getPdo();
+        $pdo = $this->ledgerDao->getPdo();
         $locked = false;
         if ($pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql') {
             $lock = $pdo->prepare('SELECT GET_LOCK(?, 0)');
@@ -58,7 +58,7 @@ final class RecurringWorker
     /** @return array{processed: int, autoPosted: int, draftReminders: int, failedInsufficientFunds: int} */
     private function processDueSchedulesLocked(?string $asOfDate): array
     {
-        $pdo = $this->txRepo->getPdo();
+        $pdo = $this->ledgerDao->getPdo();
         $ownsTransaction = !$pdo->inTransaction();
         if ($ownsTransaction) {
             $pdo->beginTransaction();
@@ -82,7 +82,7 @@ final class RecurringWorker
     private function processDueSchedulesBatch(?string $asOfDate): array
     {
         $date = $asOfDate ?: date('Y-m-d');
-        $dueList = $this->repo->findDueSchedules($date);
+        $dueList = $this->recurringDao->findDueSchedules($date);
 
         $summary = [
             'processed' => 0,
@@ -105,10 +105,10 @@ final class RecurringWorker
             $walletBalance = (float) $schedule['wallet_balance'];
 
             // Skip if already executed for this due date (Idempotent per due cycle)
-            if ($this->repo->hasExecutionForDue($scheduleId, $dueDate)) {
+            if ($this->recurringDao->hasExecutionForDue($scheduleId, $dueDate)) {
                 // Advance next due date if stuck
                 $nextDueDate = RecurringService::calculateNextMonthlyDueDate($anchorDay, $dueDate);
-                $this->repo->updateNextDueDate($scheduleId, $nextDueDate);
+                $this->recurringDao->updateNextDueDate($scheduleId, $nextDueDate);
                 continue;
             }
 
@@ -116,7 +116,7 @@ final class RecurringWorker
 
             if ($mode === 'AUTO_POST') {
                 if ($walletBalance >= $amount && $categoryId !== null) {
-                    $pdo = $this->txRepo->getPdo();
+                    $pdo = $this->ledgerDao->getPdo();
                     $pdo->exec('SAVEPOINT recurring_post');
                     $savepointActive = true;
                     try {
@@ -132,7 +132,7 @@ final class RecurringWorker
                         $savepointActive = false;
 
                         $txId = (int) $txResult['transactionId'];
-                        $this->repo->recordExecution($scheduleId, $dueDate, $txId, 'COMPLETED');
+                        $this->recurringDao->recordExecution($scheduleId, $dueDate, $txId, 'COMPLETED');
                         $summary['autoPosted']++;
 
                         $this->notifService->notify(
@@ -148,12 +148,12 @@ final class RecurringWorker
                         }
                         $pdo->exec('ROLLBACK TO SAVEPOINT recurring_post');
                         $pdo->exec('RELEASE SAVEPOINT recurring_post');
-                        $this->repo->recordExecution($scheduleId, $dueDate, null, 'FAILED');
+                        $this->recurringDao->recordExecution($scheduleId, $dueDate, null, 'FAILED');
                         $summary['failedInsufficientFunds']++;
                     }
                 } else {
                     // Insufficient funds or no category
-                    $txId = $this->txRepo->createTransaction([
+                    $txId = $this->ledgerDao->createTransaction([
                         'userId' => $userId,
                         'categoryId' => $categoryId,
                         'type' => 'EXPENSE',
@@ -167,7 +167,7 @@ final class RecurringWorker
                         'originalTransactionId' => null,
                     ]);
 
-                    $this->repo->recordExecution($scheduleId, $dueDate, $txId, 'PENDING');
+                    $this->recurringDao->recordExecution($scheduleId, $dueDate, $txId, 'PENDING');
                     $summary['failedInsufficientFunds']++;
 
                     $this->notifService->notify(
@@ -180,7 +180,7 @@ final class RecurringWorker
                 }
             } else {
                 // DRAFT_REMINDER mode (default)
-                $txId = $this->txRepo->createTransaction([
+                $txId = $this->ledgerDao->createTransaction([
                     'userId' => $userId,
                     'categoryId' => $categoryId,
                     'type' => 'EXPENSE',
@@ -194,7 +194,7 @@ final class RecurringWorker
                     'originalTransactionId' => null,
                 ]);
 
-                $this->repo->recordExecution($scheduleId, $dueDate, $txId, 'PENDING');
+                $this->recurringDao->recordExecution($scheduleId, $dueDate, $txId, 'PENDING');
                 $summary['draftReminders']++;
 
                 $this->notifService->notify(
@@ -208,7 +208,7 @@ final class RecurringWorker
 
             // Advance next due date respecting anchor day and clamping
             $nextDueDate = RecurringService::calculateNextMonthlyDueDate($anchorDay, $dueDate);
-            $this->repo->updateNextDueDate($scheduleId, $nextDueDate);
+            $this->recurringDao->updateNextDueDate($scheduleId, $nextDueDate);
         }
 
         return $summary;

@@ -1,0 +1,52 @@
+erDiagram
+    %% ========================================================
+    %% ERD07: NOTIFICATIONS, CONFIG & AUDIT TRAILS (FR11, FR12)
+    %% ========================================================
+
+    USERS ||--o{ NOTIFICATIONS : "nhan_thong_bao"
+    USERS ||--o{ ADMIN_AUDIT_LOGS : "admin_thao_tac"
+    USERS ||--o{ ADMIN_AUDIT_LOGS : "target_bi_tac_dong"
+    USERS ||--o{ EXPORT_AUDIT_LOGS : "xuat_du_lieu"
+
+    USERS {
+        bigint id PK
+        varchar email UK "Email nguoi dung"
+        enum role "USER / ADMIN"
+    }
+
+    NOTIFICATIONS {
+        bigint id PK
+        bigint user_id FK "ON DELETE CASCADE"
+        varchar title "Tieu de thong bao"
+        text body "Noi dung chi tiet"
+        enum notification_type "BUDGET / LOAN / RECURRING / BROADCAST / SYSTEM"
+        enum priority "INFO / WARNING / CRITICAL / MAINTENANCE"
+        varchar dedup_key UK "Khoa chong trung lap"
+        datetime read_at "Thoi diem doc NULL la chua"
+        timestamp created_at "Ngay tao"
+    }
+
+    SYSTEM_CONFIG {
+        varchar config_key PK "Khoa cau hinh he thong"
+        varchar config_value "Gia tri thiet lap"
+        timestamp updated_at "Ngay cap nhat"
+    }
+
+    ADMIN_AUDIT_LOGS {
+        bigint id PK
+        bigint admin_user_id FK "ON DELETE RESTRICT"
+        varchar action "LOCK_USER / UNLOCK / CONFIG"
+        bigint target_user_id FK "ON DELETE SET NULL"
+        varchar reason "Ly do bat buoc cua Admin"
+        timestamp created_at "Thoi diem thao tac"
+    }
+
+    EXPORT_AUDIT_LOGS {
+        bigint id PK
+        bigint user_id FK "ON DELETE CASCADE"
+        varchar export_type "TRIAL_BALANCE / CSV_REPORT"
+        int row_count "So dong xuat"
+        char file_hash "SHA-256 xac thuc file"
+        varchar ip_address "IP nguoi tai"
+        timestamp created_at "Ngay gio tai"
+    }

@@ -1,14 +1,33 @@
-# WealthFlow — hướng dẫn chạy và kiểm thử
+# WealthFlow — Hướng dẫn chạy và kiểm thử
 
-## 1. Cài đặt và chạy trên Windows
+## 1. Khởi động và quản lý hệ thống (TUI Control Center)
 
-Đọc [HUONG_DAN.txt](./HUONG_DAN.txt) để xem yêu cầu XAMPP và hướng dẫn setup chi tiết. Tóm tắt:
+Đọc [HUONG_DAN.txt](./HUONG_DAN.txt) để xem thông tin chi tiết. Hệ thống cung cấp **Menu điều khiển trực quan trên Terminal (TUI)** giúp khởi động, dừng, kiểm tra, reset CSDL chỉ với 1 lệnh duy nhất:
 
-1. Đặt source project ở `C:\xampp\htdocs\SE\` và chép các file `CHAY_SE.bat`, `DUNG_SE.bat`, `setup-se.ps1`, `stop-se.ps1` vào thư mục gốc project.
-2. Double-click `CHAY_SE.bat`; chờ thông báo `Everything is ready.` rồi mở `http://localhost:8080/`.
-3. Khi muốn dừng riêng WealthFlow, double-click `DUNG_SE.bat`.
+### Trên Windows:
+Double-click `run_wealthflow.bat`, hoặc mở terminal chạy:
+```powershell
+.\run_wealthflow.bat
+```
 
-Runner dùng PHP development server và một MySQL riêng cho SE ở cổng `3307`. Không cần bật Apache/MySQL chính của XAMPP; runner không thay đổi dữ liệu MySQL chính hoặc các ứng dụng khác. Setup/migration không xóa database hiện có. Dữ liệu và log riêng của SE nằm ở `C:\xampp\se-instance\`.
+### Trên Linux / macOS:
+Mở terminal và chạy:
+```bash
+chmod +x run_wealthflow.sh
+./run_wealthflow.sh
+```
+
+Menu điều khiển sẽ hiển thị các tùy chọn:
+- `[1]`: Khởi động Web Server (cổng `8080`) & MySQL SE độc lập (cổng `3307`), tự động nạp 28 migrations và mở trình duyệt.
+- `[2]`: Dừng toàn bộ hệ thống sạch sẽ, không ảnh hưởng đến dữ liệu.
+- `[3]`: Kiểm tra trạng thái và kết quả `/api/health`.
+- `[4]`: Cập nhật CSDL Migrations (28 file SQL).
+- `[5]`: Reset CSDL & nạp lại dữ liệu mẫu (`user1@gmail.com` / `User1234`).
+- `[6]`: Chạy toàn bộ test suites tự động (36 unit tests + 7 mail smoke tests).
+- `[7]`: Xem log và email OTP cục bộ.
+- `[0]`: Thoát menu.
+
+> **Lưu ý an toàn:** Runner tự động nhận diện thư mục cài đặt XAMPP (`C:\xampp`, `D:\xampp`, `E:\xampp`...). Runner sử dụng phiên MySQL riêng biệt trên cổng `3307`, hoàn toàn **KHÔNG** can thiệp hay thay đổi cấu hình Apache cổng 80/8000 và MySQL cổng 3306 của XAMPP.
 
 ## 2. Kiểm thử thủ công đầu-cuối
 
@@ -49,19 +68,22 @@ Runner local ghi email vào file `.eml` trong `source\backend\storage` thay vì 
 
 ## 3. Chạy kiểm thử backend FR03–FR06
 
-Sau khi cài dependencies thành công, chạy trong PowerShell:
+Có thể chạy trực tiếp từ Menu Control Center (chọn `[6]`), hoặc chạy trong PowerShell:
 
 ```powershell
-& 'F:\xampp\php\php.exe' '.\source\backend\tests\run_tests.php'
+# Chạy với PHP của XAMPP:
+php .\source\backend\tests\run_tests.php
+# Hoặc chỉ định rõ đường dẫn:
+& 'D:\xampp\php\php.exe' '.\source\backend\tests\run_tests.php'
 ```
 
-Chạy từ thư mục gốc repository. Nếu XAMPP ở đường dẫn khác, đổi đường dẫn `php.exe`. Bộ test dùng SQLite in-memory và không cần sửa database MySQL của ứng dụng.
+Chạy từ thư mục gốc repository. Bộ test dùng SQLite in-memory và không cần sửa database MySQL của ứng dụng.
 
 Kết quả mong đợi có dòng tổng kết `36 PASSED, 0 FAILED` (số lượng có thể thay đổi khi nhóm bổ sung test) và tiến trình kết thúc không có lỗi.
 
 ## 4. Chạy lại sau khi khởi động lại máy
 
-1. Double-click `CHAY_SE.bat` để khởi động lại server và MySQL riêng của SE.
+1. Double-click `run_wealthflow.bat`, chọn `[1]` để khởi động lại server và MySQL riêng của SE.
 2. Mở `http://localhost:8080/`; dùng [hướng dẫn setup](./HUONG_DAN.txt) nếu cần xem log khi có lỗi.
 
 ## 5. Xử lý lỗi thường gặp

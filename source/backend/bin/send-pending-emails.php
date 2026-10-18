@@ -5,8 +5,8 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 try {
     $config = require dirname(__DIR__) . '/bootstrap.php';
     $config->validate();
-    $db = WealthFlow\Database::connect($config);
-    $queue = new WealthFlow\Mail\WelcomeEmailQueue($db, new WealthFlow\Mail\EmailService($config));
+    $db = WealthFlow\Core\Database::connect($config);
+    $queue = new WealthFlow\Core\WelcomeEmailQueue($db, new WealthFlow\Core\EmailService($config));
     $ids = $db->query("SELECT user_id FROM registration_emails WHERE status = 'PENDING' ORDER BY id LIMIT 50")->fetchAll(PDO::FETCH_COLUMN);
     $failed = 0;
     foreach ($ids as $id) {

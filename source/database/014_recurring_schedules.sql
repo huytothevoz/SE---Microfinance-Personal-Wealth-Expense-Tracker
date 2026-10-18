@@ -1,0 +1,20 @@
+-- Table 14: recurring_schedules (Fixed Expenses & Subscriptions)
+CREATE TABLE IF NOT EXISTS recurring_schedules (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  wallet_id BIGINT UNSIGNED NOT NULL,
+  category_id BIGINT UNSIGNED NULL,
+  name VARCHAR(160) NOT NULL,
+  amount DECIMAL(24,8) NOT NULL,
+  currency CHAR(3) NOT NULL,
+  frequency ENUM('DAILY','WEEKLY','MONTHLY','YEARLY') NOT NULL DEFAULT 'MONTHLY',
+  day_of_month TINYINT UNSIGNED NOT NULL,
+  next_due_date DATE NOT NULL,
+  execution_mode ENUM('DRAFT_REMINDER','AUTO_POST') NOT NULL DEFAULT 'DRAFT_REMINDER',
+  status ENUM('ACTIVE','PAUSED','CANCELLED') NOT NULL DEFAULT 'ACTIVE',
+  CHECK (amount > 0),
+  CHECK (day_of_month BETWEEN 1 AND 31),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON DELETE RESTRICT,
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+) ENGINE=InnoDB;

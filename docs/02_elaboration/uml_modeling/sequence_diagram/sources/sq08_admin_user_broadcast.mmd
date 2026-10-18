@@ -1,0 +1,115 @@
+sequenceDiagram
+    autonumber
+    actor Admin as Quản trị viên (Admin A02)
+    participant AC as <<Boundary>><br/>AdminController
+    participant AS as <<Control>><br/>AdminService
+    participant NS as <<Control>><br/>NotificationService
+    participant UD as <<DataAccess>><br/>UserDAO
+    participant AD as <<DataAccess>><br/>AuditLogDAO
+    participant ND as <<DataAccess>><br/>NotificationDAO
+    participant DB as <<Storage>><br/>MySQL Database (InnoDB)
+    actor EndUser as Người dùng (End-User)
+
+    %% ========================================================
+    %% 1. KỊCH BẢN KHÓA TÀI KHOẢN VI PHẠM (ACCOUNT LOCKOUT)
+    %% ========================================================
+    rect rgb(254, 226, 226)
+        note over Admin, EndUser: 1. KHÓA TÀI KHOẢN VI PHẠM & THU HỒI PHIÊN TỨC THỜI (BR11, BR13, BR14)
+        Admin ->> AC: PUT /api/admin/users/5/lock { "reason": "Gian lận số dư & vi phạm điều khoản" }
+        activate AC
+        AC ->> AS: lockUserAccount(adminId=1, targetUserId=5, reason)
+        activate AS
+
+        %% Kiểm tra lý do khóa
+        alt Lý do giải trình bị để trống hoặc rỗng
+            AS -->> AC: Ném lỗi UnprocessableEntityException("Lý do khóa tài khoản là bắt buộc")
+            AC -->> Admin: 422 Unprocessable Entity { error: 'REASON_REQUIRED' }
+        else Lý do hợp lệ -> Kiểm tra điều kiện bảo vệ Admin duy nhất
+            AS ->> UD: countRemainingActiveAdmins(targetUserId=5)
+            activate UD
+            UD ->> DB: SELECT COUNT(*) FROM users WHERE role = 'ADMIN' AND status = 'ACTIVE' AND id != 5
+            DB -->> UD: remainingAdminsCount
+            UD -->> AS: remainingAdminsCount
+            deactivate UD
+
+            alt remainingAdminsCount == 0 (Là Admin duy nhất còn lại của hệ thống)
+                AS -->> AC: Ném lỗi BadRequestException("Không thể khóa tài khoản Quản trị viên duy nhất còn lại")
+                AC -->> Admin: 400 Bad Request { error: 'CANNOT_LOCK_LAST_ADMIN' }
+            else Thẩm định hợp lệ -> Thực thi khóa nguyên tử ACID
+                AS ->> UD: executeLockUserAndRevokeSessions(adminId=1, targetUserId=5, reason)
+                activate UD
+                UD ->> DB: START TRANSACTION
+                UD ->> DB: UPDATE users SET status = 'LOCKED', updated_at = NOW() WHERE id = 5
+                UD ->> DB: DELETE FROM auth_sessions WHERE user_id = 5 (Thu hồi mọi phiên đăng nhập)
+                UD ->> AD: logAdminAction(adminId=1, 'LOCK_USER', targetUserId=5, reason)
+                activate AD
+                AD ->> DB: INSERT INTO admin_audit_logs (admin_user_id, action, target_user_id, reason, created_at) VALUES (1, 'LOCK_USER', 5, 'Gian lận số dư & vi phạm điều khoản', NOW())
+                DB -->> AD: Query OK, 1 row affected
+                AD -->> UD: void
+                deactivate AD
+                UD ->> DB: COMMIT
+                DB -->> UD: Transaction Committed
+                UD -->> AS: success = true
+                deactivate UD
+
+                AS -->> AC: LockResult(targetUserId=5, status='LOCKED')
+                deactivate AS
+                AC -->> Admin: 200 OK { targetUserId: 5, status: 'LOCKED', message: 'Tài khoản đã bị khóa thành công' }
+                deactivate AC
+
+                %% Tác động tức thì tới người dùng bị khóa khi gửi request tiếp theo
+                EndUser -) AC: GET /api/wallets (Gửi kèm Access Token cũ)
+                activate AC
+                AC ->> AC: AuthMiddleware.verifyStatus(targetUserId=5)
+                note over AC: Middleware kiểm tra bảng users hoặc Redis Cache:<br/>status == 'LOCKED' -> Lập tức từ chối phục vụ!
+                AC -->> EndUser: 403 Forbidden { error: 'ACCOUNT_LOCKED', message: 'Tài khoản của bạn đã bị khóa' }
+                deactivate AC
+            end
+        end
+    end
+
+    %% ========================================================
+    %% 2. KỊCH BẢN PHÁT THÔNG BÁO TOÀN HỆ THỐNG (BROADCAST)
+    %% ========================================================
+    rect rgb(240, 253, 244)
+        note over Admin, EndUser: 2. PHÁT HÀNH THÔNG BÁO TOÀN HỆ THỐNG (BATCH FAN-OUT) (UC13, BR13)
+        Admin ->> AC: POST /api/admin/announcements { "title": "Bảo trì định kỳ", "body": "Hệ thống bảo trì lúc 01:00", "priority": "MAINTENANCE" }
+        activate AC
+        AC ->> AS: broadcastAnnouncement(adminId=1, broadcastDto)
+        activate AS
+
+        alt Tiêu đề hoặc nội dung để trống
+            AS -->> AC: Ném lỗi UnprocessableEntityException("Tiêu đề và nội dung thông báo là bắt buộc")
+            AC -->> Admin: 422 Unprocessable Entity
+        else Dữ liệu hợp lệ -> Điều phối phát tán thông báo
+            AS ->> NS: fanoutBroadcastToActiveUsers(adminId=1, broadcastDto)
+            activate NS
+
+            %% Kỹ thuật SQL Batch Fan-out tối ưu
+            NS ->> ND: batchInsertNotificationToActiveUsers(title, body, priority='MAINTENANCE')
+            activate ND
+            ND ->> DB: INSERT INTO notifications (user_id, title, body, notification_type, priority, created_at) SELECT id, 'Bảo trì định kỳ', 'Hệ thống bảo trì lúc 01:00', 'BROADCAST', 'MAINTENANCE', NOW() FROM users WHERE status = 'ACTIVE'
+            DB -->> ND: Query OK, 2500 rows affected
+            ND -->> NS: affectedCount = 2500
+            deactivate ND
+
+            %% Ghi nhật ký kiểm toán hành chính
+            NS ->> AD: logAdminAction(adminId=1, 'BROADCAST_ANNOUNCEMENT', null, 'Phát thông báo bảo trì')
+            activate AD
+            AD ->> DB: INSERT INTO admin_audit_logs (admin_user_id, action, target_user_id, reason, created_at) VALUES (1, 'BROADCAST_ANNOUNCEMENT', NULL, 'Phát thông báo bảo trì', NOW())
+            DB -->> AD: Query OK, 1 row affected
+            AD -->> NS: void
+            deactivate AD
+
+            %% Đẩy thông báo thời gian thực tới người dùng đang online
+            NS -->> EndUser: EventPush via WebSocket/SSE (Event: 'NEW_BROADCAST_ALERT')
+            note over EndUser: Biểu tượng chuông thông báo trên giao diện Web/Mobile lập tức sáng đèn
+            NS -->> AS: BroadcastResult(sentUsersCount=2500, status='DISPATCHED')
+            deactivate NS
+
+            AS -->> AC: BroadcastResultVO(sentUsersCount=2500)
+            deactivate AS
+            AC -->> Admin: 201 Created { status: 'SUCCESS', recipientCount: 2500, message: 'Đã gửi thông báo thành công' }
+            deactivate AC
+        end
+    end

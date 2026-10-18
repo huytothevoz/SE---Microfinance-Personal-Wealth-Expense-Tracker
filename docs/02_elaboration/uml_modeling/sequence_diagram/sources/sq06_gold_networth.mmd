@@ -1,0 +1,99 @@
+sequenceDiagram
+    autonumber
+    actor User as Người dùng (User)
+    participant GC as <<Boundary>><br/>GoldController
+    participant DC as <<Boundary>><br/>AnalyticsDashboardController
+    participant GS as <<Control>><br/>GoldAssetService
+    participant AS as <<Control>><br/>NetWorthAnalyticsService
+    participant GD as <<DataAccess>><br/>GoldHoldingDAO
+    participant WD as <<DataAccess>><br/>WalletDAO
+    participant LoanD as <<DataAccess>><br/>LoanDAO
+    participant LD as <<DataAccess>><br/>LedgerDAO
+    participant DB as <<Storage>><br/>MySQL Database (InnoDB)
+
+    %% ----------------------------------------------------
+    %% Luồng Định giá lại Vàng
+    %% ----------------------------------------------------
+    rect rgb(254, 243, 199)
+        note over User, DB: 1. KỊCH BẢN ĐỊNH GIÁ LẠI VÀNG THỊ TRƯỜNG (GOLD REVALUATION)
+        User ->> GC: PUT /api/assets/gold/{id}/revalue (marketPricePerChi, valuationDate)
+        activate GC
+        GC ->> GS: revalueGoldAsset(userId, goldAssetId, RevaluationDTO)
+        activate GS
+
+        GS ->> GD: updateValuation(goldAssetId, userId, marketPrice, valuationDate)
+        activate GD
+        GD ->> DB: START TRANSACTION
+        %% Cập nhật đơn giá thị trường mới vào gold_assets
+        GD ->> DB: UPDATE gold_assets SET valuation_per_chi = ?, valuation_date = ? WHERE id = ? AND user_id = ?
+        %% Lưu vết biến động định giá vào gold_transactions
+        GD ->> DB: INSERT INTO gold_transactions (gold_asset_id, user_id, transaction_type='REVALUATION', quantity_chi=0, unit_price=?, total_amount=0, occurred_on=?) VALUES (?, ?, 'REVALUATION', 0, ?, 0, ?)
+        GD ->> DB: COMMIT
+        DB -->> GD: Transaction committed
+        GD -->> GS: UpdatedGoldAsset(id, quantityChi, valuationPerChi)
+        deactivate GD
+
+        GS -->> GC: GoldRevaluationResponse(goldAssetId, marketPrice, totalMarketValue)
+        deactivate GS
+        GC -->> User: 200 OK {"status": "success", "valuationPerChi": marketPrice}
+        deactivate GC
+    end
+
+    %% ----------------------------------------------------
+    %% Luồng Tổng hợp Dashboard Net Worth
+    %% ----------------------------------------------------
+    rect rgb(240, 253, 244)
+        note over User, DB: 2. KỊCH BẢN TỔNG HỢP DASHBOARD NET WORTH & SỨC KHỎE TÀI CHÍNH
+        User ->> DC: GET /api/dashboard/overview?period=month
+        activate DC
+        DC ->> AS: getFinancialHealthOverview(userId, 'month')
+        activate AS
+
+        %% Truy vấn song song dữ liệu tài chính đa nguồn
+        par 1. Tổng tài sản Ví tiền khả dụng
+            AS ->> WD: getTotalWalletAssets(userId)
+            activate WD
+            WD ->> DB: SELECT SUM(cached_balance) FROM wallets WHERE user_id = ? AND wallet_type != 'CREDIT' AND status = 'ACTIVE'
+            DB -->> WD: walletAssetsTotal (ví dụ: 50.000.000 VND)
+            WD -->> AS: walletAssetsTotal
+            deactivate WD
+        and 2. Tổng giá trị Vàng theo thị giá mới nhất
+            AS ->> GD: getTotalGoldMarketValue(userId)
+            activate GD
+            GD ->> DB: SELECT SUM(quantity_chi * valuation_per_chi) FROM gold_assets WHERE user_id = ? AND status = 'HELD'
+            DB -->> GD: goldAssetsTotal (ví dụ: 17.000.000 VND)
+            GD -->> AS: goldAssetsTotal
+            deactivate GD
+        and 3. Tổng nghĩa vụ nợ phải trả (Dư nợ tín dụng + Dư nợ vay vi mô)
+            AS ->> LoanD: getTotalOutstandingLoans(userId)
+            activate LoanD
+            LoanD ->> DB: SELECT (SELECT COALESCE(SUM(ABS(cached_balance)),0) FROM wallets WHERE user_id = ? AND wallet_type = 'CREDIT' AND cached_balance < 0) + (SELECT COALESCE(SUM(principal_remaining),0) FROM micro_loans WHERE user_id = ? AND loan_direction = 'BORROWED' AND status = 'ACTIVE')
+            DB -->> LoanD: totalLiabilities (ví dụ: 15.000.000 VND)
+            LoanD -->> AS: totalLiabilities
+            deactivate LoanD
+        and 4. Doanh số Dòng tiền thu chi trong tháng
+            AS ->> LD: getMonthlyCashFlow(userId, month)
+            activate LD
+            LD ->> DB: SELECT (SELECT COALESCE(SUM(amount_base),0) FROM ledger_entries le JOIN financial_transactions ft ON le.transaction_id = ft.id WHERE ft.user_id = ? AND ft.transaction_type = 'INCOME' AND ft.status = 'POSTED' AND ft.occurred_on BETWEEN ? AND ?) AS total_income, (SELECT COALESCE(SUM(amount_base),0) FROM ledger_entries le JOIN financial_transactions ft ON le.transaction_id = ft.id WHERE ft.user_id = ? AND ft.transaction_type = 'EXPENSE' AND ft.status = 'POSTED' AND ft.occurred_on BETWEEN ? AND ?) AS total_expense
+            DB -->> LD: CashFlowData(totalIncome=20.000.000, totalExpense=12.000.000)
+            LD -->> AS: CashFlowData
+            deactivate LD
+        end
+
+        %% Tính toán các chỉ số tài chính tổng hợp
+        AS ->> AS: calculateTotalAssets() -> 50tr + 17tr = 67.000.000 VND
+        AS ->> AS: calculateNetWorth() -> Total Assets (67tr) - Total Liabilities (15tr) = 52.000.000 VND
+        AS ->> AS: calculateCashFlow() -> Total Income (20tr) - Total Expense (12tr) = +8.000.000 VND
+
+        %% Xử lý an toàn tỷ lệ tiết kiệm (BR18 - Tránh chia cho 0)
+        alt totalIncome <= 0
+            AS ->> AS: setSavingRate("N/A") [An toàn theo BR18 khi không có thu nhập]
+        else totalIncome > 0
+            AS ->> AS: calculateSavingRate() -> ((20tr - 12tr) / 20tr) * 100% = 40%
+        end
+
+        AS -->> DC: FinancialOverviewVO(totalAssets=67tr, totalLiabilities=15tr, netWorth=52tr, cashFlow=+8tr, savingRate="40%")
+        deactivate AS
+        DC -->> User: 200 OK (Hiển thị Dashboard: Cards tài sản ròng, Biểu đồ cơ cấu tài sản & nợ)
+        deactivate DC
+    end
