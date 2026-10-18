@@ -8,8 +8,7 @@ if (PHP_SAPI !== 'cli') {
 }
 
 try {
-    require_once dirname(__DIR__) . '/src/bootstrap.php';
-    /** @var \WealthFlow\Config $config */
+    /** @var \WealthFlow\Core\Config $config */
     $config = require dirname(__DIR__) . '/bootstrap.php';
     $config->validate();
 

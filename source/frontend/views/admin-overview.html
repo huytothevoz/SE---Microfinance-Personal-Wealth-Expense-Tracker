@@ -1,0 +1,100 @@
+<div class="page-heading">
+  <div>
+    <h1>Quản trị hệ thống</h1>
+    <p>Tổng quan người dùng, tham số hệ thống và các tác vụ vận hành.</p>
+  </div>
+  <div class="page-actions">
+    <button type="button" class="btn btn--primary btn-sm" data-action="broadcast-add">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Soạn thông báo
+    </button>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Tổng người dùng</span>
+      <div class="kpi-icon">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="admin-total-users">1.284</div>
+    <div class="kpi-desc">Thông tin hệ thống</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Tài khoản Active</span>
+      <div class="kpi-icon green">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="admin-active-users">1.237</div>
+    <div class="kpi-desc">Không bao gồm tài khoản khóa</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Đăng ký mới tháng</span>
+      <div class="kpi-icon blue">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 16l4-5 4 2 5-7"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="admin-new-users">86</div>
+    <div class="kpi-desc">
+      <span class="delta">+9,4%</span>Tháng 10/2026
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Tài khoản Locked</span>
+      <div class="kpi-icon orange">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="12" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="admin-locked-users">14</div>
+    <div class="kpi-desc">Cần xử lý theo quy trình</div>
+  </div>
+</div>
+
+<div class="panel-grid">
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Hoạt động tài khoản</h2>
+        <p>Thống kê người dùng theo tháng</p>
+      </div>
+      <div class="panel-tools"></div>
+    </div>
+    <div id="admin-activity-chart"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Phân bố tiền cơ sở</h2>
+        <p>Thống kê tổng hợp, không có số dư</p>
+      </div>
+      <div class="panel-tools"></div>
+    </div>
+    <div class="doughnut-wrap">
+      <div class="donut" style="background:conic-gradient(#197c96 0 85%,#aac7e5 85% 96%,#e3bb83 96%)">
+        <div class="donut-center">
+          <strong>1.284</strong>
+          <span>Người dùng</span>
+        </div>
+      </div>
+      <div class="donut-legend">
+        <span><i style="background:#197c96"></i>VND<strong>85%</strong></span>
+        <span><i style="background:#aac7e5"></i>USD<strong>11%</strong></span>
+        <span><i style="background:#e3bb83"></i>Khác<strong>4%</strong></span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="hint-box">
+  <strong>Bảo mật dữ liệu:</strong> trang Admin không được cung cấp số dư, tài sản, khoản nợ hoặc lịch sử giao dịch tài chính của bất kỳ người dùng nào. Dữ liệu quản trị phải được tổng hợp và ẩn danh theo quyền được cấp.
+</div>

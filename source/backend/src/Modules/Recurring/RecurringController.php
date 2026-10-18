@@ -6,9 +6,9 @@ namespace WealthFlow\Modules\Recurring;
 
 use Exception;
 use InvalidArgumentException;
-use WealthFlow\Http\JsonResponse;
-use WealthFlow\Http\Request;
-use WealthFlow\Modules\Auth\AuthContext;
+use WealthFlow\Core\AuthContext;
+use WealthFlow\Core\JsonResponse;
+use WealthFlow\Core\Request;
 
 final class RecurringController
 {
@@ -21,7 +21,7 @@ final class RecurringController
 
     public function list(Request $request): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $schedules = $this->service->listSchedules($userId);
         JsonResponse::success([
             'schedules' => $schedules,
@@ -31,7 +31,7 @@ final class RecurringController
 
     public function create(Request $request): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $body = $request->getBody();
 
         try {
@@ -46,7 +46,7 @@ final class RecurringController
 
     public function pause(Request $request, int $id): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
 
         try {
             $this->service->pauseSchedule($id, $userId);
@@ -60,7 +60,7 @@ final class RecurringController
 
     public function resume(Request $request, int $id): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
 
         try {
             $this->service->resumeSchedule($id, $userId);
@@ -74,7 +74,7 @@ final class RecurringController
 
     public function delete(Request $request, int $id): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
 
         try {
             $this->service->deleteSchedule($id, $userId);

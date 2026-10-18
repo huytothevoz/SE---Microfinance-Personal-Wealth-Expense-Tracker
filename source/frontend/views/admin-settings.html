@@ -1,0 +1,62 @@
+<div class="page-heading">
+  <div>
+    <h1>Tham số hệ thống</h1>
+    <p>Cấu hình ngưỡng ngân sách, tỷ lệ cảnh báo, thời hạn token và kiểm tra nhật ký quản trị.</p>
+  </div>
+  <div class="page-actions">
+    <button type="button" class="btn btn--primary btn-sm" data-action="admin-config">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Điều chỉnh tham số
+    </button>
+  </div>
+</div>
+
+<div class="info-grid">
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Tham số vận hành</h2>
+        <p>Cấu hình mặc định</p>
+      </div>
+      <div class="panel-tools"></div>
+    </div>
+    <div class="metric-list">
+      <div class="metric-item">
+        <span>Cảnh báo ngân sách</span>
+        <strong>80%</strong>
+      </div>
+      <div class="metric-item">
+        <span>Vượt ngân sách</span>
+        <strong>100%</strong>
+      </div>
+      <div class="metric-item">
+        <span>TTL access token tối đa</span>
+        <strong>60 phút</strong>
+      </div>
+      <div class="metric-item">
+        <span>Nhắc khoản vay</span>
+        <strong>Trước hạn 3 ngày</strong>
+      </div>
+      <div class="metric-item">
+        <span>Hạn ngạch tệp xuất</span>
+        <strong>Chưa thiết lập</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Admin Audit Log</h2>
+        <p>Lịch sử thao tác quản trị</p>
+      </div>
+      <div class="panel-tools"></div>
+    </div>
+    <div class="empty-state">
+      <span class="empty-icon">◷</span>
+      <strong>Chưa có hoạt động</strong>
+      <p>Nhật ký thao tác sẽ xuất hiện tại đây.</p>
+    </div>
+    <div class="hint-box">Các hành động khóa tài khoản, mở khóa, cập nhật cấu hình và phát broadcast cần có nhật ký với thời gian và Admin thực hiện.</div>
+  </section>
+</div>

@@ -1,0 +1,49 @@
+erDiagram
+    %% ========================================================
+    %% ERD01: IDENTITY, AUTHENTICATION & ACCESS CONTROL (FR01, FR02)
+    %% ========================================================
+
+    USERS ||--o{ AUTH_SESSIONS : "duy_tri_phien"
+    USERS ||--o| PASSWORD_RESET_TOKENS : "yeu_cau_otp"
+    USERS ||--o{ SECURITY_AUDIT_LOGS : "ghi_nhat_ky"
+
+    USERS {
+        bigint id PK
+        varchar full_name "Ho va ten"
+        varchar email UK "Email dang nhap"
+        varchar password_hash "Hash Argon2id / Bcrypt"
+        enum role "USER / ADMIN"
+        enum status "ACTIVE / LOCKED"
+        char base_currency "Tien te goc ISO-4217"
+        timestamp created_at "Ngay tao"
+        timestamp updated_at "Ngay cap nhat"
+    }
+
+    AUTH_SESSIONS {
+        char id PK "Session UUID v4"
+        bigint user_id FK "ON DELETE CASCADE"
+        char refresh_hash "SHA-256 Refresh Token"
+        datetime expires_at "Han su dung"
+        timestamp created_at "Thoi diem cap"
+    }
+
+    PASSWORD_RESET_TOKENS {
+        bigint user_id PK, FK "ON DELETE CASCADE"
+        char token_hash UK "SHA-256 OTP 6 so"
+        datetime expires_at "Het han 10 phut"
+        tinyint attempts "So lan nhap sai toi da 5"
+        timestamp created_at "Thoi diem tao"
+    }
+
+    AUTH_RATE_LIMITS {
+        char bucket PK "Key hash IP hoac Email"
+        int attempts "So luong request da gui"
+        datetime expires_at "Thoi diem giai phong ro"
+    }
+
+    SECURITY_AUDIT_LOGS {
+        bigint id PK
+        bigint user_id FK "ON DELETE SET NULL"
+        varchar event "LOGIN_SUCCESS / FAILED / RESET"
+        timestamp created_at "Thoi diem su kien"
+    }

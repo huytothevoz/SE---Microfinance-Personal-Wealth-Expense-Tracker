@@ -6,19 +6,19 @@ namespace WealthFlow\Modules\Recurring;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
-use WealthFlow\Modules\Wallets\WalletRepository;
+use WealthFlow\Modules\Wallets\WalletDAO;
 
 final class RecurringService
 {
-    private RecurringRepository $repo;
-    private WalletRepository $walletRepo;
+    private RecurringRuleDAO $recurringDao;
+    private WalletDAO $walletDao;
 
     public function __construct(
-        ?RecurringRepository $repo = null,
-        ?WalletRepository $walletRepo = null
+        ?RecurringRuleDAO $recurringDao = null,
+        ?WalletDAO $walletDao = null
     ) {
-        $this->repo = $repo ?? new RecurringRepository();
-        $this->walletRepo = $walletRepo ?? new WalletRepository();
+        $this->recurringDao = $recurringDao ?? new RecurringRuleDAO();
+        $this->walletDao = $walletDao ?? new WalletDAO();
     }
 
     /**
@@ -56,7 +56,7 @@ final class RecurringService
             $executionMode = 'DRAFT_REMINDER';
         }
 
-        $wallet = $this->walletRepo->findByIdAndUser($walletId, $userId);
+        $wallet = $this->walletDao->findByIdAndUser($walletId, $userId);
         if (!$wallet) {
             throw new InvalidArgumentException('Ví thanh toán không tồn tại hoặc không thuộc quyền sở hữu.');
         }
@@ -64,7 +64,7 @@ final class RecurringService
         $currency = strtoupper($dto['currency'] ?? $wallet['currency']);
         $nextDueDate = self::calculateInitialDueDate($dayOfMonth);
 
-        $id = $this->repo->create([
+        $id = $this->recurringDao->create([
             'userId' => $userId,
             'walletId' => $walletId,
             'categoryId' => $categoryId,
@@ -82,7 +82,7 @@ final class RecurringService
     /** @return array<string, mixed> */
     public function getSchedule(int $id, int $userId): array
     {
-        $res = $this->repo->findByIdAndUser($id, $userId);
+        $res = $this->recurringDao->findByIdAndUser($id, $userId);
         if (!$res) {
             throw new InvalidArgumentException('Khoản định kỳ không tồn tại hoặc không thuộc quyền sở hữu.');
         }
@@ -92,25 +92,25 @@ final class RecurringService
     /** @return array<int, array<string, mixed>> */
     public function listSchedules(int $userId): array
     {
-        return $this->repo->listByUser($userId);
+        return $this->recurringDao->listByUser($userId);
     }
 
     public function pauseSchedule(int $id, int $userId): bool
     {
         $this->getSchedule($id, $userId);
-        return $this->repo->updateStatus($id, $userId, 'PAUSED');
+        return $this->recurringDao->updateStatus($id, $userId, 'PAUSED');
     }
 
     public function resumeSchedule(int $id, int $userId): bool
     {
         $this->getSchedule($id, $userId);
-        return $this->repo->updateStatus($id, $userId, 'ACTIVE');
+        return $this->recurringDao->updateStatus($id, $userId, 'ACTIVE');
     }
 
     public function deleteSchedule(int $id, int $userId): bool
     {
         $this->getSchedule($id, $userId);
-        return $this->repo->delete($id, $userId);
+        return $this->recurringDao->delete($id, $userId);
     }
 
     /**

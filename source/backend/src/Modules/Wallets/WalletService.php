@@ -4,577 +4,211 @@ declare(strict_types=1);
 
 namespace WealthFlow\Modules\Wallets;
 
-use PDO;
-use PDOException;
+use InvalidArgumentException;
+use RuntimeException;
 use Throwable;
-use WealthFlow\Http\ApiException;
-use WealthFlow\Modules\Transactions\ExchangeRateService;
-use WealthFlow\Modules\Transactions\TransactionRepository;
+use WealthFlow\Core\Database;
+use WealthFlow\Modules\Transactions\LedgerDAO;
 
 final class WalletService
 {
-    private const TYPES = ['CASH', 'BANK', 'E_WALLET', 'SAVINGS'];
-    private const CURRENCIES = ['VND', 'USD', 'EUR'];
-    private const ICONS = ['cash', 'bank', 'wallet', 'savings'];
-    private const COLORS = [
-        'blue', 'navy', 'ocean', 'cyan', 'teal', 'green', 'emerald', 'forest',
-        'amber', 'orange', 'coral', 'rose', 'purple', 'indigo', 'slate', 'graphite',
-    ];
+    private WalletDAO $walletDao;
+    private ?LedgerDAO $ledgerDao;
 
-    private PDO $pdo;
-    private WalletRepository $wallets;
-    private TransactionRepository $transactions;
-    private ExchangeRateService $rates;
+    public function __construct(?WalletDAO $walletDao = null, ?LedgerDAO $ledgerDao = null)
+    {
+        $this->walletDao = $walletDao ?? new WalletDAO();
+        $this->ledgerDao = $ledgerDao ?? new LedgerDAO($this->walletDao->getPdo());
+    }
 
-    public function __construct(
-        ?WalletRepository $wallets = null,
-        ?TransactionRepository $transactions = null,
-        ?ExchangeRateService $rates = null
-    ) {
-        $this->wallets = $wallets ?? new WalletRepository();
-        $this->pdo = $this->wallets->getPdo();
-        $this->transactions = $transactions ?? new TransactionRepository($this->pdo);
-        $this->rates = $rates ?? new ExchangeRateService($this->pdo);
+    /** @return array<int, array<string, mixed>> */
+    public function getWallets(int $userId, bool $includeArchived = false): array
+    {
+        return $this->walletDao->findAllByUser($userId, $includeArchived);
     }
 
     /** @return array<string, mixed> */
-    public function listWallets(int $userId, string $status): array
+    public function getWallet(int $walletId, int $userId): array
     {
-        $status = strtoupper(trim($status));
-        if (!in_array($status, ['ACTIVE', 'ARCHIVED', 'ALL'], true)) {
-            throw new ApiException('VALIDATION_ERROR', 'Trạng thái danh sách ví không hợp lệ.', 422, [
-                'status' => 'Chỉ chấp nhận active, archived hoặc all.',
-            ]);
+        $wallet = $this->walletDao->findByIdAndUser($walletId, $userId);
+        if (!$wallet) {
+            throw new InvalidArgumentException('Ví không tồn tại hoặc không thuộc quyền sở hữu.');
         }
-
-        $baseCurrency = $this->requireBaseCurrency($userId);
-        $rows = $this->wallets->listByUser($userId, 'ALL');
-        $items = [];
-        $activeCount = 0;
-        $archivedCount = 0;
-        $unconverted = false;
-        $total = $this->zeroFor($baseCurrency);
-
-        foreach ($rows as $row) {
-            $wallet = $this->presentWallet($row, $baseCurrency);
-            if ($status === 'ALL' || $row['status'] === $status) {
-                $items[] = $wallet;
-            }
-            if ($row['status'] === 'ACTIVE') {
-                $activeCount++;
-                if ($wallet['baseBalance'] === null && bccomp((string) $row['cached_balance'], '0', 8) !== 0) {
-                    $unconverted = true;
-                } elseif ($wallet['baseBalance'] !== null) {
-                    $total = bcadd($total, $wallet['baseBalance'], $this->currencyScale($baseCurrency));
-                }
-            } else {
-                $archivedCount++;
-            }
-        }
-
-        return [
-            'wallets' => $items,
-            'summary' => [
-                'baseCurrency' => $baseCurrency,
-                'totalBalanceBase' => $total,
-                'activeCount' => $activeCount,
-                'archivedCount' => $archivedCount,
-                'hasUnconvertedBalances' => $unconverted,
-            ],
-        ];
+        return $wallet;
     }
 
-    /** @param array<string, mixed> $input @return array<string, mixed> */
-    public function createWallet(int $userId, array $input, ?string $idempotencyKey): array
+    /**
+     * Create a new wallet and optionally post an opening balance (BR01, BR02).
+     *
+     * @param array{
+     *     name: string,
+     *     walletType: string,
+     *     currency?: string,
+     *     initialBalance?: float|string|int
+     * } $dto
+     * @return array<string, mixed>
+     */
+    public function createWallet(int $userId, array $dto): array
     {
-        $name = $this->normalizeName($input['name'] ?? null);
-        $nameKey = mb_strtolower($name, 'UTF-8');
-        $type = strtoupper(trim((string) ($input['type'] ?? '')));
-        $currency = strtoupper(trim((string) ($input['currency'] ?? '')));
-        $balance = $this->normalizeAmount($input['openingBalance'] ?? null, $currency);
-        $icon = $this->choice((string) ($input['iconKey'] ?? ''), self::ICONS, $this->defaultIcon($type), 'iconKey');
-        $color = $this->normalizeColor((string) ($input['colorKey'] ?? ''), 'blue');
-        $key = $this->validateIdempotencyKey($idempotencyKey);
+        $name = trim((string) ($dto['name'] ?? ''));
+        $walletType = strtoupper(trim((string) ($dto['walletType'] ?? $dto['type'] ?? '')));
+        $currency = strtoupper(trim((string) ($dto['currency'] ?? 'VND')));
+        $initialBalance = (string) ($dto['initialBalance'] ?? $dto['openingBalance'] ?? '0');
 
-        if (!in_array($type, self::TYPES, true)) {
-            throw new ApiException('VALIDATION_ERROR', 'Loại ví không hợp lệ.', 422, [
-                'type' => 'Chọn tiền mặt, ngân hàng, ví điện tử hoặc tiết kiệm.',
-            ]);
+        if ($name === '' || mb_strlen($name) > 120) {
+            throw new InvalidArgumentException('Tên ví phải từ 1 đến 120 ký tự.');
         }
 
-        $baseCurrency = $this->requireBaseCurrency($userId);
-        $payload = compact('name', 'type', 'currency', 'balance', 'icon', 'color');
-        $requestHash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
+        $validTypes = ['CASH', 'BANK', 'E_WALLET', 'SAVINGS', 'CREDIT'];
+        if (!in_array($walletType, $validTypes, true)) {
+            throw new InvalidArgumentException('Loại ví không hợp lệ: ' . implode(', ', $validTypes));
+        }
 
-        $this->pdo->beginTransaction();
+        if (!preg_match('/^\d{1,16}(?:\.\d{1,8})?$/D', $initialBalance)) {
+            throw new InvalidArgumentException('Số dư mở sổ phải là số dương hợp lệ, tối đa 8 chữ số thập phân.');
+        }
+        if (!in_array($currency, ['VND', 'USD', 'EUR'], true)) {
+            throw new InvalidArgumentException('Loại tiền tệ chưa được hỗ trợ.');
+        }
+        // A nonzero foreign-currency opening needs a verified FX snapshot.
+        // Never claim a synthetic 1:1 exchange rate in a double-entry ledger.
+        if ($initialBalance !== '0' && bccomp($initialBalance, '0', 8) > 0
+            && ($currency !== 'VND' || $walletType === 'CREDIT')) {
+            throw new InvalidArgumentException('Số dư đầu kỳ lớn hơn 0 hiện chỉ hỗ trợ ví VND không phải thẻ tín dụng.');
+        }
+
+        if (bccomp($initialBalance, '0', 8) < 0) {
+            throw new InvalidArgumentException('Số dư mở sổ ban đầu không được âm.');
+        }
+
+        $pdo = $this->walletDao->getPdo();
+        $ownsTx = !$pdo->inTransaction();
+        if ($ownsTx) {
+            $pdo->beginTransaction();
+        }
+
         try {
-            $cached = $this->transactions->findIdempotency($userId, $key);
-            if ($cached !== null) {
-                if (!hash_equals((string) $cached['request_hash'], $requestHash)) {
-                    throw new ApiException('IDEMPOTENCY_CONFLICT', 'Khóa yêu cầu đã được sử dụng với dữ liệu khác.', 409);
+            $walletId = $this->walletDao->create(
+                $userId,
+                $name,
+                $walletType,
+                $currency,
+                $initialBalance
+            );
+
+            // If initial balance > 0, post opening balance ledger entry
+            if (bccomp($initialBalance, '0', 8) > 0) {
+                $walletAccountId = $this->walletDao->getOrCreateWalletLedgerAccountId($userId, $walletId);
+
+                // Create or find Equity Opening Balance account
+                $equityCode = 'EQUITY_OPENING_BALANCE';
+                $stmt = $pdo->prepare('SELECT id FROM ledger_accounts WHERE user_id = ? AND code = ?');
+                $stmt->execute([$userId, $equityCode]);
+                $equityAccountId = $stmt->fetchColumn();
+                if (!$equityAccountId) {
+                    $stmt = $pdo->prepare(
+                        'INSERT INTO ledger_accounts (user_id, code, account_type) VALUES (?, ?, "EQUITY")'
+                    );
+                    $stmt->execute([$userId, $equityCode]);
+                    $equityAccountId = (int) $pdo->lastInsertId();
+                } else {
+                    $equityAccountId = (int) $equityAccountId;
                 }
-                $response = json_decode((string) $cached['response_json'], true, 32, JSON_THROW_ON_ERROR);
-                $this->pdo->commit();
-                return $response;
-            }
 
-            if ($this->wallets->activeNameExists($userId, $nameKey)) {
-                throw new ApiException('DUPLICATE_WALLET_NAME', 'Tên ví đã tồn tại.', 409, [
-                    'name' => 'Tên ví không được trùng với ví đang hoạt động.',
-                ]);
-            }
-
-            $rate = $this->resolveRate($currency, $baseCurrency, $balance);
-            $walletId = $this->wallets->create([
-                'userId' => $userId,
-                'name' => $name,
-                'activeNameKey' => $nameKey,
-                'type' => $type,
-                'currency' => $currency,
-                'balance' => $balance,
-                'iconKey' => $icon,
-                'colorKey' => $color,
-            ]);
-
-            $transactionId = null;
-            if (bccomp($balance, '0', 8) === 1) {
-                $amountBase = $this->convert($balance, (string) $rate['rate'], $baseCurrency);
-                $transactionId = $this->transactions->createTransaction([
+                $txId = $this->ledgerDao->createTransaction([
                     'userId' => $userId,
                     'categoryId' => null,
-                    'type' => 'OTHER',
+                    'type' => 'OTHER', // Equity opening, not user income.
                     'status' => 'POSTED',
-                    'description' => 'Số dư đầu kỳ: ' . $name,
+                    'description' => 'Số dư mở sổ ví: ' . $name,
                     'currency' => $currency,
-                    'amount' => $balance,
-                    'fxRateSnapshot' => $rate['rate'],
+                    'amount' => $initialBalance,
+                    'fxRateSnapshot' => '1.00000000',
                     'occurredOn' => date('Y-m-d'),
                     'postedAt' => date('Y-m-d H:i:s'),
                     'originalTransactionId' => null,
                 ]);
-                $walletAccountId = $this->wallets->getOrCreateWalletLedgerAccountId($userId, $walletId);
-                $equityAccountId = $this->wallets->getOrCreateOpeningEquityAccountId($userId);
-                $entry = [
-                    'transactionId' => $transactionId,
-                    'amountOriginal' => $balance,
-                    'currency' => $currency,
-                    'amountBase' => $amountBase,
-                    'fxRateSnapshot' => $rate['rate'],
-                ];
-                $this->transactions->createLedgerEntry($entry + [
+
+                // DEBIT Asset:Wallet
+                $this->ledgerDao->createLedgerEntry([
+                    'transactionId' => $txId,
                     'ledgerAccountId' => $walletAccountId,
                     'entrySide' => 'DEBIT',
+                    'amountOriginal' => $initialBalance,
+                    'currency' => $currency,
+                    'amountBase' => $initialBalance,
+                    'fxRateSnapshot' => '1.00000000',
                 ]);
-                $this->transactions->createLedgerEntry($entry + [
+
+                // CREDIT Equity:OpeningBalance
+                $this->ledgerDao->createLedgerEntry([
+                    'transactionId' => $txId,
                     'ledgerAccountId' => $equityAccountId,
                     'entrySide' => 'CREDIT',
+                    'amountOriginal' => $initialBalance,
+                    'currency' => $currency,
+                    'amountBase' => $initialBalance,
+                    'fxRateSnapshot' => '1.00000000',
                 ]);
             }
 
-            $row = $this->wallets->findByIdAndUser($walletId, $userId);
-            if ($row === null) {
-                throw new ApiException('WALLET_CREATE_FAILED', 'Không thể đọc lại ví vừa tạo.', 500);
+            if ($ownsTx) {
+                $pdo->commit();
             }
-            $response = [
-                'wallet' => $this->presentWallet($row, $baseCurrency),
-                'openingTransactionId' => $transactionId,
-            ];
-            $this->transactions->saveIdempotency(
-                $userId,
-                $key,
-                $requestHash,
-                $transactionId,
-                201,
-                json_encode($response, JSON_THROW_ON_ERROR)
-            );
-            $this->pdo->commit();
-            return $response;
-        } catch (Throwable $error) {
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
+
+            return $this->getWallet($walletId, $userId);
+        } catch (Throwable $e) {
+            if ($ownsTx && $pdo->inTransaction()) {
+                $pdo->rollBack();
             }
-            if ($error instanceof PDOException && $error->getCode() === '23000') {
-                throw new ApiException('DUPLICATE_WALLET_NAME', 'Tên ví đã tồn tại.', 409, [
-                    'name' => 'Tên ví không được trùng với ví đang hoạt động.',
-                ]);
-            }
-            throw $error;
+            throw $e;
         }
     }
 
-    /** @param array<string, mixed> $input @return array<string, mixed> */
-    public function updateWallet(int $userId, int $walletId, array $input): array
+    public function updateWallet(int $walletId, int $userId, array $dto): array
     {
-        $wallet = $this->wallets->findByIdAndUser($walletId, $userId);
-        if ($wallet === null || $wallet['status'] !== 'ACTIVE') {
-            throw new ApiException('NOT_FOUND', 'Ví không tồn tại.', 404);
+        $wallet = $this->getWallet($walletId, $userId);
+        $name = trim((string) ($dto['name'] ?? $wallet['name']));
+        if ($name === '' || mb_strlen($name) > 120) {
+            throw new InvalidArgumentException('Tên ví phải từ 1 đến 120 ký tự.');
         }
 
-        $name = $this->normalizeName($input['name'] ?? null);
-        $nameKey = mb_strtolower($name, 'UTF-8');
-        $icon = $this->choice((string) ($input['iconKey'] ?? ''), self::ICONS, (string) $wallet['icon_key'], 'iconKey');
-        $color = $this->normalizeColor((string) ($input['colorKey'] ?? ''), (string) $wallet['color_key']);
-        if ($this->wallets->activeNameExists($userId, $nameKey, $walletId)) {
-            throw new ApiException('DUPLICATE_WALLET_NAME', 'Tên ví đã tồn tại.', 409, [
-                'name' => 'Tên ví không được trùng với ví đang hoạt động.',
-            ]);
-        }
+        $this->walletDao->update($walletId, $userId, $name);
+        return $this->getWallet($walletId, $userId);
+    }
 
+    public function archiveWallet(int $walletId, int $userId): bool
+    {
+        $wallet = $this->getWallet($walletId, $userId);
+        if ($wallet['status'] !== 'ACTIVE') {
+            throw new InvalidArgumentException('Ví đã được lưu trữ.');
+        }
+        $pdo = $this->walletDao->getPdo();
+        $ownTransaction = !$pdo->inTransaction();
+        if ($ownTransaction) $pdo->beginTransaction();
         try {
-            $this->wallets->updateMetadata($walletId, $userId, $name, $nameKey, $icon, $color);
-        } catch (PDOException $error) {
-            if ($error->getCode() === '23000') {
-                throw new ApiException('DUPLICATE_WALLET_NAME', 'Tên ví đã tồn tại.', 409, [
-                    'name' => 'Tên ví không được trùng với ví đang hoạt động.',
-                ]);
+            // Lock the wallet and verify the balance within the same transaction.
+            $locked = $this->walletDao->findByIdAndUser($walletId, $userId, true);
+            if (!$locked || bccomp((string) $locked['cached_balance'], '0', 8) !== 0) {
+                throw new InvalidArgumentException('Chỉ lưu trữ được ví có số dư bằng 0.');
             }
-            throw $error;
+            $active = $pdo->prepare("SELECT COUNT(*) FROM recurring_schedules WHERE user_id = ? AND wallet_id = ? AND status = 'ACTIVE'");
+            $active->execute([$userId, $walletId]);
+            if ((int) $active->fetchColumn() > 0) {
+                throw new InvalidArgumentException('Ví còn giao dịch định kỳ đang hoạt động; hãy tạm dừng trước.');
+            }
+            $result = $this->walletDao->archive($walletId, $userId);
+            if ($ownTransaction) $pdo->commit();
+            return $result;
+        } catch (Throwable $e) {
+            if ($ownTransaction && $pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
         }
-
-        $updated = $this->wallets->findByIdAndUser($walletId, $userId);
-        return ['wallet' => $this->presentWallet($updated, $this->requireBaseCurrency($userId))];
     }
 
-    /** @param array<string, mixed> $input @return array<string, mixed> */
-    public function adjustWallet(int $userId, int $walletId, array $input, ?string $idempotencyKey): array
+    public function deleteWallet(int $walletId, int $userId): bool
     {
-        $direction = strtoupper(trim((string) ($input['direction'] ?? '')));
-        if (!in_array($direction, ['INCREASE', 'DECREASE'], true)) {
-            throw new ApiException('VALIDATION_ERROR', 'Chiều điều chỉnh không hợp lệ.', 422, [
-                'direction' => 'Chọn tăng hoặc giảm số dư.',
-            ]);
-        }
-        $note = preg_replace('/\s+/u', ' ', trim((string) ($input['note'] ?? ''))) ?? '';
-        if (mb_strlen($note, 'UTF-8') > 200) {
-            throw new ApiException('VALIDATION_ERROR', 'Nội dung điều chỉnh quá dài.', 422, [
-                'note' => 'Nội dung không vượt quá 200 ký tự.',
-            ]);
-        }
-        $key = $this->validateIdempotencyKey($idempotencyKey);
-        $baseCurrency = $this->requireBaseCurrency($userId);
-
-        $this->pdo->beginTransaction();
-        try {
-            $wallet = $this->wallets->findActiveForUpdate($walletId, $userId);
-            if ($wallet === null) {
-                throw new ApiException('NOT_FOUND', 'Ví không tồn tại.', 404);
-            }
-            $currency = strtoupper((string) $wallet['currency']);
-            $amount = $this->normalizeAmount($input['amount'] ?? null, $currency);
-            if (bccomp($amount, '0', 8) !== 1) {
-                throw new ApiException('VALIDATION_ERROR', 'Số tiền điều chỉnh phải lớn hơn 0.', 422, [
-                    'amount' => 'Nhập số tiền lớn hơn 0.',
-                ]);
-            }
-            $payload = compact('walletId', 'direction', 'amount', 'note');
-            $requestHash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
-            $cached = $this->transactions->findIdempotency($userId, $key);
-            if ($cached !== null) {
-                if (!hash_equals((string) $cached['request_hash'], $requestHash)) {
-                    throw new ApiException('IDEMPOTENCY_CONFLICT', 'Khóa yêu cầu đã được sử dụng với dữ liệu khác.', 409);
-                }
-                $response = json_decode((string) $cached['response_json'], true, 32, JSON_THROW_ON_ERROR);
-                $this->pdo->commit();
-                return $response;
-            }
-
-            $scale = $this->currencyScale($currency);
-            $currentBalance = (string) $wallet['cached_balance'];
-            $newBalance = $direction === 'INCREASE'
-                ? bcadd($currentBalance, $amount, $scale)
-                : bcsub($currentBalance, $amount, $scale);
-            if (bccomp($newBalance, '0', $scale) === -1) {
-                throw new ApiException('INSUFFICIENT_FUNDS', 'Số dư ví không đủ để giảm số tiền này.', 422, [
-                    'amount' => 'Số tiền giảm không được vượt quá số dư hiện tại.',
-                ]);
-            }
-
-            $rate = $this->resolveRate($currency, $baseCurrency, $amount);
-            $amountBase = $this->convert($amount, (string) $rate['rate'], $baseCurrency);
-            $transactionId = $this->transactions->createTransaction([
-                'userId' => $userId,
-                'categoryId' => null,
-                'type' => 'OTHER',
-                'status' => 'POSTED',
-                'description' => $note !== '' ? $note : ($direction === 'INCREASE'
-                    ? 'Điều chỉnh tăng số dư ví'
-                    : 'Điều chỉnh giảm số dư ví'),
-                'currency' => $currency,
-                'amount' => $amount,
-                'fxRateSnapshot' => $rate['rate'],
-                'occurredOn' => date('Y-m-d'),
-                'postedAt' => date('Y-m-d H:i:s'),
-                'originalTransactionId' => null,
-            ]);
-            $walletAccountId = $this->wallets->getOrCreateWalletLedgerAccountId($userId, $walletId);
-            $adjustmentAccountId = $this->wallets->getOrCreateBalanceAdjustmentAccountId($userId);
-            $entry = [
-                'transactionId' => $transactionId,
-                'amountOriginal' => $amount,
-                'currency' => $currency,
-                'amountBase' => $amountBase,
-                'fxRateSnapshot' => $rate['rate'],
-            ];
-            $this->transactions->createLedgerEntry($entry + [
-                'ledgerAccountId' => $direction === 'INCREASE' ? $walletAccountId : $adjustmentAccountId,
-                'entrySide' => 'DEBIT',
-            ]);
-            $this->transactions->createLedgerEntry($entry + [
-                'ledgerAccountId' => $direction === 'INCREASE' ? $adjustmentAccountId : $walletAccountId,
-                'entrySide' => 'CREDIT',
-            ]);
-            $this->wallets->setBalance($walletId, $userId, $newBalance);
-
-            $updated = $this->wallets->findByIdAndUser($walletId, $userId);
-            $response = [
-                'wallet' => $this->presentWallet($updated, $baseCurrency),
-                'transactionId' => $transactionId,
-            ];
-            $this->transactions->saveIdempotency(
-                $userId,
-                $key,
-                $requestHash,
-                $transactionId,
-                201,
-                json_encode($response, JSON_THROW_ON_ERROR)
-            );
-            $this->pdo->commit();
-            return $response;
-        } catch (Throwable $error) {
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
-            }
-            throw $error;
-        }
-    }
-
-    public function archiveWallet(int $userId, int $walletId): void
-    {
-        $this->pdo->beginTransaction();
-        try {
-            $wallet = $this->wallets->findActiveForUpdate($walletId, $userId);
-            if ($wallet === null) {
-                throw new ApiException('NOT_FOUND', 'Ví không tồn tại.', 404);
-            }
-            if (bccomp((string) $wallet['cached_balance'], '0', 8) !== 0) {
-                throw new ApiException('WALLET_BALANCE_NOT_ZERO', 'Chỉ có thể lưu trữ ví có số dư bằng 0.', 422);
-            }
-            if ($this->wallets->hasActiveRecurringSchedule($walletId, $userId)) {
-                throw new ApiException(
-                    'WALLET_HAS_ACTIVE_RECURRING',
-                    'Ví đang được sử dụng bởi giao dịch định kỳ hoạt động.',
-                    422
-                );
-            }
-            $this->wallets->archive($walletId, $userId);
-            $this->pdo->commit();
-        } catch (Throwable $error) {
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
-            }
-            throw $error;
-        }
-    }
-
-    public function deleteWalletPermanently(int $userId, int $walletId): void
-    {
-        $this->pdo->beginTransaction();
-        try {
-            $wallet = $this->wallets->findArchivedForUpdate($walletId, $userId);
-            if ($wallet === null) {
-                throw new ApiException(
-                    'WALLET_MUST_BE_ARCHIVED',
-                    'Ví phải được lưu trữ trước khi xóa vĩnh viễn.',
-                    409
-                );
-            }
-            if (bccomp((string) $wallet['cached_balance'], '0', 8) !== 0) {
-                throw new ApiException('WALLET_BALANCE_NOT_ZERO', 'Ví phải có số dư bằng 0.', 422);
-            }
-            if ($this->wallets->hasActiveRecurringSchedule($walletId, $userId)) {
-                throw new ApiException(
-                    'WALLET_HAS_ACTIVE_RECURRING',
-                    'Không thể xóa ví đang liên kết với lịch định kỳ hoạt động.',
-                    409
-                );
-            }
-            if (!$this->wallets->markDeleted($walletId, $userId)) {
-                throw new ApiException('WALLET_DELETE_FAILED', 'Không thể xóa ví.', 409);
-            }
-            $this->pdo->commit();
-        } catch (Throwable $error) {
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
-            }
-            throw $error;
-        }
-    }
-
-    /** @param array<string, mixed> $row @return array<string, mixed> */
-    private function presentWallet(array $row, string $baseCurrency): array
-    {
-        $currency = strtoupper((string) $row['currency']);
-        $rate = $this->resolveRate($currency, $baseCurrency, (string) $row['cached_balance'], false);
-        $baseBalance = $rate === null
-            ? null
-            : $this->convert((string) $row['cached_balance'], (string) $rate['rate'], $baseCurrency);
-
-        return [
-            'id' => (int) $row['id'],
-            'name' => (string) $row['name'],
-            'type' => (string) $row['wallet_type'],
-            'currency' => $currency,
-            'balance' => (string) $row['cached_balance'],
-            'status' => (string) $row['status'],
-            'iconKey' => $row['icon_key'] ?: $this->defaultIcon((string) $row['wallet_type']),
-            'colorKey' => $row['color_key'] ?: 'blue',
-            'baseCurrency' => $baseCurrency,
-            'baseBalance' => $baseBalance,
-            'conversionRate' => $rate['rate'] ?? null,
-            'rateEffectiveAt' => $rate['effectiveAt'] ?? null,
-            'rateProvider' => $rate['provider'] ?? null,
-            'createdAt' => (string) $row['created_at'],
-            'updatedAt' => (string) $row['updated_at'],
-            'archivedAt' => $row['archived_at'],
-            'deletedAt' => $row['deleted_at'],
-        ];
-    }
-
-    /** @return array{rate: string, effectiveAt: ?string}|null */
-    private function resolveRate(
-        string $currency,
-        string $baseCurrency,
-        string $amount,
-        bool $required = true
-    ): ?array {
-        if ($currency === $baseCurrency) {
-            return ['rate' => '1', 'effectiveAt' => null];
-        }
-        $rate = $this->rates->findLatestRate($currency, $baseCurrency);
-        if ($rate === null && $required && bccomp($amount, '0', 8) === 1) {
-            throw new ApiException(
-                'EXCHANGE_RATE_UNAVAILABLE',
-                "Chưa có tỷ giá hợp lệ từ {$currency} sang {$baseCurrency}.",
-                422,
-                ['currency' => 'Cần cập nhật tỷ giá trước khi ghi nhận số dư ngoại tệ.']
-            );
-        }
-        return $rate;
-    }
-
-    private function normalizeName(mixed $value): string
-    {
-        $name = preg_replace('/\s+/u', ' ', trim((string) $value)) ?? '';
-        if ($name === '' || mb_strlen($name, 'UTF-8') > 120) {
-            throw new ApiException('VALIDATION_ERROR', 'Tên ví không hợp lệ.', 422, [
-                'name' => 'Tên ví bắt buộc và không vượt quá 120 ký tự.',
-            ]);
-        }
-        return $name;
-    }
-
-    private function normalizeAmount(mixed $value, string $currency): string
-    {
-        if (!in_array($currency, self::CURRENCIES, true)) {
-            throw new ApiException('VALIDATION_ERROR', 'Tiền tệ không hợp lệ.', 422, [
-                'currency' => 'Chỉ hỗ trợ VND, USD hoặc EUR.',
-            ]);
-        }
-        $raw = trim((string) ($value ?? '0'));
-        $scale = $this->currencyScale($currency);
-        $pattern = $scale === 0 ? '/^\d{1,16}$/' : '/^\d{1,16}(?:\.\d{1,2})?$/' ;
-        if (!preg_match($pattern, $raw)) {
-            throw new ApiException('VALIDATION_ERROR', 'Số dư đầu kỳ không hợp lệ.', 422, [
-                'openingBalance' => $scale === 0
-                    ? 'Số dư VND phải là số nguyên không âm.'
-                    : 'Số dư phải không âm và có tối đa 2 chữ số thập phân.',
-            ]);
-        }
-        $parts = explode('.', $raw, 2);
-        $whole = ltrim($parts[0], '0') ?: '0';
-        if ($scale === 0) {
-            return $whole;
-        }
-        $fraction = str_pad($parts[1] ?? '', $scale, '0');
-        return $whole . '.' . $fraction;
-    }
-
-    private function validateIdempotencyKey(?string $value): string
-    {
-        $key = trim((string) $value);
-        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD', $key)) {
-            throw new ApiException(
-                'IDEMPOTENCY_KEY_REQUIRED',
-                'Yêu cầu tạo ví cần Idempotency-Key hợp lệ.',
-                400
-            );
-        }
-        return strtolower($key);
-    }
-
-    /** @param array<int, string> $allowed */
-    private function choice(string $value, array $allowed, string $default, string $field): string
-    {
-        $choice = strtolower(trim($value));
-        if ($choice === '') {
-            return $default;
-        }
-        if (!in_array($choice, $allowed, true)) {
-            throw new ApiException('VALIDATION_ERROR', 'Tùy chọn hiển thị không hợp lệ.', 422, [
-                $field => 'Giá trị không nằm trong danh sách hỗ trợ.',
-            ]);
-        }
-        return $choice;
-    }
-
-    private function normalizeColor(string $value, string $default): string
-    {
-        $color = strtolower(trim($value));
-        if ($color === '') {
-            return $default;
-        }
-        if (in_array($color, self::COLORS, true) || preg_match('/^#[0-9a-f]{6}$/D', $color)) {
-            return $color;
-        }
-        throw new ApiException('VALIDATION_ERROR', 'Màu hiển thị không hợp lệ.', 422, [
-            'colorKey' => 'Chọn một màu hợp lệ.',
-        ]);
-    }
-
-    private function defaultIcon(string $type): string
-    {
-        return match ($type) {
-            'BANK' => 'bank',
-            'E_WALLET' => 'wallet',
-            'SAVINGS' => 'savings',
-            default => 'cash',
-        };
-    }
-
-    private function requireBaseCurrency(int $userId): string
-    {
-        $currency = $this->wallets->getUserBaseCurrency($userId);
-        if ($currency === null || !in_array($currency, self::CURRENCIES, true)) {
-            throw new ApiException('USER_NOT_FOUND', 'Không xác định được tiền tệ cơ sở của người dùng.', 404);
-        }
-        return $currency;
-    }
-
-    private function currencyScale(string $currency): int
-    {
-        return $currency === 'VND' ? 0 : 2;
-    }
-
-    private function zeroFor(string $currency): string
-    {
-        return $this->currencyScale($currency) === 0 ? '0' : '0.00';
-    }
-
-    private function convert(string $amount, string $rate, string $baseCurrency): string
-    {
-        $scale = $this->currencyScale($baseCurrency);
-        $working = bcmul($amount, $rate, $scale + 1);
-        $increment = $scale === 0 ? '0.5' : '0.' . str_repeat('0', $scale) . '5';
-        return bcadd($working, $increment, $scale);
+        // Never hard-delete financial accounts; ledgers and audit history must survive.
+        return $this->archiveWallet($walletId, $userId);
     }
 }

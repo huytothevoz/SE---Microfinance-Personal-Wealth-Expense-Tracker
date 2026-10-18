@@ -1,7 +1,7 @@
 /**
  * Dữ liệu hoàn toàn giả lập phục vụ demo giao diện Construction.
  * Không dùng để tính số dư thật, ghi sổ hay ra quyết định tài chính.
- * Dữ liệu minh họa cho giao diện WealthFlow.
+ * Nguồn đối chiếu: SRS Elaboration FR01–FR15, UC01–UC13.
  */
 export const wallets = [
   {

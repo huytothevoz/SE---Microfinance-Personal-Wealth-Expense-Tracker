@@ -25,13 +25,21 @@ try {
     }
     $config = require $directory . '/bootstrap.php';
     $config->validate();
-    $db = WealthFlow\Database::connect($config, false);
+    $db = WealthFlow\Core\Database::connect($config, false);
     $name = $config->get('DB_NAME');
     $db->exec("CREATE DATABASE IF NOT EXISTS `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
     $db->exec("USE `{$name}`");
     // Serialize installers. MariaDB/MySQL DDL implicitly commits, so each file is rerunnable.
     if ((int) $db->query("SELECT GET_LOCK('wealthflow_setup_{$name}', 20)")->fetchColumn() !== 1) {
         throw new RuntimeException('Another installer is running.');
+    }
+    // Refuse silent in-place upgrades from the previous 7-file main schema to the
+    // refactor's 28-file schema. An implicit CREATE IF NOT EXISTS cannot migrate columns.
+    $tableQuery = $db->prepare('SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = \'BASE TABLE\'');
+    $tableQuery->execute([$name]);
+    $existingTables = $tableQuery->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('schema_migrations', $existingTables, true) && count($existingTables) > 0) {
+        throw new RuntimeException('Legacy database schema detected. Back up and migrate explicitly; automatic conversion disabled.');
     }
     $db->exec('CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(100) PRIMARY KEY, applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB');
     foreach (glob(dirname($directory) . '/database/[0-9]*.sql') as $file) {

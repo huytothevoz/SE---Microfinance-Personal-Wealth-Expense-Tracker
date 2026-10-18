@@ -1,0 +1,99 @@
+sequenceDiagram
+    autonumber
+    actor User as Người dùng (User)
+    participant RC as <<Boundary>><br/>ReportController
+    participant ReconS as <<Control>><br/>ReconciliationService
+    participant ExpS as <<Control>><br/>ExportService
+    participant WD as <<DataAccess>><br/>WalletDAO
+    participant LD as <<DataAccess>><br/>LedgerDAO
+    participant AD as <<DataAccess>><br/>AuditLogDAO
+    participant DB as <<Storage>><br/>MySQL Database (InnoDB)
+
+    %% ========================================================
+    %% 1. KỊCH BẢN ĐỐI SOÁT SỐ DƯ SỔ CÁI (RECONCILIATION)
+    %% ========================================================
+    rect rgb(245, 243, 255)
+        note over User, DB: 1. ĐỐI SOÁT ĐỘC LẬP SỐ DƯ BỘ ĐỆM VÀ SỔ CÁI KÉP (BR01, BR12, BR14)
+        User ->> RC: GET /api/reports/reconcile?walletId=10
+        activate RC
+        RC ->> ReconS: reconcileWalletLedger(userId, walletId=10)
+        activate ReconS
+
+        %% Lấy số dư bộ đệm từ ví
+        ReconS ->> WD: findWalletByIdAndUser(walletId=10, userId)
+        activate WD
+        WD ->> DB: SELECT id, name, cached_balance, currency FROM wallets WHERE id = 10 AND user_id = ?
+        DB -->> WD: Row (id=10, name='Techcombank', cached_balance=15000000.00000000, currency='VND')
+        WD -->> ReconS: WalletVO(cachedBalance=15000000, currency='VND')
+        deactivate WD
+
+        %% Tính tổng lũy kế Nợ/Có từ bảng ledger_entries
+        ReconS ->> LD: calculateCumulativeLedgerSum(walletId=10)
+        activate LD
+        LD ->> DB: SELECT COALESCE(SUM(CASE WHEN entry_type='DEBIT' THEN amount ELSE -amount END), 0) AS ledger_sum FROM ledger_entries WHERE wallet_id = 10
+        DB -->> LD: Row (ledger_sum = 15000000.00000000)
+        LD -->> ReconS: ledgerSum = 15000000.00000000
+        deactivate LD
+
+        %% So sánh đối soát
+        ReconS ->> ReconS: delta = cachedBalance - ledgerSum
+        alt delta == 0 (Khớp đúng tuyệt đối 100% - Số dư toàn vẹn)
+            ReconS -->> RC: ReconciliationResult(status='MATCHED', cachedBalance=15000000, ledgerSum=15000000, delta=0)
+            RC -->> User: 200 OK { status: 'MATCHED', cachedBalance: 15000000, ledgerSum: 15000000, delta: 0 }
+        else delta != 0 (Phát hiện sai lệch - Cảnh báo toàn vẹn dữ liệu)
+            ReconS ->> AD: logSecurityAuditAlert(userId, 'LEDGER_MISMATCH')
+            activate AD
+            AD ->> DB: INSERT INTO security_audit_logs (user_id, event, created_at) VALUES (?, 'LEDGER_MISMATCH', NOW())
+            DB -->> AD: Query OK, 1 row affected
+            AD -->> ReconS: void
+            deactivate AD
+            ReconS -->> RC: ReconciliationResult(status='MISMATCHED', cachedBalance, ledgerSum, delta)
+            RC -->> User: 200 OK { status: 'MISMATCHED', cachedBalance, ledgerSum, delta, warning: 'Lệch số dư sổ cái!' }
+        end
+        deactivate ReconS
+        deactivate RC
+    end
+
+    %% ========================================================
+    %% 2. KỊCH BẢN XUẤT TỆP CSV AN TOÀN CHỐNG FORMULA INJECTION
+    %% ========================================================
+    rect rgb(240, 253, 244)
+        note over User, DB: 2. XUẤT BÁO CÁO CSV AN TOÀN: CHỐNG INJECTION & HỖ TRỢ EXCEL BOM (FR12.04, BR18)
+        User ->> RC: GET /api/reports/export/csv?from=2026-10-01&to=2026-10-31&walletId=10
+        activate RC
+        RC ->> ExpS: exportTransactionsToCSV(userId, filterDto, clientIp='192.168.1.15')
+        activate ExpS
+
+        %% Truy vấn danh sách giao dịch
+        ExpS ->> LD: findPostedTransactions(userId, filterDto)
+        activate LD
+        LD ->> DB: SELECT ft.occurred_on, ft.transaction_type, c.name AS category_name, w.name AS wallet_name, ft.amount, ft.currency, ft.description, ft.note FROM financial_transactions ft JOIN wallets w ON ft.wallet_id = w.id LEFT JOIN transaction_categories c ON ft.category_id = c.id WHERE ft.user_id = ? AND ft.occurred_on BETWEEN '2026-10-01' AND '2026-10-31' AND ft.wallet_id = 10 ORDER BY ft.occurred_on DESC
+        DB -->> LD: List<ExportTransactionRow> (50 rows)
+        LD -->> ExpS: rawRows
+        deactivate LD
+
+        %% Xử lý an toàn: Vệ sinh dữ liệu chống Formula Injection (FR12.04)
+        loop Duyệt qua từng bản ghi và từng trường văn bản (description, note, category_name)
+            ExpS ->> ExpS: sanitizeCSVField(fieldValue)
+            note over ExpS: Nếu ký tự đầu tiên là '=', '+', '-', '@' -> Thêm dấu nháy đơn `'` ở đầu<br/>(Ngăn chặn Microsoft Excel thực thi DDE / Macro độc hại)
+        end
+
+        %% Đóng gói nội dung CSV và chèn UTF-8 BOM
+        ExpS ->> ExpS: buildCSVString(sanitizedRows)
+        ExpS ->> ExpS: prependUTF8BOM("\xEF\xBB\xBF")
+        note over ExpS: Gắn 3 bytes BOM để Microsoft Excel trên Windows tự nhận diện chuẩn xác UTF-8 tiếng Việt
+        ExpS ->> ExpS: computeSHA256Hash(csvBytes)
+
+        %% Ghi nhật ký xuất file vào export_audit_logs
+        ExpS ->> AD: logExportAudit(userId, 'TRANSACTION_CSV', rowCount=50, fileHash, clientIp)
+        activate AD
+        AD ->> DB: INSERT INTO export_audit_logs (user_id, export_type, row_count, file_hash, ip_address, created_at) VALUES (?, 'TRANSACTION_CSV', 50, ?, '192.168.1.15', NOW())
+        DB -->> AD: Query OK, 1 row affected
+        AD -->> ExpS: void
+        deactivate AD
+
+        ExpS -->> RC: CSVStreamBuffer(csvBytes, fileName='wealthflow_tx_202610.csv')
+        deactivate ExpS
+        RC -->> User: 200 OK (Tải tệp CSV an toàn - Content-Type: text/csv)
+        deactivate RC
+    end

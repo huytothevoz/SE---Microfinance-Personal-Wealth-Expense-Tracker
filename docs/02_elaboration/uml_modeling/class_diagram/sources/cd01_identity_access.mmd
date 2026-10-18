@@ -166,13 +166,13 @@ classDiagram
     }
 
     class UserRole {
-        <<enumeration>>
+        <<Enumeration>>
         USER
         ADMIN
     }
 
     class UserStatus {
-        <<enumeration>>
+        <<Enumeration>>
         ACTIVE
         LOCKED
     }
@@ -211,3 +211,21 @@ classDiagram
     User "1" o-- "0..*" AdminAuditLog : targeted_in (FR13)
     User --> UserRole : typed_by
     User --> UserStatus : state_of
+
+    %% ==========================================
+    %% STYLES & HIGHLIGHTS (BCE+D Color Palette)
+    %% ==========================================
+    style AuthController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style UserController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style AdminController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style AuthService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style UserService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style AdminService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style UserDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style PasswordResetDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style AuditLogDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style User fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style PasswordResetToken fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style AdminAuditLog fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style UserRole fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style UserStatus fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px

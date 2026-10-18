@@ -1,9 +1,0 @@
-.env
-.env.*
-!.env.example
-/vendor/
-/node_modules/
-/storage/logs/
-*.log
-*.sqlite
-.DS_Store

@@ -33,7 +33,7 @@ const candidates = {
 };
 export const dataStatus = Object.fromEntries(Object.keys(collections).map(k => [k, { state: 'idle', message: '', endpoint: '' }]));
 let generation = 0;
-const keyVariants = k => [k, k === 'adminUsers' ? 'users' : k, 'items', 'rows', 'results'];
+const keyVariants = k => [k, k === 'recurring' ? 'schedules' : k, k === 'adminUsers' ? 'users' : k, 'items', 'rows', 'results'];
 function extractCollection(json, name) {
   if (Array.isArray(json)) return json;
   for (const obj of [json, json?.data, json?.result, json?.payload]) {
@@ -54,9 +54,9 @@ function shape(name, row) {
     r.type = String(r.type ?? r.transactionType ?? r.transaction_type ?? '').toLowerCase();
     r.amount = Number(r.amountBase ?? r.amount_base ?? r.baseAmount ?? r.amount ?? 0);
     r.hasBaseAmount = ['amountBase', 'amount_base', 'baseAmount'].some(k => row[k] != null) || String(row.currency ?? 'VND').toUpperCase() === 'VND';
-    r.date = String(r.date ?? r.occurredAt ?? r.occurred_at ?? r.createdAt ?? '').slice(0, 10);
-    r.category = String(r.categoryName ?? r.category?.name ?? r.category ?? 'Chưa phân loại');
-    r.wallet = String(r.walletName ?? r.wallet?.name ?? r.wallet ?? '—');
+    r.date = String(r.date ?? r.occurredOn ?? r.occurred_on ?? r.createdAt ?? '').slice(0, 10);
+    r.category = String(r.categoryName ?? r.category_name ?? r.category?.name ?? r.category ?? 'Chưa phân loại');
+    r.wallet = String(r.walletName ?? r.wallet_name ?? r.wallet?.name ?? r.wallet ?? '—');
     r.status = String(r.status ?? 'POSTED').toUpperCase();
     r.currency = String(r.currency ?? 'VND');
     r.icon = r.icon ?? (r.type === 'income' ? '↗' : r.type === 'expense' ? '↘' : '⇄');
@@ -66,13 +66,22 @@ function shape(name, row) {
   if (name === 'wallets') {
     r.id = String(r.id ?? r.walletId ?? '');
     r.name = String(r.name ?? r.walletName ?? 'Ví');
-    r.balance = Number(r.balance ?? r.currentBalance ?? r.current_balance ?? 0);
+    r.balance = Number(r.balance ?? r.cached_balance ?? r.currentBalance ?? r.current_balance ?? 0);
+    r.balanceBase = r.balanceBase ?? r.baseBalance ?? null;
+    r.type = r.type ?? r.wallet_type ?? '—';
     r.currency = String(r.currency ?? 'VND');
   }
   if (name === 'budgets') {
-    r.name = String(r.name ?? r.categoryName ?? r.category?.name ?? 'Ngân sách');
-    r.limit = Number(r.limit ?? r.amount ?? r.limitAmount ?? 0);
-    r.spent = Number(r.spent ?? r.spentAmount ?? r.used ?? 0);
+    r.name = String(r.name ?? r.categoryName ?? r.category_name ?? r.category?.name ?? 'Ngân sách');
+    r.limit = Number(r.limit ?? r.limitAmount ?? r.limit_amount ?? r.amount ?? 0);
+    r.spent = Number(r.spent ?? r.spentAmount ?? r.spent_amount ?? r.used ?? 0);
+  }
+  if (name === 'categories') {
+    r.type = String(r.type ?? r.category_type ?? '').toUpperCase();
+  }
+  if (name === 'recurring') {
+    r.nextRun = r.nextRun ?? r.next_due_date ?? r.nextDueDate ?? '';
+    r.frequency = r.frequency ?? 'Hằng tháng';
   }
   if (name === 'goals') {
     r.name = String(r.name ?? r.title ?? 'Mục tiêu');
@@ -138,13 +147,17 @@ export async function mutateLiveData(name, method, record, id = null) {
   const base = getEndpoint(name);
   if (!base) throw new Error('API phân hệ này chưa khả dụng. Chưa lưu dữ liệu nào.');
   const endpoint = id === null ? base : `${base}/${encodeURIComponent(String(id))}`;
-  const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+  const headers = { 'Content-Type': 'application/json', Accept: 'application/json', 'X-WealthFlow': '1' };
+  if (method === 'POST' && ['transactions', 'wallets'].includes(name)) {
+    // Prevent duplicate financial writes when the browser retries a request.
+    headers['Idempotency-Key'] = crypto.randomUUID();
+  }
   // Use the existing backend's CSRF cookie/header scheme when configured.
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
   if (csrf) headers['X-CSRF-Token'] = csrf;
   const response = await fetch(endpoint, { method, credentials: 'same-origin', headers, body: record === null ? undefined : JSON.stringify(record) });
   let result;
   try { result = await response.json(); } catch { throw new Error(`Máy chủ trả về phản hồi không phải JSON (HTTP ${response.status}).`); }
-  if (!response.ok || result?.success === false) throw new Error(result?.message || errorText(response.status));
+  if (!response.ok || result?.success === false) throw new Error(result?.error?.message || result?.message || errorText(response.status));
   return result;
 }

@@ -1,11 +1,12 @@
-# WealthFlow/SE local runner. Non-destructive; does not modify XAMPP Apache,
+﻿# WealthFlow/SE local runner. Non-destructive; does not modify XAMPP Apache,
 # XAMPP's primary MySQL datadir, or any other project in htdocs.
 [CmdletBinding()]
 param(
     [string]$XamppRoot = 'C:\xampp',
     [int]$WebPort = 8080,
     [int]$DbPort = 3307,
-    [string]$DbName = 'wealthflow'
+    [string]$DbName = 'wealthflow',
+    [switch]$DbOnly
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -138,18 +139,59 @@ port=$DbPort
         [IO.File]::WriteAllText($MysqlConfig, $myIni, [Text.Encoding]::ASCII)
     } else {
         $actualIni = [IO.File]::ReadAllText($MysqlConfig)
-        if ($actualIni -notmatch "(?m)^port=$DbPort\s*$" -or $actualIni -notlike "*$DataUnix*") {
+        if ($actualIni -notmatch "(?m)^port=$DbPort\s*$" -or $actualIni -notlike "*$DataUnix*" -or $actualIni -notlike "*$BaseUnix*" -or $actualIni -notlike "*$TmpUnix*") {
             Fail "Existing SE MySQL config needs inspection: $MysqlConfig. Nothing was overwritten."
         }
     }
     if (-not $dbRunning) {
         Info "[3/7] Starting the SE-only MySQL instance on 127.0.0.1:$DbPort..."
+        # Capture diagnostics: a failed mysqld.exe often exits immediately, not after 25s.
+        # A unique per-launch log prevents confusion with stale attempts.
+        $logStamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
+        $mysqlStartOut = Join-Path $InstanceRoot "mysql-start-$logStamp.stdout.log"
+        $mysqlStartErr = Join-Path $InstanceRoot "mysql-start-$logStamp.stderr.log"
         $mysqlArgs = '--defaults-file=' + (Quote-Win $MysqlConfig) + ' --console'
-        Start-Process -FilePath $Mysqld -WorkingDirectory (Join-Path $XamppRoot 'mysql\bin') -ArgumentList $mysqlArgs -WindowStyle Hidden | Out-Null
-        try { Wait-Listen $DbPort 25 'SE MySQL' }
-        catch { Fail "$($_.Exception.Message)`nRead MySQL log: $MysqlErrorLog" }
+        $mysqlProc = Start-Process -FilePath $Mysqld -WorkingDirectory (Join-Path $XamppRoot 'mysql\bin') `
+            -ArgumentList $mysqlArgs -WindowStyle Hidden -PassThru `
+            -RedirectStandardOutput $mysqlStartOut -RedirectStandardError $mysqlStartErr
+
+        $listening = $false
+        $exitedEarly = $false
+        # Give cold Windows/XAMPP installations time, but report early exit immediately.
+        for ($i = 0; $i -lt 45; $i++) {
+            if (@(Get-Listener $DbPort).Count -gt 0) { $listening = $true; break }
+            $mysqlProc.Refresh()
+            if ($mysqlProc.HasExited) { $exitedEarly = $true; break }
+            Start-Sleep -Seconds 1
+        }
+        if (-not $listening) {
+            Write-Host ''
+            Write-Host 'MySQL did not become ready. Details from the actual process:' -ForegroundColor Red
+            if ($exitedEarly) {
+                Write-Host "mysqld.exe exited early (code: $($mysqlProc.ExitCode))." -ForegroundColor Red
+            } else {
+                Write-Host 'mysqld.exe is still not listening after 45 seconds.' -ForegroundColor Red
+            }
+            foreach ($log in @($mysqlStartErr, $mysqlStartOut, $MysqlErrorLog)) {
+                if (Test-Path -LiteralPath $log -PathType Leaf) {
+                    Write-Host "--- $log (last 35 lines) ---" -ForegroundColor Yellow
+                    try {
+                        @(Get-Content -LiteralPath $log -Tail 35 -ErrorAction Stop) | ForEach-Object { Write-Host $_ }
+                    } catch {
+                        Write-Host "Unable to read log right now: $($_.Exception.Message)" -ForegroundColor Yellow
+                    }
+                }
+            }
+            Write-Host 'The existing SE database directory was NOT reset or deleted.' -ForegroundColor Yellow
+            Fail "SE MySQL failed to start on port $DbPort. Read log: $MysqlErrorLog. Send the last 35 lines to debug the root cause."
+        }
         $null = Assert-OwnedListener $DbPort $Mysqld $MysqlConfig
     } else { Info '[3/7] SE MySQL is already running; reusing it.' }
+
+    if ($DbOnly) {
+        Write-Host "SE-only MySQL is listening on 127.0.0.1:$DbPort. No migrations or web server started." -ForegroundColor Green
+        exit 0
+    }
 
     Info '[4/7] Applying SE database migrations safely (no DROP/RESET)...'
     if (-not (Test-Path -LiteralPath $KeyFile -PathType Leaf)) {
@@ -166,7 +208,7 @@ port=$DbPort
     $env:DB_NAME = $DbName
     $env:DB_USER = if ($env:SE_DB_USER) { $env:SE_DB_USER } else { 'root' }
     $env:DB_PASSWORD = if ($env:SE_DB_PASSWORD) { $env:SE_DB_PASSWORD } else { '' }
-    $env:MAIL_TRANSPORT = 'log' # Local preview only; do not send real emails from shared config.
+    $env:MAIL_TRANSPORT = if ($env:SE_MAIL_TRANSPORT -eq 'smtp') { 'smtp' } else { 'log' } # SMTP needs config.local.php credentials; restart after changes.
     & $Php $Migrator
     if ($LASTEXITCODE -ne 0) {
         Fail "SE migration failed. No database was deleted. Check the DB permissions and files in $Project\source\database."

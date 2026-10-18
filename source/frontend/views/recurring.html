@@ -1,0 +1,88 @@
+<div class="page-heading">
+  <div>
+    <h1>Giao dịch định kỳ</h1>
+    <p>Thiết lập đăng ký dịch vụ, tiền nhà, bảo hiểm lặp lại hàng tháng kèm quy tắc neo ngày.</p>
+  </div>
+  <div class="page-actions">
+    <button type="button" class="btn btn--primary btn-sm" data-action="recurring-add">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Tạo lịch định kỳ
+    </button>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Lịch đang hoạt động</span>
+      <div class="kpi-icon">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="recurring-active-count">3 lịch</div>
+    <div class="kpi-desc">Đang theo dõi</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Sắp đến hạn</span>
+      <div class="kpi-icon orange">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="recurring-due-amount">369.000 đ</div>
+    <div class="kpi-desc">Trong tháng 10</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Tạo bản nháp</span>
+      <div class="kpi-icon blue">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="recurring-draft-count">2 lịch</div>
+    <div class="kpi-desc">Chế độ mặc định</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Tự động ghi sổ</span>
+      <div class="kpi-icon green">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="recurring-auto-count">1 lịch</div>
+    <div class="kpi-desc">Người dùng chủ động bật</div>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-title">
+    <div>
+      <h2>Các khoản định kỳ</h2>
+      <p>Hỗ trợ nhắc tạo Draft / tự động ghi sổ (sẽ xử lý bằng PHP scheduler)</p>
+    </div>
+    <div class="panel-tools"></div>
+  </div>
+  <div class="data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Khoản định kỳ</th>
+          <th>Ví</th>
+          <th>Hạn kế tiếp</th>
+          <th>Số tiền</th>
+          <th>Chế độ</th>
+          <th>Trạng thái</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="recurring-table-body">
+        <!-- Dynamic recurring items rendered by budgets.js -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="hint-box" style="margin-top:17px">Lịch định kỳ chạy theo ngày đã thiết lập; khi tháng không đủ ngày, hệ thống áp dụng ngày cuối tháng. Mỗi kỳ chỉ được ghi sổ một lần.</div>

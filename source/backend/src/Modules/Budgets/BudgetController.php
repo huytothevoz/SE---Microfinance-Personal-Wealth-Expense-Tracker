@@ -6,9 +6,9 @@ namespace WealthFlow\Modules\Budgets;
 
 use Exception;
 use InvalidArgumentException;
-use WealthFlow\Http\JsonResponse;
-use WealthFlow\Http\Request;
-use WealthFlow\Modules\Auth\AuthContext;
+use WealthFlow\Core\AuthContext;
+use WealthFlow\Core\JsonResponse;
+use WealthFlow\Core\Request;
 
 final class BudgetController
 {
@@ -21,7 +21,7 @@ final class BudgetController
 
     public function list(Request $request): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $month = (string) $request->getQuery('month', date('Y-m'));
 
         $budgets = $this->budgetService->getBudgetsForMonth($userId, $month);
@@ -34,7 +34,7 @@ final class BudgetController
 
     public function create(Request $request): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $body = $request->getBody();
 
         $categoryId = (int) ($body['categoryId'] ?? 0);
@@ -53,7 +53,7 @@ final class BudgetController
 
     public function update(Request $request, int $id): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $body = $request->getBody();
         $limitAmount = (float) ($body['limitAmount'] ?? 0);
 
@@ -69,7 +69,7 @@ final class BudgetController
 
     public function delete(Request $request, int $id): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
 
         try {
             $this->budgetService->archiveBudget($id, $userId);
@@ -83,7 +83,7 @@ final class BudgetController
 
     public function summary(Request $request): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $month = (string) $request->getQuery('month', date('Y-m'));
 
         $budgets = $this->budgetService->getBudgetsForMonth($userId, $month);

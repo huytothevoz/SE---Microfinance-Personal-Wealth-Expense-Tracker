@@ -19,7 +19,7 @@ if ($path === '/app.html' || $path === '/app.php') {
 if ($path === '/') {
     $path = '/index.html';
 }
-if (!preg_match('~^/(?:index\.html|frontend/(?:css|js|assets)/[A-Za-z0-9_./-]+\.(?:css|js|svg|png|jpe?g))$~', $path) || str_contains($path, '..')) {
+if (!preg_match('~^/(?:index\.html|frontend/(?:css|js|assets|views)/[A-Za-z0-9_./-]+\.(?:css|js|svg|png|jpe?g|html))$~', $path) || str_contains($path, '..')) {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
     echo '404 Not Found';

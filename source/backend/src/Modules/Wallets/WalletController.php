@@ -4,71 +4,83 @@ declare(strict_types=1);
 
 namespace WealthFlow\Modules\Wallets;
 
-use WealthFlow\Http\JsonResponse;
-use WealthFlow\Http\Request;
-use WealthFlow\Modules\Auth\AuthContext;
+use InvalidArgumentException;
+use Throwable;
+use WealthFlow\Core\AuthContext;
+use WealthFlow\Core\JsonResponse;
+use WealthFlow\Core\Request;
+use WealthFlow\Core\ApiException;
 
 final class WalletController
 {
-    public function __construct(private readonly ?WalletService $service = null)
+    private WalletService $walletService;
+
+    public function __construct(?WalletService $walletService = null)
     {
+        $this->walletService = $walletService ?? new WalletService();
     }
 
     public function list(Request $request): void
     {
         $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
-        $result = $this->walletService()->listWallets(
-            $userId,
-            (string) $request->getQuery('status', 'active')
-        );
-        JsonResponse::success($result);
+        $includeArchived = (bool) $request->getQuery('include_archived', false);
+        $wallets = $this->walletService->getWallets($userId, $includeArchived);
+        JsonResponse::success(['wallets' => $wallets, 'count' => count($wallets)]);
+    }
+
+    public function show(Request $request, int $id): void
+    {
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        try {
+            $wallet = $this->walletService->getWallet($id, $userId);
+            JsonResponse::success(['wallet' => $wallet]);
+        } catch (InvalidArgumentException $e) {
+            JsonResponse::error('NOT_FOUND', $e->getMessage(), 404);
+        }
     }
 
     public function create(Request $request): void
     {
         $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
-        $result = $this->walletService()->createWallet(
-            $userId,
-            $request->getBody(),
-            $request->getIdempotencyKey()
-        );
-        JsonResponse::success($result, 201);
+        $body = $request->getBody();
+
+        try {
+            $wallet = $this->walletService->createWallet($userId, $body);
+            JsonResponse::success(['wallet' => $wallet, 'message' => 'Tạo ví mới thành công.'], 201);
+        } catch (InvalidArgumentException $e) {
+            JsonResponse::error('VALIDATION_ERROR', $e->getMessage(), 422);
+        } catch (Throwable $e) {
+            JsonResponse::error('SERVER_ERROR', 'Không thể tạo ví lúc này. Vui lòng kiểm tra dữ liệu và liên hệ quản trị viên nếu lỗi tiếp diễn.', 500);
+        }
     }
 
     public function update(Request $request, int $id): void
     {
         $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
-        JsonResponse::success($this->walletService()->updateWallet($userId, $id, $request->getBody()));
+        $body = $request->getBody();
+
+        try {
+            $wallet = $this->walletService->updateWallet($id, $userId, $body);
+            JsonResponse::success(['wallet' => $wallet, 'message' => 'Cập nhật ví thành công.']);
+        } catch (InvalidArgumentException $e) {
+            JsonResponse::error('VALIDATION_ERROR', $e->getMessage(), 422);
+        }
     }
 
     public function archive(Request $request, int $id): void
     {
         $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
-        $this->walletService()->archiveWallet($userId, $id);
-        JsonResponse::success(['message' => 'Đã lưu trữ ví.']);
+        try {
+            $this->walletService->archiveWallet($id, $userId);
+            JsonResponse::success(['message' => 'Đã lưu trữ ví thành công.']);
+        } catch (InvalidArgumentException $e) {
+            JsonResponse::error('WALLET_ARCHIVE_REJECTED', $e->getMessage(), 422);
+        }
     }
 
-    public function adjust(Request $request, int $id): void
+    public function delete(Request $request, int $id): void
     {
-        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
-        $result = $this->walletService()->adjustWallet(
-            $userId,
-            $id,
-            $request->getBody(),
-            $request->getIdempotencyKey()
-        );
-        JsonResponse::success($result, 201);
-    }
-
-    public function deletePermanently(Request $request, int $id): void
-    {
-        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
-        $this->walletService()->deleteWalletPermanently($userId, $id);
-        JsonResponse::success(['message' => 'Đã xóa ví. Lịch sử tài chính được giữ nguyên.']);
-    }
-
-    private function walletService(): WalletService
-    {
-        return $this->service ?? new WalletService();
+        // Deletion is intentionally a non-destructive archive operation.
+        $this->archive($request, $id);
     }
 }

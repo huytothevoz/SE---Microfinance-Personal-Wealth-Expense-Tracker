@@ -4,8 +4,8 @@ declare(strict_types=1);
 /** Standalone mail check; requires vendor but neither a live DB nor Gmail. */
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use WealthFlow\Config;
-use WealthFlow\Mail\EmailService;
+use WealthFlow\Core\Config;
+use WealthFlow\Core\EmailService;
 
 $tmp = sys_get_temp_dir() . '/wealthflow_mail_test_' . bin2hex(random_bytes(6));
 mkdir($tmp, 0700);

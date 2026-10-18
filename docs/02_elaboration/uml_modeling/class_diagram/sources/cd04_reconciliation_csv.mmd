@@ -39,7 +39,7 @@ classDiagram
     }
 
     class ILedgerQueryPort {
-        <<Interface / Port>>
+        <<Port / Interface>>
         +getTrialBalanceBalances(userId: UUID, asOfDate: Date): Map~UUID, BalancePair~
         +findPostedTransactions(userId: UUID, filter: ExportFilterDTO): List~ExportTransactionRow~
     }
@@ -50,6 +50,12 @@ classDiagram
     class AuditLogDAO {
         <<DataAccess>>
         +saveExportAudit(log: ExportAuditLog): void
+    }
+
+    class LedgerDAO {
+        <<DataAccess>>
+        +getTrialBalanceBalances(userId: UUID, asOfDate: Date): Map~UUID, BalancePair~
+        +findPostedTransactions(userId: UUID, filter: ExportFilterDTO): List~ExportTransactionRow~
     }
 
     %% ==========================================
@@ -67,7 +73,7 @@ classDiagram
     }
 
     class TrialBalanceReport {
-        <<Value Object>>
+        <<ValueObject>>
         -asOfDate: Date
         -totalDebit: Decimal
         -totalCredit: Decimal
@@ -77,7 +83,7 @@ classDiagram
     }
 
     class AccountTrialBalanceRow {
-        <<Value Object>>
+        <<ValueObject>>
         -accountCode: String
         -accountName: String
         -accountType: String
@@ -87,7 +93,7 @@ classDiagram
     }
 
     class ExportTransactionRow {
-        <<Value Object>>
+        <<ValueObject>>
         -transactionId: UUID
         -occurredOn: Date
         -description: String
@@ -98,6 +104,12 @@ classDiagram
         -status: String
     }
 
+    class ExportFormat {
+        <<Enumeration>>
+        CSV_EXCEL_SAFE
+        CSV_STANDARD
+    }
+
     %% ==========================================
     %% RELATIONSHIPS & INTERACTIONS
     %% ==========================================
@@ -106,8 +118,24 @@ classDiagram
     ReportController --> ExportService : requests_csv_export
     ReconciliationService ..> ILedgerQueryPort : queries_ledger_balances
     ExportService ..> ILedgerQueryPort : queries_posted_rows
+    LedgerDAO ..|> ILedgerQueryPort : implements
     ExportService --> AuditLogDAO : logs_export (BR16)
     AuditLogDAO ..> ExportAuditLog : maps/persists
     ReconciliationService ..> TrialBalanceReport : produces
     TrialBalanceReport *-- AccountTrialBalanceRow : aggregates
     ExportService ..> ExportTransactionRow : sanitizes_and_encodes
+
+    %% ==========================================
+    %% STYLES & HIGHLIGHTS (BCE+D Color Palette)
+    %% ==========================================
+    style ReportController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style ReconciliationService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style ExportService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style ILedgerQueryPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style AuditLogDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style LedgerDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style ExportAuditLog fill:#ECFDF5,stroke:#059669,stroke-width:1px
+    style TrialBalanceReport fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style AccountTrialBalanceRow fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style ExportTransactionRow fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style ExportFormat fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px

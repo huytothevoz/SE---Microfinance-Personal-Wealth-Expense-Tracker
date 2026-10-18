@@ -37,7 +37,7 @@ classDiagram
     }
 
     class ILedgerEquityPort {
-        <<Interface / Port>>
+        <<Port / Interface>>
         +createOpeningEquityEntry(userId: UUID, walletId: UUID, openingBalance: Decimal, currency: String): void
     }
 
@@ -74,8 +74,18 @@ classDiagram
         +isArchived(): boolean
     }
 
+    class WalletBalanceAdjustmentVO {
+        <<ValueObject>>
+        +walletId: UUID
+        +oldBalance: Decimal
+        +newBalance: Decimal
+        +difference: Decimal
+        +adjustedAt: DateTime
+        +reason: String
+    }
+
     class WalletType {
-        <<enumeration>>
+        <<Enumeration>>
         CASH
         BANK
         E_WALLET
@@ -84,7 +94,7 @@ classDiagram
     }
 
     class WalletStatus {
-        <<enumeration>>
+        <<Enumeration>>
         ACTIVE
         ARCHIVED
     }
@@ -99,3 +109,15 @@ classDiagram
     WalletDAO ..> Wallet : maps/persists
     Wallet --> WalletType : categorized_as
     Wallet --> WalletStatus : state_of
+
+    %% ==========================================
+    %% STYLES & HIGHLIGHTS (BCE+D Color Palette)
+    %% ==========================================
+    style WalletController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style WalletService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style ILedgerEquityPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style WalletDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style Wallet fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style WalletBalanceAdjustmentVO fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style WalletType fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style WalletStatus fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px

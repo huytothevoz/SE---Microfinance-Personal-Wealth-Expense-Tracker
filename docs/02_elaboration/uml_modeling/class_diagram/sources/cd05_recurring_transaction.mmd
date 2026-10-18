@@ -70,19 +70,19 @@ classDiagram
     %% INTERFACES / PORTS (Decoupling)
     %% ==========================================
     class ILedgerPostPort {
-        <<Interface / Port>>
+        <<Port / Interface>>
         +postRecurringExpense(userId: UUID, walletId: UUID, categoryId: UUID, amount: Decimal, currency: String, desc: String, idempKey: String): UUID
         +createDraftTransaction(userId: UUID, walletId: UUID, categoryId: UUID, amount: Decimal, currency: String, desc: String): UUID
     }
 
     class IWalletQueryPort {
-        <<Interface / Port>>
+        <<Port / Interface>>
         +checkWalletBalance(walletId: UUID): Decimal
         +isWalletActive(walletId: UUID): boolean
     }
 
     class INotificationPort {
-        <<Interface / Port>>
+        <<Port / Interface>>
         +sendNotification(userId: UUID, title: String, content: String, type: String): void
     }
 
@@ -108,7 +108,7 @@ classDiagram
     %% DOMAIN ENTITIES & ENUMS
     %% ==========================================
     class RecurringRule {
-        <<Entity / Aggregate Root>>
+        <<Aggregate Root>>
         -id: UUID
         -userId: UUID
         -walletId: UUID
@@ -145,7 +145,7 @@ classDiagram
     }
 
     class RecurrenceFrequency {
-        <<enumeration>>
+        <<Enumeration>>
         DAILY
         WEEKLY
         MONTHLY
@@ -153,14 +153,14 @@ classDiagram
     }
 
     class RecurringStatus {
-        <<enumeration>>
+        <<Enumeration>>
         ACTIVE
         PAUSED
         CANCELLED
     }
 
     class ExecutionStatus {
-        <<enumeration>>
+        <<Enumeration>>
         SUCCESS_POSTED
         DRAFT_INSUFFICIENT_FUNDS
         DRAFT_MANUAL_REMINDER
@@ -198,3 +198,21 @@ classDiagram
     RecurringRule --> RecurrenceFrequency : repeated_by
     RecurringRule --> RecurringStatus : state_of
     RecurringExecutionLog --> ExecutionStatus : outcome_of
+
+    %% ==========================================
+    %% STYLES & HIGHLIGHTS (BCE+D Color Palette)
+    %% ==========================================
+    style RecurringTransactionController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style RecurringSchedulerJob fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style RecurringTransactionService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style RecurringExecutionWorker fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style ILedgerPostPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style IWalletQueryPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style INotificationPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style RecurringRuleDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style RecurringExecutionLogDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style RecurringRule fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style RecurringExecutionLog fill:#ECFDF5,stroke:#059669,stroke-width:1px
+    style RecurrenceFrequency fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style RecurringStatus fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style ExecutionStatus fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px

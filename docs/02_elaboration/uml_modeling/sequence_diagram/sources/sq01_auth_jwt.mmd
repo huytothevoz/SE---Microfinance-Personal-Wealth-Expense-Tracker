@@ -1,0 +1,109 @@
+sequenceDiagram
+    autonumber
+    actor User as Người dùng (Guest / User)
+    participant AC as <<Boundary>><br/>AuthController
+    participant AS as <<Control>><br/>AuthService
+    participant UE as <<Entity>><br/>user: User
+    participant UD as <<DataAccess>><br/>UserDAO
+    participant DB as <<Storage>><br/>MySQL Database (InnoDB)
+
+    %% ----------------------------------------------------
+    %% Luồng Đăng ký tài khoản
+    %% ----------------------------------------------------
+    rect rgb(245, 243, 255)
+        note over User, DB: 1. KỊCH BẢN ĐĂNG KÝ TÀI KHOẢN MỚI (REGISTER)
+        User ->> AC: POST /api/auth/register (name, email, password, baseCurrency)
+        activate AC
+        AC ->> AS: register(RegisterDTO)
+        activate AS
+
+        %% Kiểm tra trùng email
+        AS ->> UD: findByEmail(email)
+        activate UD
+        UD ->> DB: SELECT id, email FROM users WHERE email = ?
+        DB -->> UD: null (chưa tồn tại)
+        UD -->> AS: null
+        deactivate UD
+
+        alt Email đã tồn tại trong hệ thống
+            AS -->> AC: Ném lỗi ConflictException("Email đã được sử dụng")
+            AC -->> User: 409 Conflict {"errorCode": "EMAIL_ALREADY_EXISTS"}
+        else Email hợp lệ (chưa tồn tại)
+            AS ->> AS: hashPassword(password) [Argon2id, cost=12]
+            AS ->> UD: createUserWithDefaultCategories(userData)
+            activate UD
+            UD ->> DB: START TRANSACTION
+            UD ->> DB: INSERT INTO users (full_name, email, password_hash, role, status, base_currency) VALUES (?, ?, ?, 'USER', 'ACTIVE', ?)
+            DB -->> UD: newUserId (BIGINT UNSIGNED)
+            UD ->> DB: INSERT INTO categories (user_id, name, category_type) SELECT ?, name, category_type FROM default_categories WHERE is_active = TRUE
+            UD ->> DB: COMMIT
+            DB -->> UD: Transaction committed
+            UD -->> AS: UserRecord (id, email, status='ACTIVE')
+            deactivate UD
+
+            AS -->> AC: RegistrationResponse(userId, email, status)
+            deactivate AS
+            AC -->> User: 201 Created {"status": "success", "userId": 123}
+        end
+        deactivate AC
+    end
+
+    %% ----------------------------------------------------
+    %% Luồng Đăng nhập tài khoản
+    %% ----------------------------------------------------
+    rect rgb(224, 242, 254)
+        note over User, DB: 2. KỊCH BẢN ĐĂNG NHẬP & CẤP PHÁT PHIÊN JWT (LOGIN)
+        User ->> AC: POST /api/auth/login (email, password)
+        activate AC
+        AC ->> AS: login(LoginDTO)
+        activate AS
+
+        AS ->> UD: findByEmailForAuth(email)
+        activate UD
+        UD ->> DB: SELECT id, full_name, email, password_hash, role, status, base_currency FROM users WHERE email = ?
+        DB -->> UD: userDataRow
+        UD -->> AS: userEntity: User
+        deactivate UD
+
+        alt Không tìm thấy người dùng
+            AS -->> AC: Ném UnauthorizedException("Thông tin đăng nhập không hợp lệ")
+            AC -->> User: 401 Unauthorized {"errorCode": "INVALID_CREDENTIALS"}
+        else Tìm thấy người dùng -> Thẩm định mật khẩu qua Entity
+            AS ->> UE: validatePassword(plainPassword, password_hash)
+            activate UE
+            UE -->> AS: isPasswordValid (true / false)
+            deactivate UE
+
+            alt Mật khẩu không khớp
+                AS -->> AC: Ném UnauthorizedException("Thông tin đăng nhập không hợp lệ")
+                AC -->> User: 401 Unauthorized {"errorCode": "INVALID_CREDENTIALS"}
+            else Mật khẩu hợp lệ -> Kiểm tra trạng thái tài khoản
+                AS ->> UE: isActive()
+                activate UE
+                UE -->> AS: isAccountActive (true / false)
+                deactivate UE
+
+                alt Tài khoản bị khóa (status == 'LOCKED')
+                    AS -->> AC: Ném ForbiddenException("Tài khoản đã bị tạm khóa bởi Quản trị viên")
+                    AC -->> User: 403 Forbidden {"errorCode": "ACCOUNT_LOCKED", "message": "Liên hệ hỗ trợ"}
+                else Tài khoản đang hoạt động (status == 'ACTIVE')
+                    AS ->> AS: generateAccessToken(userId, role) [15 mins]
+                    AS ->> AS: generateRefreshToken() [7 days]
+                    AS ->> AS: hashTokenSHA256(refreshToken)
+                    
+                    %% Lưu phiên vào auth_sessions
+                    AS ->> UD: saveAuthSession(sessionId, userId, refreshHash, expiresAt)
+                    activate UD
+                    UD ->> DB: INSERT INTO auth_sessions (id, user_id, refresh_hash, expires_at) VALUES (?, ?, ?, ?)
+                    DB -->> UD: Session saved
+                    UD -->> AS: void
+                    deactivate UD
+
+                    AS -->> AC: AuthResult(accessToken, refreshToken, profile)
+                    deactivate AS
+                    AC -->> User: 200 OK (Access Token trong JSON Body, Refresh Token trong HttpOnly Cookie)
+                end
+            end
+        end
+        deactivate AC
+    end

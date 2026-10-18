@@ -144,7 +144,6 @@ Hệ thống đặc biệt tối ưu cho các nhóm đối tượng có nguồn 
 * **A01 - Người dùng (User):** Người dùng cuối (khách vãng lai khi đăng ký/đăng nhập; người dùng đã xác thực khi thao tác dữ liệu cá nhân). Có toàn quyền quản lý tài sản, nợ, ví, giao dịch của bản thân; tuyệt đối không thể xem hay sửa dữ liệu của người dùng khác.
 * **A02 - Quản trị viên (System Administrator):** Chịu trách nhiệm bảo trì hệ thống, quản lý khóa/mở khóa tài khoản người dùng vi phạm, theo dõi Dashboard thống kê vĩ mô, cấu hình danh mục/tham số mặc định và phát thông báo hệ thống (Broadcast Announcements). Tuyệt đối không có quyền xem số liệu sổ sách tài chính cá nhân của người dùng (theo BR11).
 * **A03 - Nhà cung cấp tỷ giá (Exchange Rate Provider):** Hệ thống API bên ngoài cung cấp bảng tỷ giá tiền tệ theo thời gian thực hoặc định kỳ hàng ngày thông qua giao tiếp IF02.
-* **A04 - Dịch vụ Thị giá Vàng (Gold Price API Provider):** Dịch vụ API bên ngoài cung cấp dữ liệu thị giá vàng thị trường Việt Nam (tổng hợp chuẩn hóa dạng RESTful JSON từ SJC, DOJI, PNJ) cho vàng nhẫn 9999 và vàng miếng SJC theo thời gian thực phục vụ định giá tài sản tích lũy (UC08); có cơ chế tự động Fallback cho phép người dùng tự nhập thủ công khi mất kết nối API.
 * **SYS - Bộ lập lịch nền (System Scheduler):** Tiến trình nội bộ chạy ngầm kích hoạt các tác vụ định kỳ tự động (SYS01 - SYS03).
 
 ### 2.2 Kiến trúc tham chiếu nền tảng (Layered Architecture + Modular Monolith)
@@ -201,7 +200,7 @@ Nhằm bảo đảm tính cô lập cao, khả năng bảo trì tốt (Maintaina
 
 Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm (IEEE 29148 & Karl Wiegers): mỗi nhóm chức năng bao gồm Bảng hồ sơ quản trị & Ma trận truy vết hai chiều (UR, BR, UC, Sequence Diagram, Test Case), kèm Bảng chi tiết các yêu cầu chức năng bắt buộc (`FRnn.xx`) định rõ hành vi hệ thống, dữ liệu đầu vào & ràng buộc, kết quả kỳ vọng và mã phản hồi kỹ thuật.
 
-### <a id="fr01"></a>FR01 - Định danh, xác thực và quản lý phiên truy cập
+### FR01 - Định danh, xác thực và quản lý phiên truy cập
 
 | Trường thông tin | Nội dung chi tiết |
 | :--- | :--- |
@@ -219,11 +218,13 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 | **FR01.02** | Đăng nhập hệ thống | Kiểm tra email/password, trạng thái tài khoản `Active`. Cấp cặp Token JWT (Access & Refresh). Chống User Enumeration. | • Email, Password. | • Cấp JWT vào Cookie / Response (`200 OK`).<br>• Đăng nhập sai: `401 Unauthorized` chung, không tiết lộ tài khoản tồn tại hay không. |
 | **FR01.03** | Đăng xuất | Thu hồi hiệu lực phiên truy cập hiện tại ngay lập tức. | • Access Token / Refresh Token hiện hành. | • Đưa Refresh Token vào Blacklist, xóa Cookie HttpOnly (`200 OK`). |
 | **FR01.04** | Đổi mật khẩu | Xác thực mật khẩu cũ, băm và cập nhật mật khẩu mới, tự động hủy bỏ mọi phiên truy cập trên thiết bị khác. | • `currentPassword`, `newPassword`. | • Cập nhật Hash mới, nâng `tokenVersion` làm hết hạn các phiên cũ (`200 OK`).<br>• Sai mật khẩu cũ: `400 Bad Request`. |
-| **FR01.05** | Quên mật khẩu qua Email OTP | Tạo mã OTP 6 chữ số ngẫu nhiên gửi qua email người dùng; kiểm tra tính hợp lệ trong vòng 10 phút và không quá 5 lần nhập sai trước khi cho phép thiết lập lại mật khẩu mới. | • Email tài khoản, Mã OTP, Mật khẩu mới.<br>• Mật khẩu mới thỏa mãn [NFR02](#nfr02). | • Gửi email OTP (`200 OK`). Xác thực đúng cập nhật Hash mới và hủy phiên cũ (`200 OK`).<br>• Quá 5 lần hoặc hết hạn: `400 Bad Request`. |
 
 ---
 
-### <a id="fr02"></a>FR02 - Quản lý tài khoản thanh toán và ví tiền
+### FR02 - Quản lý tài khoản thanh toán và ví tiền
+
+> **Construction integration note, 2026-10-18:** Thiết kế FR02.01/02.02 vẫn yêu cầu hỗ trợ quy đổi ngoại tệ chính xác. Trong source hiện tại, chỉ cho phép nhập số dư đầu kỳ >0 cho ví VND không phải CREDIT, do chưa có luồng xác nhận tỷ giá snapshot ngay khi mở ví; ví ngoại tệ chỉ được tạo với số dư 0. Không tự áp dụng tỷ giá 1:1 hoặc hiển thị tổng tài sản quy đổi giả. Đây là giới hạn triển khai **chưa đạt đầy đủ FR02.02 và FR04**, cần kiểm thử/hoàn thiện ở Construction trước khi nghiệm thu. Việc đổi tên và lưu trữ ví được triển khai theo FR02.03, không xóa cứng lịch sử. Chi tiết: `docs/03_construction/INTEGRATION_STATUS_2026-10-18.md`.
+
 
 | Trường thông tin | Nội dung chi tiết |
 | :--- | :--- |
@@ -244,7 +245,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-### <a id="fr03"></a>FR03 - Quản lý giao dịch tài chính và sổ kế toán kép
+### FR03 - Quản lý giao dịch tài chính và sổ kế toán kép
 
 | Trường thông tin | Nội dung chi tiết |
 | :--- | :--- |
@@ -266,7 +267,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-### <a id="fr04"></a>FR04 - Đa tiền tệ và tỷ giá hối đoái thời điểm (Snapshot)
+### FR04 - Đa tiền tệ và tỷ giá hối đoái thời điểm (Snapshot)
 
 | Trường thông tin | Nội dung chi tiết |
 | :--- | :--- |
@@ -286,7 +287,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-### <a id="fr05"></a>FR05 - Thiết lập và kiểm soát ngân sách chi tiêu
+### FR05 - Thiết lập và kiểm soát ngân sách chi tiêu
 
 | Trường thông tin | Nội dung chi tiết |
 | :--- | :--- |
@@ -306,7 +307,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-### <a id="fr06"></a>FR06 - Xử lý giao dịch định kỳ
+### FR06 - Xử lý giao dịch định kỳ
 
 | Trường thông tin | Nội dung chi tiết |
 | :--- | :--- |
@@ -326,7 +327,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-### <a id="fr07"></a>FR07 - Quản lý mục tiêu tích lũy tài chính
+### FR07 - Quản lý mục tiêu tích lũy tài chính
 
 | Trường thông tin | Nội dung chi tiết |
 | :--- | :--- |
@@ -346,7 +347,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-### <a id="fr08"></a>FR08 - Quản lý tài sản tích lũy ngoài ví (Vàng) và Tài sản ròng (Personal Wealth & Net Worth)
+### FR08 - Quản lý tài sản tích lũy ngoài ví (Vàng) và Tài sản ròng (Personal Wealth & Net Worth)
 
 | Trường thông tin | Nội dung chi tiết |
 | :--- | :--- |
@@ -368,7 +369,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-### <a id="fr09"></a>FR09 - Quản lý khoản vay và nghĩa vụ nợ vi mô (Microfinance Tracking)
+### FR09 - Quản lý khoản vay và nghĩa vụ nợ vi mô (Microfinance Tracking)
 
 | Trường thông tin | Nội dung chi tiết |
 | :--- | :--- |
@@ -390,7 +391,6 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-<a id="fr10"></a>
 ### FR10 - Dashboard sức khỏe tài chính và Tổng quan tài sản ròng
 
 | Trường thông tin | Nội dung chi tiết |
@@ -411,7 +411,6 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-<a id="fr11"></a>
 ### FR11 - Phân tích dòng tiền và Tỷ lệ tiết kiệm
 
 | Trường thông tin | Nội dung chi tiết |
@@ -432,7 +431,6 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-<a id="fr12"></a>
 ### FR12 - Tra cứu lịch sử, đối soát và xuất tệp CSV
 
 | Thuộc tính | Nội dung chi tiết |
@@ -454,7 +452,6 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-<a id="fr13"></a>
 ### FR13 - Cấu hình hệ thống và Phát thông báo người dùng (Admin)
 
 | Thuộc tính | Nội dung chi tiết |
@@ -475,7 +472,6 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-<a id="fr14"></a>
 ### FR14 - Quản trị tài khoản người dùng và Dashboard thống kê vĩ mô (Admin)
 
 | Thuộc tính | Nội dung chi tiết |
@@ -498,7 +494,6 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ---
 
-<a id="fr15"></a>
 ### FR15 - Kiểm soát truy cập API và bảo mật dữ liệu đa người dùng
 
 | Thuộc tính | Nội dung chi tiết |
@@ -570,10 +565,10 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 | **Mã Use Case (ID)** | **UC01** |
 | **Tên Use Case** | **Đăng ký & Xác thực người dùng** |
 | **Tác nhân (Actors)** | • **Tác nhân chính:** Khách vãng lai (`A01-G`), Người dùng (`A01`)<br>• **Tác nhân phụ:** Quản trị viên (`A02`) |
-| **Mục đích (Description)** | Cho phép khách vãng lai đăng ký tài khoản mới kèm tiền cơ sở; người dùng đăng nhập hệ thống an toàn bằng cặp Token JWT (Access/Refresh Token), đổi mật khẩu, quên mật khẩu và đặt lại qua Email OTP, cùng đăng xuất an toàn. |
-| **Sự kiện kích hoạt (Trigger)** | Người dùng chọn "Đăng ký", "Đăng nhập" hoặc "Quên mật khẩu" từ trang chủ/form đăng nhập, hoặc chọn "Đổi mật khẩu" / "Đăng xuất" từ màn hình Cài đặt cá nhân. |
-| **Tiền điều kiện (Pre-condition)** | • **Đăng ký:** Địa chỉ email chưa từng tồn tại trong hệ thống.<br>• **Đăng nhập / Quên mật khẩu:** Tài khoản đã tồn tại và ở trạng thái `Active` và không bị khóa.<br>• **Đổi mật khẩu / Đăng xuất:** Đang có phiên đăng nhập hợp lệ. |
-| **Hậu điều kiện (Post-condition)** | • Cấp phiên làm việc an toàn (JWT lưu trong Cookie HttpOnly hoặc Header Authorization).<br>• Tự động gán bộ danh mục thu/chi mặc định cho tài khoản mới.<br>• Thu hồi toàn bộ token phiên làm việc khi người dùng đổi mật khẩu, đặt lại mật khẩu qua OTP hoặc đăng xuất. |
+| **Mục đích (Description)** | Cho phép khách vãng lai đăng ký tài khoản mới kèm tiền cơ sở; người dùng đăng nhập hệ thống an toàn bằng cặp Token JWT (Access/Refresh Token), đổi mật khẩu và đăng xuất an toàn. |
+| **Sự kiện kích hoạt (Trigger)** | Người dùng chọn "Đăng ký" hoặc "Đăng nhập" từ trang chủ, hoặc chọn "Đổi mật khẩu" / "Đăng xuất" từ màn hình Cài đặt cá nhân. |
+| **Tiền điều kiện (Pre-condition)** | • **Đăng ký:** Địa chỉ email chưa từng tồn tại trong hệ thống.<br>• **Đăng nhập:** Tài khoản đã tồn tại và ở trạng thái `Active` và không bị khóa.<br>• **Đổi mật khẩu / Đăng xuất:** Đang có phiên đăng nhập hợp lệ. |
+| **Hậu điều kiện (Post-condition)** | • Cấp phiên làm việc an toàn (JWT lưu trong Cookie HttpOnly hoặc Header Authorization).<br>• Tự động gán bộ danh mục thu/chi mặc định cho tài khoản mới.<br>• Thu hồi toàn bộ token phiên làm việc khi người dùng đổi mật khẩu hoặc đăng xuất. |
 | **Ma trận truy vết** | • **Yêu cầu chức năng:** [FR01](#fr01), [FR15](#fr15)<br>• **Yêu cầu người dùng:** [UR01](#ur01)<br>• **Quy tắc nghiệp vụ:** [BR11](#br11)<br>• **Biểu đồ tuần tự:** [SQ01](./uml_modeling/sequence_diagram/sq01_auth_jwt.md)<br>• **Ca kiểm thử nghiệm thu:** [TC-F01](#tc-f01) |
 
 ##### 2. Các luồng sự kiện (Flow of Events)
@@ -596,7 +591,6 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 | :---: | :--- | :--- |
 | **AF01.01** | **Người dùng Đổi mật khẩu:**<br>Tại trang Cài đặt, người dùng nhập mật khẩu hiện tại, mật khẩu mới và nhấn "Đổi mật khẩu". | Hệ thống xác minh mật khẩu cũ chính xác, kiểm tra độ mạnh mật khẩu mới, băm và cập nhật Hash mới; đồng thời tăng `tokenVersion` để tự động vô hiệu hóa toàn bộ phiên đăng nhập cũ trên các thiết bị khác theo [FR01.04](#fr01). |
 | **AF01.02** | **Người dùng Đăng xuất khỏi hệ thống:**<br>Người dùng nhấn nút "Đăng xuất" trên thanh điều hướng. | Hệ thống đưa Refresh Token hiện tại vào danh sách thu hồi (Blacklist), xóa Cookie HttpOnly chứa token và kết thúc phiên làm việc ngay lập tức theo [FR01.03](#fr01). |
-| **AF01.03** | **Quên mật khẩu & Đặt lại qua Email OTP:**<br>Tại màn hình Đăng nhập, người dùng nhấn "Quên mật khẩu" và nhập địa chỉ email đã đăng ký. | Hệ thống kiểm tra email tồn tại trong CSDL, tạo mã OTP 6 chữ số ngẫu nhiên, lưu trữ dưới dạng băm kèm thời hạn hiệu lực 10 phút; gửi email chứa mã OTP đến người dùng. Người dùng nhập mã OTP cùng mật khẩu mới; hệ thống đối soát mã OTP (tối đa 5 lần thử), băm mật khẩu mới, cập nhật CSDL và vô hiệu hóa các phiên đăng nhập cũ theo [FR01.05](#fr01). |
 
 **c. Luồng ngoại lệ (Exception Flows):**
 
@@ -606,7 +600,6 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 | **EF01.02** | Mật khẩu không thỏa mãn chính sách bảo mật theo [NFR02](#nfr02). | Hệ thống trả về `400 Bad Request` kèm thông báo lỗi cụ thể (ví dụ: "Mật khẩu tối thiểu 8 ký tự, phải bao gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt"). |
 | **EF01.03** | Sai thông tin đăng nhập (sai email hoặc sai mật khẩu). | Hệ thống trả về mã lỗi `401 Unauthorized` kèm thông báo chung "Email hoặc mật khẩu không chính xác" nhằm phòng chống tấn công dò quét danh tính (User Enumeration). |
 | **EF01.04** | Tài khoản đang ở trạng thái bị tạm khóa (`Locked`). | Hệ thống từ chối cấp token, trả về mã `403 Forbidden` kèm thông báo: "Tài khoản của bạn đã bị khóa bởi Quản trị viên. Lý do: [Lý do khóa]". |
-| **EF01.05** | Nhập sai mã OTP quá 5 lần hoặc mã OTP đã hết hạn 10 phút. | Hệ thống từ chối cho phép đổi mật khẩu, trả về mã lỗi `400 Bad Request` kèm thông báo: "Mã OTP đã hết hạn hoặc không chính xác". Nếu số lần thử vượt quá 5 lần, hệ thống vô hiệu hóa mã OTP hiện tại và yêu cầu người dùng khởi tạo lại yêu cầu mới. |
 
 ##### 3. Ràng buộc bổ sung (Additional Info)
 
@@ -734,7 +727,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 | **Tên Use Case** | **Thiết lập & Xử lý giao dịch định kỳ** |
 | **Tác nhân (Actors)** | • **Tác nhân chính:** Người dùng (`A01`)<br>• **Tác nhân phụ:** Tiến trình nền hệ thống (`SYS02`) |
 | **Mục đích (Description)** | Cho phép người dùng lập lịch các khoản thu/chi lặp lại tự động định kỳ (tiền nhà, hóa đơn điện nước, dịch vụ thuê bao); tiến trình nền định kỳ quét và tự động sinh giao dịch ghi sổ đúng ngày đến hạn, xử lý an toàn tháng thiếu ngày. |
-| **Sự kiện kích hoạt (Trigger)** | Người dùng chọn "Giao dịch định kỳ" $\rightarrow$ "Tạo lịch mới"; hoặc tiến trình nền `SYS02` kích hoạt quét tự động vào đầu ngày mới (00:05 hàng ngày). |
+| **Sự kiện kích hoạt (Trigger)** | Người dùng chọn "Giao dịch định kỳ" $\rightarrow$ "Tạo lịch mới"; hoặc bộ lập lịch `SYS02` kích hoạt quét mỗi 5 phút. |
 | **Tiền điều kiện (Pre-condition)** | Phiên đăng nhập hợp lệ; ví thanh toán và danh mục liên kết đang ở trạng thái hoạt động. |
 | **Hậu điều kiện (Post-condition)** | • Bản ghi lịch định kỳ được lưu với chu kỳ, ngày neo và tùy chọn tự động ghi sổ.<br>• Định kỳ đến hạn, hệ thống tự động sinh bút toán kế toán kép chuẩn xác theo [BR09](#br09). |
 | **Ma trận truy vết** | • **Yêu cầu chức năng:** [FR06](#fr06)<br>• **Yêu cầu người dùng:** [UR04](#ur04)<br>• **Quy tắc nghiệp vụ:** [BR09](#br09), [BR12](#br12), [BR13](#br13)<br>• **Tác vụ nền liên quan:** [SYS02](#sys02)<br>• **Biểu đồ tuần tự:** [SQ04](./uml_modeling/sequence_diagram/sq04_recurring_scheduler.md)<br>• **Ca kiểm thử nghiệm thu:** [TC-F06](#tc-f06) |
@@ -759,7 +752,6 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 | :---: | :--- | :--- |
 | **AF04.01** | **Tùy chọn "Nhắc nhở trước khi ghi sổ" (Không bật tự động):**<br>Lịch định kỳ đến hạn nhưng người dùng không bật tự động ghi sổ. | Hệ thống không tự trừ tiền; sinh thông báo nhắc nhở đến chuông Notification kèm nút "Xác nhận ghi sổ ngay" để người dùng chủ động duyệt. |
 | **AF04.02** | **Tạm dừng hoặc Hủy lịch định kỳ:**<br>Người dùng chọn "Tạm dừng" hoặc "Xóa lịch" từ danh sách. | Hệ thống chuyển trạng thái sang `Paused` hoặc `Cancelled`; tiến trình nền sẽ bỏ qua không quét lịch này trong các chu kỳ sau. |
-| **AF04.03** | **Thay đổi ví thanh toán liên kết của lịch định kỳ:**<br>Người dùng chọn "Đổi ví thanh toán" từ danh sách lịch định kỳ sang một ví hoạt động khác (ví dụ: giải phóng ví cũ để đủ điều kiện lưu trữ theo [EF02.04](#ef02)). | Hệ thống kiểm tra ví đích ở trạng thái `Active` và tương thích loại tiền tệ; cập nhật liên kết `walletId` mới (`200 OK`); gỡ bỏ ràng buộc trên ví cũ, giúp ví cũ có thể chuyển hết số dư và tiến hành lưu trữ an toàn theo [AF02.02](#af02). |
 
 **c. Luồng ngoại lệ (Exception Flows):**
 
@@ -941,7 +933,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 | :--- | :--- |
 | **Mã Use Case (ID)** | **UC08** |
 | **Tên Use Case** | **Quản lý tài sản tích lũy ngoài ví (Vàng)** |
-| **Tác nhân (Actors)** | • **Tác nhân chính:** Người dùng (`A01`)<br>• **Tác nhân phụ:** Dịch vụ Thị giá Vàng (`A04` - Gold Price REST API Provider) |
+| **Tác nhân (Actors)** | • **Tác nhân chính:** Người dùng (`A01`) |
 | **Mục đích (Description)** | Cho phép người dùng theo dõi vàng tích trữ (nhẫn tròn trơn 9999, vàng miếng SJC); ghi nhận số lượng (chỉ/lượng) và định giá thị trường để đóng góp chính xác vào Tổng tài sản (Total Assets) và Tài sản ròng (Net Worth). |
 | **Sự kiện kích hoạt (Trigger)** | Người dùng chọn "Tài sản tích lũy" $\rightarrow$ "Thêm tài sản vàng" hoặc thao tác bán/định giá lại thị trường. |
 | **Tiền điều kiện (Pre-condition)** | Phiên đăng nhập hợp lệ của người dùng (`A01`). |
@@ -954,7 +946,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 | Bước | Hành động của Tác nhân (Actor Action) | Phản hồi của Hệ thống (System Response) |
 | :---: | :--- | :--- |
-| **1** | Người dùng truy cập mục "Tài sản tích lũy" và nhấn "Thêm tài sản vàng". | Hệ thống hiển thị biểu mẫu: Loại vàng (Vàng nhẫn 9999 / Vàng miếng SJC), Số lượng (chỉ), Đơn giá mua (VND/chỉ), Đơn giá thị trường hiện tại (VND/chỉ), Nơi cất giữ. Hệ thống tự động gợi ý đơn giá thị trường thời điểm từ `A04: Dịch vụ Thị giá Vàng (RESTful JSON API)`. |
+| **1** | Người dùng truy cập mục "Tài sản tích lũy" và nhấn "Thêm tài sản vàng". | Hệ thống hiển thị biểu mẫu: Loại vàng (Vàng nhẫn 9999 / Vàng miếng SJC), Số lượng (chỉ), Đơn giá mua (VND/chỉ), Đơn giá thị trường hiện tại (VND/chỉ), Nơi cất giữ. |
 | **2** | Người dùng nhập: 2 chỉ Vàng nhẫn 9999, đơn giá mua 8.200.000 VND/chỉ, đơn giá hiện tại 8.500.000 VND/chỉ; nhấn "Lưu tài sản". | Hệ thống kiểm tra số lượng $> 0$, đơn giá $> 0$. |
 | **3** | — | Hệ thống tạo bản ghi tài sản ở trạng thái `Active`; tự động tính giá trị thị trường: $\text{Market Value} = 2 \times 8.500.000 = 17.000.000\text{ VND}$. |
 | **4** | — | Hệ thống cập nhật Dashboard: Total Assets tăng 17.000.000 VND, Net Worth tăng 17.000.000 VND theo [BR16](#br16). |
@@ -965,7 +957,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 | Mã luồng | Điều kiện kích hoạt & Hướng rẽ | Hành vi xử lý của Hệ thống |
 | :---: | :--- | :--- |
 | **AF08.01** | **Bán/Thanh lý vàng nhận tiền vào ví:**<br>Người dùng chọn bán một phần hoặc toàn bộ số vàng, nhập số lượng bán và ví nhận tiền. | Hệ thống giảm số lượng vàng tương ứng; ghi nhận tiền thực tế nhận được vào ví tài sản; hạch toán lãi/lỗ thực hiện chênh lệch giá theo [BR02](#br02). |
-| **AF08.02** | **Cập nhật định giá thị trường mới (Revaluation):**<br>Người dùng chọn cập nhật lại thị giá tài sản vàng theo biến động giá thị trường. | Hệ thống tự động truy vấn dữ liệu giá niêm yết mới nhất qua RESTful JSON API từ `A04` (Gold Price API Provider - chuẩn hóa tỷ giá SJC/DOJI/PNJ) để gợi ý đơn giá thị trường cho người dùng xác nhận; kích hoạt cơ chế Fallback cho phép người dùng tự điều chỉnh thủ công nếu mất kết nối hoặc mua tại tiệm vàng địa phương; cập nhật lại Market Value của tài sản và điều chỉnh lại Total Assets trên Dashboard tức thời. |
+| **AF08.02** | **Cập nhật định giá thị trường mới:**<br>Người dùng nhập đơn giá mới theo biến động thị trường. | Hệ thống cập nhật lại Market Value của tài sản và điều chỉnh lại Total Assets trên Dashboard tức thời. |
 
 **c. Luồng ngoại lệ (Exception Flows):**
 
@@ -1058,7 +1050,7 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 | :---: | :--- | :--- |
 | **1** | Người dùng truy cập màn hình Dashboard chính. | Hệ thống tiếp nhận yêu cầu và trích xuất danh tính `userId` an toàn từ JWT Token. |
 | **2** | — | Hệ thống thực thi truy vấn tổng hợp dữ liệu song song:<br>• **Total Assets:** Tổng số dư các ví tài sản + Giá trị vàng tích lũy [BR16](#br16).<br>• **Total Liabilities:** Dư nợ các ví nợ + Dư nợ gốc các khoản vay vi mô [BR05](#br05).<br>• **Net Worth:** $\text{Total Assets} - \text{Total Liabilities}$.<br>• **Dòng tiền tháng:** Tổng thu nhập, Tổng chi phí, Net Cash Flow.<br>• **Saving Rate:** $\frac{\text{Income} - \text{Expense}}{\text{Income}} \times 100\%$ theo [BR18](#br18). |
-| **3** | — | Hệ thống vẽ biểu đồ đường biểu diễn xu hướng Net Worth (kết hợp các điểm snapshot lịch sử do [SYS03](#sys03) lưu trữ cuối mỗi ngày và điểm giá trị Net Worth thời gian thực của ngày hiện tại) và biểu đồ tròn cơ cấu tài sản / danh mục chi tiêu. |
+| **3** | — | Hệ thống vẽ biểu đồ đường biểu diễn xu hướng Net Worth theo các lát cắt lịch sử và biểu đồ tròn cơ cấu tài sản / danh mục chi tiêu. |
 | **4** | — | Hệ thống hiển thị widget danh sách cảnh báo ngân sách chi tiêu tiệm cận ($ge 80\%$) và các kỳ trả nợ sắp đến hạn trong vòng 3 ngày tới. |
 | **5** | Người dùng theo dõi và đánh giá toàn diện sức khỏe tài chính cá nhân. | Hệ thống duy trì hiển thị ổn định, hỗ trợ thao tác chạm/click xem chi tiết từng thành phần. |
 
@@ -1245,9 +1237,9 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 | Mã tác vụ | Kích hoạt & Tần suất | Luồng xử lý nghiệp vụ | Kết quả kỳ vọng & Xử lý lỗi |
 | :---: | :--- | :--- | :--- |
-| <a id="sys01"></a>**SYS01** | Lịch tự động: 00:05 hàng ngày hoặc khi khởi động. | Gửi yêu cầu đến IF02 lấy tỷ giá mới nhất; kiểm tra giá trị $> 0$, thời điểm hợp lệ; lưu phiên bản tỷ giá mới. Không làm thay đổi snapshot của giao dịch cũ. | Thành công có tỷ giá mới. Thất bại: thử lại sau 1, 5, 15 phút rồi chuyển sang mỗi giờ; quá 24h cảnh báo Admin và chặn ghi sổ ngoại tệ mới. |
-| <a id="sys02"></a>**SYS02** | Lịch tự động: 00:05 hàng ngày (đầu ngày mới). | Quét các lịch định kỳ đến hạn trong ngày ($nextDueDate = \text{hôm nay}$). Với lịch tắt tự động ghi sổ: phát thông báo nhắc nhở trước 1 ngày; với lịch bật tự động ghi sổ: tự động sinh bút toán kế toán kép ngay đầu ngày đến hạn theo [BR09](#br09) để đảm bảo số dư ví phản ánh kịp thời, tránh bội chi ngoài thực tế. | Mỗi kỳ đến hạn xử lý đúng một lần theo khóa Idempotency `(subscriptionId, dueDate)`. Lỗi số dư: chuyển trạng thái chờ và gửi cảnh báo khẩn; lỗi mạng tạm thời: thử lại an toàn. |
-| <a id="sys03"></a>**SYS03** | Lịch tự động: 08:00 sáng hàng ngày & Hướng sự kiện giao dịch. | Quét danh mục các khoản vay/nợ vi mô đang `Active` có ngày đến hạn trả nợ trong vòng 3 ngày tới để gửi thông báo nhắc nợ; đồng thời lúc 23:59:59 chụp snapshot Net Worth phục vụ vẽ biểu đồ xu hướng. | Người dùng nhận nhắc nợ kịp thời; biểu đồ Net Worth có đầy đủ điểm dữ liệu lịch sử liên tục. |
+| **SYS01** | Lịch tự động: 00:05 hàng ngày hoặc khi khởi động. | Gửi yêu cầu đến IF02 lấy tỷ giá mới nhất; kiểm tra giá trị $> 0$, thời điểm hợp lệ; lưu phiên bản tỷ giá mới. Không làm thay đổi snapshot của giao dịch cũ. | Thành công có tỷ giá mới. Thất bại: thử lại sau 1, 5, 15 phút rồi chuyển sang mỗi giờ; quá 24h cảnh báo Admin và chặn ghi sổ ngoại tệ mới. |
+| **SYS02** | Lịch tự động: mỗi 5 phút quét một lần. | Quét các lịch định kỳ hoạt động có $nextDueDate \le \text{thời điểm hiện tại}$ chưa xử lý. Nhận khóa `(subscriptionId, dueDate)`; tạo bản nháp hoặc tự ghi sổ nếu người dùng bật; cập nhật ngày đến hạn kế tiếp theo BR09. | Mỗi kỳ đến hạn xử lý đúng một lần. Lỗi số dư: giữ bản ghi chờ và thông báo người dùng; lỗi tạm thời: thử lại với cùng khóa Idempotency. |
+| **SYS03** | Lịch tự động: 08:00 sáng hàng ngày & Hướng sự kiện giao dịch. | Quét danh mục các khoản vay/nợ vi mô đang `Active` có ngày đến hạn trả nợ trong vòng 3 ngày tới để gửi thông báo nhắc nợ; đồng thời lúc 23:59:59 chụp snapshot Net Worth phục vụ vẽ biểu đồ xu hướng. | Người dùng nhận nhắc nợ kịp thời; biểu đồ Net Worth có đầy đủ điểm dữ liệu lịch sử liên tục. |
 
 ---
 
