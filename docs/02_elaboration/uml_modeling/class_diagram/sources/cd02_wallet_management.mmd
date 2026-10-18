@@ -1,0 +1,101 @@
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% ACTORS (Tác nhân tương tác)
+    %% ==========================================
+    class EndUserActor {
+        <<Actor: Người dùng A01>>
+        +createWallet(name, type, currency, openingBalance)
+        +getWallets()
+        +archiveWallet(walletId)
+        +adjustBalance(walletId, actualBalance, reason)
+    }
+
+    %% ==========================================
+    %% BOUNDARY LAYER (Controllers)
+    %% ==========================================
+    class WalletController {
+        <<Boundary>>
+        +createWallet(dto: CreateWalletDTO): ResponseEntity
+        +getWallets(userId: UUID): ResponseEntity
+        +archiveWallet(walletId: UUID): ResponseEntity
+        +adjustBalance(walletId: UUID, dto: AdjustBalanceDTO): ResponseEntity
+    }
+
+    %% ==========================================
+    %% CONTROL LAYER (Services)
+    %% ==========================================
+    class WalletService {
+        <<Control>>
+        -walletDAO: WalletDAO
+        -ledgerPort: ILedgerEquityPort
+        +createWalletWithOpeningBalance(userId: UUID, dto: CreateWalletDTO): Wallet
+        +archiveWallet(userId: UUID, walletId: UUID): void
+        +getWalletDetails(walletId: UUID): Wallet
+        +validateWalletAvailable(walletId: UUID, amount: Decimal): boolean
+    }
+
+    class ILedgerEquityPort {
+        <<Interface / Port>>
+        +createOpeningEquityEntry(userId: UUID, walletId: UUID, openingBalance: Decimal, currency: String): void
+    }
+
+    %% ==========================================
+    %% DATA ACCESS LAYER (DAOs)
+    %% ==========================================
+    class WalletDAO {
+        <<DataAccess>>
+        +findById(id: UUID): Optional~Wallet~
+        +findByUserId(userId: UUID): List~Wallet~
+        +findWithLock(id: UUID): Optional~Wallet~
+        +save(wallet: Wallet): Wallet
+        +hasTransactions(walletId: UUID): boolean
+        +updateCachedBalance(walletId: UUID, delta: Decimal): void
+    }
+
+    %% ==========================================
+    %% DOMAIN ENTITIES & VALUE OBJECTS
+    %% ==========================================
+    class Wallet {
+        <<Entity>>
+        -id: UUID
+        -userId: UUID
+        -name: String
+        -walletType: WalletType
+        -currency: String
+        -cachedBalance: Decimal
+        -status: WalletStatus
+        -createdAt: DateTime
+        +deposit(amount: Decimal): void
+        +withdraw(amount: Decimal): void
+        +canWithdraw(amount: Decimal): boolean
+        +archive(): void
+        +isArchived(): boolean
+    }
+
+    class WalletType {
+        <<enumeration>>
+        CASH
+        BANK
+        E_WALLET
+        SAVINGS
+        CREDIT
+    }
+
+    class WalletStatus {
+        <<enumeration>>
+        ACTIVE
+        ARCHIVED
+    }
+
+    %% ==========================================
+    %% RELATIONSHIPS & INTERACTIONS
+    %% ==========================================
+    EndUserActor ..> WalletController : interacts (HTTP/REST)
+    WalletController --> WalletService : delegates
+    WalletService --> WalletDAO : queries/locks
+    WalletService ..> ILedgerEquityPort : creates_opening_equity (BR01)
+    WalletDAO ..> Wallet : maps/persists
+    Wallet --> WalletType : categorized_as
+    Wallet --> WalletStatus : state_of

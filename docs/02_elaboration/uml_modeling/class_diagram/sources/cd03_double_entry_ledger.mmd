@@ -1,0 +1,179 @@
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% ACTORS (Tác nhân tương tác)
+    %% ==========================================
+    class EndUserActor {
+        <<Actor: Người dùng A01>>
+        +createExpense(walletId, categoryId, amount, date)
+        +createIncome(walletId, categoryId, amount, date)
+        +transfer(srcWalletId, dstWalletId, amount)
+        +reverseTransaction(transactionId, reason)
+        +getTransactions(filter, page)
+    }
+
+    %% ==========================================
+    %% BOUNDARY LAYER (Controllers)
+    %% ==========================================
+    class TransactionController {
+        <<Boundary>>
+        +createExpense(dto: CreateExpenseDTO, idempKey: String): ResponseEntity
+        +createIncome(dto: CreateIncomeDTO, idempKey: String): ResponseEntity
+        +transfer(dto: TransferDTO, idempKey: String): ResponseEntity
+        +reverseTransaction(txId: UUID, dto: ReverseDTO): ResponseEntity
+        +getTransactions(filter: TransactionFilterDTO, page: int): ResponseEntity
+    }
+
+    %% ==========================================
+    %% CONTROL LAYER (Services & Ports)
+    %% ==========================================
+    class LedgerService {
+        <<Control>>
+        -ledgerDAO: LedgerDAO
+        -categoryDAO: CategoryDAO
+        -idempotencyDAO: IdempotencyDAO
+        -walletPort: IWalletLockPort
+        -fxPort: IExchangeRatePort
+        +recordExpense(userId: UUID, dto: CreateExpenseDTO, idempKey: String): FinancialTransaction
+        +recordIncome(userId: UUID, dto: CreateIncomeDTO, idempKey: String): FinancialTransaction
+        +transferBetweenWallets(userId: UUID, dto: TransferDTO, idempKey: String): FinancialTransaction
+        +reversePostedTransaction(userId: UUID, txId: UUID, reason: String): FinancialTransaction
+        +createOpeningEquityEntry(userId: UUID, walletId: UUID, amount: Decimal, currency: String): void
+        +validateDoubleEntry(entries: List~JournalEntry~): boolean
+    }
+
+    class IWalletLockPort {
+        <<Interface / Port>>
+        +findWithLock(walletId: UUID): Optional~WalletRef~
+        +updateCachedBalance(walletId: UUID, delta: Decimal): void
+    }
+
+    class IExchangeRatePort {
+        <<Interface / Port>>
+        +getLatestRate(fromCurr: String, toCurr: String): Decimal
+        +calculateWeightedAverageRate(walletId: UUID, amount: Decimal): Decimal
+    }
+
+    %% ==========================================
+    %% DATA ACCESS LAYER (DAOs)
+    %% ==========================================
+    class LedgerDAO {
+        <<DataAccess>>
+        +saveTransactionWithEntries(tx: FinancialTransaction, entries: List~JournalEntry~): FinancialTransaction
+        +findTransactionById(id: UUID): Optional~FinancialTransaction~
+        +findTransactionsByUser(userId: UUID, filter: TransactionFilterDTO, page: int): Page~FinancialTransaction~
+    }
+
+    class CategoryDAO {
+        <<DataAccess>>
+        +findById(id: UUID): Optional~Category~
+        +findByUserId(userId: UUID): List~Category~
+        +save(category: Category): Category
+    }
+
+    class IdempotencyDAO {
+        <<DataAccess>>
+        +findByKey(userId: UUID, key: String): Optional~IdempotencyRecord~
+        +save(record: IdempotencyRecord): void
+    }
+
+    %% ==========================================
+    %% DOMAIN ENTITIES & ENUMS
+    %% ==========================================
+    class Category {
+        <<Entity>>
+        -id: UUID
+        -userId: UUID
+        -name: String
+        -categoryType: CategoryType
+        -isArchived: boolean
+    }
+
+    class CategoryType {
+        <<enumeration>>
+        INCOME
+        EXPENSE
+    }
+
+    class FinancialTransaction {
+        <<Entity / Aggregate Root>>
+        -id: UUID
+        -userId: UUID
+        -categoryId: UUID
+        -transactionType: TransactionType
+        -status: TransactionStatus
+        -description: String
+        -currency: String
+        -amount: Decimal
+        -fxRateSnapshot: Decimal
+        -occurredOn: Date
+        -postedAt: DateTime
+        -originalTransactionId: UUID
+        -entries: List~JournalEntry~
+        +addEntry(entry: JournalEntry): void
+        +validateBalance(): boolean
+        +post(): void
+        +createReversal(reversalReason: String): FinancialTransaction
+    }
+
+    class TransactionType {
+        <<enumeration>>
+        INCOME
+        EXPENSE
+        TRANSFER
+        ADJUSTMENT
+    }
+
+    class TransactionStatus {
+        <<enumeration>>
+        DRAFT
+        POSTED
+        REVERSED
+    }
+
+    class JournalEntry {
+        <<Entity>>
+        -id: UUID
+        -transactionId: UUID
+        -walletId: UUID
+        -entrySide: EntrySide
+        -amountOriginal: Decimal
+        -currency: String
+        -amountBase: Decimal
+        -fxRateSnapshot: Decimal
+        +isDebit(): boolean
+        +isCredit(): boolean
+    }
+
+    class EntrySide {
+        <<enumeration>>
+        DEBIT
+        CREDIT
+    }
+
+    %% ==========================================
+    %% RELATIONSHIPS & INTERACTIONS
+    %% ==========================================
+    %% Central Spine: Actor -> Controller -> Service -> DAO -> Aggregate Root -> Child
+    EndUserActor ..> TransactionController : interacts (HTTP/REST)
+    TransactionController --> LedgerService : delegates
+    LedgerService --> LedgerDAO : persists_acid (BR12)
+    LedgerDAO ..> FinancialTransaction : maps/persists_aggregate
+    FinancialTransaction "1" *-- "2..*" JournalEntry : balances (BR01)
+    JournalEntry --> EntrySide : side_of
+
+    %% Left Ports (Wallet & FX)
+    LedgerService ..> IWalletLockPort : locks_wallet (BR13)
+    LedgerService ..> IExchangeRatePort : gets_snapshot_rate (BR15)
+
+    %% Right Branch (Idempotency & Category Hierarchy)
+    LedgerService --> IdempotencyDAO : checks_dedup (BR13)
+    LedgerService --> CategoryDAO : verifies_category
+    CategoryDAO ..> Category : maps/persists
+    Category --> CategoryType : typed_by
+
+    %% Enums and Association
+    FinancialTransaction ..> Category : categorizes
+    FinancialTransaction --> TransactionType : typed_by
+    FinancialTransaction --> TransactionStatus : state_of

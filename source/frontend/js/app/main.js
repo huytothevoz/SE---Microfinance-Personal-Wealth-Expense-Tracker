@@ -1,7 +1,9 @@
 import { icon, safe, money, USER_NAV, ADMIN_NAV, META } from './ui-core.js';
 import { createPages } from './pages.js';
 import { FIELDS } from './forms.js';
-import { transactions } from '../data/fixtures.js';
+import { transactions, notifications, loadLiveData } from '../data/live-data.js';
+import { liveRender, liveAction } from './live-pages.js';
+// WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
 
 let currentUser;
@@ -64,7 +66,7 @@ ${group.group}\
 <div class="sidebar-group">\
 ${group.items.map(([id, label, ico]) => `<button type="button" data-page="${id}" class="nav-link ${state.page === id ? 'is-active' : ''}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(ico)}\
 <span>\
-${label}</span>${id === 'notifications' ? '<span class="nav-count">4</span>' : ''}</button>`).join('')}</div>`).join('') + (currentUser.role === 'ADMIN' ? `<div class="sidebar-label">QUẢN TRỊ</div>\
+${label}</span>${id === 'notifications' ? (notifications.length ? `<span class="nav-count">${notifications.length}</span>` : '') : ''}</button>`).join('')}</div>`).join('') + (currentUser.role === 'ADMIN' ? `<div class="sidebar-label">QUẢN TRỊ</div>\
 <div class="sidebar-group">\
 <button class="nav-link" data-action="switch-role">\
 ${icon(state.admin ? 'user' : 'lock')}\
@@ -84,6 +86,12 @@ function navigate(page) {
   renderNav();
   document.querySelector('#breadcrumb-name').textContent = META[page][0];
   app.innerHTML = PAGES[page]();
+  // Refresh current user's server data. Never treat a failed request as an empty wallet.
+  void loadLiveData({ admin: currentUser.role === 'ADMIN' }).then(() => {
+    if (state.page !== page) return;
+    app.innerHTML = PAGES[page]();
+    renderNav();
+  }).catch(error => { console.error('WealthFlow API refresh failed', error); });
   closeSidebar();
   const hash = '#' + page;
   if (location.hash !== hash) history.replaceState(null, '', hash);
@@ -97,6 +105,10 @@ function closeSidebar() {
 
 }
 const { PAGES, txTable } = createPages({ state, heading, btn, panel, currentUser });
+// Replace EVERY rendered page before first navigation; old demo templates are never displayed.
+for (const pageName of Object.keys(META)) {
+  PAGES[pageName] = () => liveRender(pageName, { state, heading, currentUser });
+}
 function toast(message) {
   const stack = document.querySelector('#toast-stack');
   const item = document.createElement('div');
@@ -259,6 +271,7 @@ function applyTransactionSearch() {
 
 }
 function handleAction(action) {
+  if (liveAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (action === 'password') { openPasswordForm(); return; }
   if (action === 'logout') {
     authApi('logout', {}).then(() => location.replace('index.html?auth=login')).catch(error => toast(errorMessage(error)));
@@ -371,11 +384,9 @@ document.addEventListener('submit', event => {
   toast('Tính năng lưu chưa khả dụng. Không có thay đổi nào được thực hiện.');
 
 });
-dialog.addEventListener('click', event => {
-  if (event.target === dialog) dialog.close();
-
-});
 document.querySelector('#modal-close').addEventListener('click', () => dialog.close());
+// Only explicit controls close a form; moving/clicking outside never discards changes.
+dialog.addEventListener('cancel', event => event.preventDefault());
 document.querySelector('#sidebar-toggle').addEventListener('click', () => {
   const open = !sidebar.classList.contains('is-open');
   sidebar.classList.toggle('is-open', open);

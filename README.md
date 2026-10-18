@@ -6,9 +6,10 @@ Tài liệu này hướng dẫn thành viên nhóm cài WealthFlow trên Windows
 
 - Windows 10/11.
 - XAMPP có Apache, PHP 8.2 trở lên và MySQL/MariaDB. Ví dụ bên dưới giả sử XAMPP nằm ở `F:\xampp`.
+- WealthFlow mặc định kết nối MySQL qua cổng `3307` để tránh đụng dịch vụ MySQL khác đang dùng `3306`.
 - Trình duyệt hiện đại.
 - Kết nối Internet ở lần cài dependencies đầu tiên.
-- Composer: có thể cài trên máy hoặc tải Composer PHAR như ở bước 3.
+- Composer: cần khi chưa có dependencies trong `source\backend\vendor`; nếu `vendor\autoload.php` đã có sẵn, script sẽ dùng lại và không cần Composer.
 
 Script setup phải được chạy từ thư mục gốc repository (thư mục chứa file này). Có thể để project ở ổ C dù XAMPP ở ổ F.
 
@@ -29,11 +30,15 @@ Sao lưu website/database cần giữ trước khi chạy. Không chạy lại s
 1. Mở XAMPP Control Panel.
 2. Nhấn **Start** ở dòng **MySQL**.
 3. Chờ đến khi trạng thái MySQL hiện **Running**.
-4. Để cửa sổ XAMPP mở trong lúc cài và kiểm thử.
+4. Để cửa sổ XAMPP mở trong lúc cài và kiểm thử. Nếu Apache XAMPP đang chạy trên cổng cài đặt, script nhận diện đúng tiến trình này và dừng tạm thời trong lúc cài; tiến trình khác đang giữ cổng sẽ làm setup dừng an toàn.
+
+MySQL của XAMPP được cấu hình dùng cổng `3307`; phpMyAdmin và ứng dụng WealthFlow cũng dùng cùng cổng này. Nếu MySQL vẫn tắt khi khởi động, đổi cổng chỉ giải quyết xung đột cổng, không sửa được lỗi trong các file database. Xem `F:\xampp\mysql\data\mysql_error.log` để biết nguyên nhân cụ thể.
 
 Không cần cài Apache dưới dạng Windows Service. Setup sẽ khởi động Apache của XAMPP sau khi cài.
 
-### 3.2. Tải Composer PHAR nếu chưa cài Composer
+### 3.2. Tải Composer PHAR nếu chưa cài Composer và chưa có dependencies
+
+Nếu repository đã có `source\backend\vendor\autoload.php`, script dùng lại dependencies đó. Nếu chưa có thư mục `vendor`, cần cài Composer hoặc tải Composer PHAR như sau:
 
 Mở PowerShell tại thư mục gốc repository. Nếu XAMPP ở `F:\xampp`, chạy:
 
@@ -186,7 +191,7 @@ Nếu Apache đã chạy, không khởi động thêm bản Apache thứ hai. Tr
 | `composer` không được nhận diện | Dùng Composer PHAR theo mục 3.2 và truyền `-ComposerPhar "$env:TEMP\composer.phar"` khi chạy setup. |
 | Thiếu PHP ZIP | Script bật `php\ext\php_zip.dll` tạm cho Composer. Nếu báo DLL thiếu, kiểm tra lại cài đặt XAMPP/PHP. |
 | Cổng 8080 đang bận | Chọn cổng khác khi chạy setup, ví dụ 8081. Đóng ứng dụng đang dùng cổng trước khi setup. |
-| MySQL không kết nối được | Xác nhận MySQL ở XAMPP Control Panel đang Running và kiểm tra `DB_HOST`, `DB_PORT` trong `backend\config.local.php`. |
+| MySQL không kết nối được | Xác nhận MySQL ở XAMPP Control Panel đang Running trên cổng `3307` và kiểm tra `DB_HOST`, `DB_PORT` trong `backend\config.local.php`. Nếu MySQL tự tắt, xem `F:\xampp\mysql\data\mysql_error.log`; chuyển cổng không xử lý được lỗi/corruption trong data directory. |
 | Trang không mở / connection refused | Xác nhận Apache đang chạy, kiểm tra cổng trong `httpd.conf`, rồi xem `F:\xampp\apache\logs\error.log`. |
 | API báo dịch vụ chưa sẵn sàng | Chạy health endpoint; kiểm tra MySQL và `F:\xampp\apache\logs\error.log`. |
 | OTP không tới hộp thư | Kiểm tra `MAIL_PASSWORD` có App Password đúng, xem Spam/Junk, và kiểm tra log Apache. Không gửi thông tin bí mật cho người khác. |

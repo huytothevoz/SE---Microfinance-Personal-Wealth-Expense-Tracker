@@ -5,7 +5,7 @@ return [
     'APP_ENV' => 'local',
     'APP_KEY' => '', // Installer generates a random 256-bit secret.
     'DB_HOST' => '127.0.0.1',
-    'DB_PORT' => '3306',
+    'DB_PORT' => '3307',
     'DB_NAME' => 'wealthflow',
     'DB_USER' => 'root',
     'DB_PASSWORD' => '',

@@ -1,0 +1,205 @@
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% ACTORS (Tác nhân tương tác)
+    %% ==========================================
+    class EndUserActor {
+        <<Actor: Người dùng A01>>
+        +buyGold(type, quantityTael, unitPrice, walletId)
+        +sellGold(type, quantityTael, sellPrice, walletId)
+        +revalueGoldHolding(holdingId, newMarketPrice)
+        +getGoldPortfolio()
+    }
+
+    class MarketPriceActor {
+        <<Actor: API Thị trường SJC / DOJI>>
+        +publishDailyGoldPrices()
+    }
+
+    %% ==========================================
+    %% BOUNDARY LAYER (Controllers & Schedulers)
+    %% ==========================================
+    class GoldController {
+        <<Boundary>>
+        +buyGold(dto: BuyGoldDTO): ResponseEntity
+        +sellGold(dto: SellGoldDTO): ResponseEntity
+        +revalueGold(id: UUID, dto: RevalueGoldDTO): ResponseEntity
+        +getGoldHoldings(userId: UUID): ResponseEntity
+        +getGoldValuationSummary(userId: UUID): ResponseEntity
+    }
+
+    class GoldPriceSyncSchedulerJob {
+        <<Boundary / Job>>
+        -goldService: GoldAssetService
+        +executeDailyPriceSync(): void
+    }
+
+    %% ==========================================
+    %% CONTROL LAYER (Services & Ports)
+    %% ==========================================
+    class GoldAssetService {
+        <<Control>>
+        -holdingDAO: GoldHoldingDAO
+        -transactionDAO: GoldTransactionDAO
+        -priceDAO: GoldPriceDAO
+        -ledgerPort: IGoldLedgerPort
+        -priceFeedPort: IGoldPriceFeedPort
+        +buyGold(userId: UUID, dto: BuyGoldDTO): GoldHolding
+        +sellGold(userId: UUID, dto: SellGoldDTO): GoldSaleReceiptVO
+        +revalueHolding(userId: UUID, holdingId: UUID, marketPrice: BigDecimal): GoldHolding
+        +getValuationSummary(userId: UUID): GoldPortfolioSummaryVO
+        +calculateWeightedAverageCost(holding: GoldHolding, buyQty: BigDecimal, buyCost: BigDecimal): BigDecimal
+    }
+
+    class IGoldLedgerPort {
+        <<Port / Interface>>
+        +postGoldPurchase(userId: UUID, holdingId: UUID, totalCost: BigDecimal, walletId: UUID): UUID
+        +postGoldSale(userId: UUID, holdingId: UUID, proceeds: BigDecimal, costBasis: BigDecimal, gainLoss: BigDecimal, walletId: UUID): UUID
+    }
+
+    class IGoldPriceFeedPort {
+        <<Port / Interface>>
+        +fetchLatestMarketPrices(): List~GoldPriceSnapshotVO~
+    }
+
+    %% ==========================================
+    %% ENTITY LAYER (Domain Entities & Value Objects)
+    %% ==========================================
+    class GoldHolding {
+        <<Entity>>
+        -id: UUID
+        -userId: UUID
+        -goldType: GoldType
+        -quantityTael: BigDecimal
+        -totalCostBasis: BigDecimal
+        -weightedAvgCostPerTael: BigDecimal
+        -currentMarketUnitPrice: BigDecimal
+        -updatedAt: Timestamp
+        +applyPurchase(taels: BigDecimal, cost: BigDecimal): void
+        +applySale(taels: BigDecimal): BigDecimal
+        +getCurrentMarketValue(): BigDecimal
+        +getUnrealizedGainLoss(): BigDecimal
+    }
+
+    class GoldTransaction {
+        <<Entity>>
+        -id: UUID
+        -holdingId: UUID
+        -userId: UUID
+        -txType: GoldTxType
+        -quantityTael: BigDecimal
+        -unitPrice: BigDecimal
+        -totalAmount: BigDecimal
+        -walletId: UUID
+        -txDate: Date
+    }
+
+    class GoldPortfolioSummaryVO {
+        <<ValueObject>>
+        +totalCostBasis: BigDecimal
+        +totalMarketValue: BigDecimal
+        +unrealizedGainLoss: BigDecimal
+        +unrealizedGainLossPercent: double
+    }
+
+    class GoldSaleReceiptVO {
+        <<ValueObject>>
+        +saleAmount: BigDecimal
+        +costBasisRelieved: BigDecimal
+        +realizedGainLoss: BigDecimal
+        +isProfitable: boolean
+    }
+
+    class GoldPriceSnapshotVO {
+        <<ValueObject>>
+        +goldType: GoldType
+        +buyPrice: BigDecimal
+        +sellPrice: BigDecimal
+        +source: String
+        +snapshotTime: Timestamp
+    }
+
+    class GoldType {
+        <<Enumeration>>
+        SJC_1L
+        RING_9999_1C
+        GOLD_24K
+    }
+
+    class GoldTxType {
+        <<Enumeration>>
+        BUY
+        SELL
+        REVALUATION
+    }
+
+    %% ==========================================
+    %% DATA ACCESS LAYER (DAOs)
+    %% ==========================================
+    class GoldHoldingDAO {
+        <<DataAccess>>
+        +save(holding: GoldHolding): GoldHolding
+        +findById(id: UUID): Optional~GoldHolding~
+        +findByUserAndType(userId: UUID, type: GoldType): Optional~GoldHolding~
+        +findByUser(userId: UUID): List~GoldHolding~
+        +updateValuation(id: UUID, unitPrice: BigDecimal): void
+    }
+
+    class GoldTransactionDAO {
+        <<DataAccess>>
+        +save(tx: GoldTransaction): GoldTransaction
+        +findByHolding(holdingId: UUID): List~GoldTransaction~
+        +findByUser(userId: UUID): List~GoldTransaction~
+    }
+
+    class GoldPriceDAO {
+        <<DataAccess>>
+        +savePriceHistory(type: GoldType, buyPrice: BigDecimal, sellPrice: BigDecimal, source: String): void
+        +getLatestPrice(type: GoldType): Optional~GoldPriceSnapshotVO~
+    }
+
+    %% ==========================================
+    %% RELATIONSHIPS
+    %% ==========================================
+    EndUserActor --> GoldController : thực hiện mua bán và định giá vàng
+    MarketPriceActor --> GoldPriceSyncSchedulerJob : cung cấp nguồn dữ liệu giá niêm yết
+
+    GoldController --> GoldAssetService : gọi xử lý nghiệp vụ tài sản
+    GoldPriceSyncSchedulerJob --> GoldAssetService : kích hoạt đồng bộ thị giá
+
+    GoldAssetService ..> IGoldLedgerPort : hạch toán sổ cái kép hoán đổi tài sản
+    GoldAssetService ..> IGoldPriceFeedPort : lấy báo giá từ SJC/DOJI
+    GoldAssetService --> GoldHoldingDAO : truy vấn và lưu kho vàng
+    GoldAssetService --> GoldTransactionDAO : lưu lịch sử giao dịch vàng
+    GoldAssetService --> GoldPriceDAO : lưu và đọc bảng giá thị trường
+
+    GoldAssetService ..> GoldHolding : tính giá vốn bình quân gia quyền
+    GoldAssetService ..> GoldSaleReceiptVO : sinh biên lai bán vàng
+    GoldAssetService ..> GoldPortfolioSummaryVO : tổng hợp giá trị danh mục
+
+    GoldHolding *-- GoldTransaction : lịch sử phát sinh giao dịch mua bán
+    GoldHolding --> GoldType : phân loại thương phẩm vàng
+    GoldTransaction --> GoldTxType : phân loại hành động giao dịch
+
+    GoldHoldingDAO ..> GoldHolding : ánh xạ CSDL bảng gold_holdings
+    GoldTransactionDAO ..> GoldTransaction : ánh xạ CSDL bảng gold_transactions
+
+    %% ==========================================
+    %% STYLES & HIGHLIGHTS
+    %% ==========================================
+    style GoldController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style GoldPriceSyncSchedulerJob fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style GoldAssetService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style IGoldLedgerPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style IGoldPriceFeedPort fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style GoldHolding fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style GoldTransaction fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style GoldPortfolioSummaryVO fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style GoldSaleReceiptVO fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style GoldPriceSnapshotVO fill:#F1F5F9,stroke:#64748B,stroke-width:1px
+    style GoldType fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style GoldTxType fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style GoldHoldingDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style GoldTransactionDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style GoldPriceDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px

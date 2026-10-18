@@ -95,10 +95,11 @@ document.querySelectorAll('[data-open-auth]').forEach(button => button.addEventL
   setMode(button.dataset.openAuth);
   dialog.showModal();
 }));
-document.querySelector('[data-close-dialog]').addEventListener('click', () => dialog.close());
-dialog.addEventListener('click', event => {
-  if (event.target === dialog) dialog.close();
-});
+document.querySelector('[data-close-dialog]').addEventListener('click', () => { if (!submit.disabled) dialog.close(); });
+// WealthFlow: close auth only by explicit button. Clicking/dragging outside and ESC keep input intact.
+dialog.addEventListener('cancel', event => event.preventDefault());
+// Password confirmation validation before contacting backend.
+[password, confirmation].forEach(field => field.addEventListener('input', () => confirmation.setCustomValidity('')));
 tabs.forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.authTab)));
 forgotLink.addEventListener('click', () => {
   setMode('forgot');
@@ -122,6 +123,11 @@ resendOtpButton.addEventListener('click', async () => {
 });
 document.querySelector('#auth-form').addEventListener('submit', async event => {
   event.preventDefault();
+  if (['register', 'reset'].includes(currentMode) && password.value !== confirmation.value) {
+    confirmation.setCustomValidity('Mật khẩu xác nhận không trùng khớp.');
+    confirmation.reportValidity();
+    return;
+  }
   if (!event.currentTarget.reportValidity()) return;
   const mode = currentMode;
   const form = event.currentTarget;
