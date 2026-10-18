@@ -47,6 +47,13 @@ assert.equal(requests.at(-1).init.method, 'DELETE', 'Permanent wallet deletion u
 const walletFeatureSource = await readFile(new URL('../source/frontend/js/app/wallet-feature.js', import.meta.url), 'utf8');
 const walletViewSource = await readFile(new URL('../source/frontend/js/app/wallets.js', import.meta.url), 'utf8');
 const appCssSource = await readFile(new URL('../source/frontend/css/app.css', import.meta.url), 'utf8');
+const uiCoreSource = await readFile(new URL('../source/frontend/js/app/ui-core.js', import.meta.url), 'utf8');
+const mainSource = await readFile(new URL('../source/frontend/js/app/main.js', import.meta.url), 'utf8');
+const routesSource = await readFile(new URL('../source/backend/public/index.php', import.meta.url), 'utf8');
+assert.match(uiCoreSource, /\['settings', 'Cài đặt & bảo mật', 'gear'\][\s\S]+settings: \['Cài đặt & bảo mật'/, 'Settings navigation and page title use one consistent label');
+assert.match(mainSource, /#user-menu'[\s\S]+navigate\(state\.admin \? 'admin-settings' : 'settings'\)/, 'Account button opens Settings & Security');
+assert.match(mainSource, /authApi\('change-password'/, 'Password form calls the real change-password API');
+assert.ok(/authApi\('logout'/.test(mainSource) && /post\('\/auth\/logout'/.test(routesSource), 'Logout control is connected to the backend route');
 assert.match(walletFeatureSource, /50000[\s\S]+CUSTOM/, 'Opening balance offers 50,000 VND presets and custom input');
 assert.match(walletFeatureSource, /if \(!isVnd\) preset\.value = 'CUSTOM'/, 'USD/EUR opening balance always uses manual input');
 assert.doesNotMatch(walletFeatureSource, /VND có các mức gợi ý/, 'Wallet creation omits redundant explanatory note');
@@ -67,4 +74,4 @@ const feature = createWalletFeature({
   render: () => {}
 });
 assert.equal(feature.handleAction('wallet-toggle', { dataset: {} }), false, 'Wallet feature leaves archive visibility toggle to the page controller');
-console.log('OK: 26 offline API/frontend contract checks passed. Does NOT verify MySQL or SMTP.');
+console.log('OK: 30 offline API/frontend contract checks passed. Does NOT verify MySQL or SMTP.');

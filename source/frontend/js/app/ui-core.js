@@ -117,7 +117,7 @@ export const META = {
   reports: ['Báo cáo tài chính', 'Hiểu dòng tiền và tỷ lệ tiết kiệm'],
   reconciliation: ['Đối soát & xuất CSV', 'Kiểm tra tính nhất quán và lưu trữ báo cáo'],
   notifications: ['Trung tâm thông báo', 'Theo dõi các cảnh báo và nhắc nhở quan trọng'],
-  settings: ['Cài đặt cá nhân', 'Hồ sơ, tiền cơ sở, bảo mật phiên đăng nhập'],
+  settings: ['Cài đặt & bảo mật', 'Hồ sơ, tiền cơ sở, bảo mật phiên đăng nhập'],
   'admin-overview': ['Tổng quan hệ thống', 'Thống kê vĩ mô, không bao gồm dữ liệu tài chính cá nhân'],
   'admin-users': ['Quản lý người dùng', 'Trạng thái tài khoản và quyền truy cập'],
   'admin-categories': ['Danh mục mặc định', 'Thiết lập danh mục mẫu cho người dùng mới'],

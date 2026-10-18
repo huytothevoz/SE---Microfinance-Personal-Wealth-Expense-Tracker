@@ -1,4 +1,4 @@
-import { icon, safe, money, USER_NAV, ADMIN_NAV, META } from './ui-core.js';
+import { icon, safe, money, USER_NAV, ADMIN_NAV, META } from './ui-core.js?v=settings-ui-1';
 import { createPages } from './pages.js?v=wallet-ui-9';
 import { FIELDS } from './forms.js';
 import { transactions, notifications, loadLiveData } from '../data/live-data.js';
