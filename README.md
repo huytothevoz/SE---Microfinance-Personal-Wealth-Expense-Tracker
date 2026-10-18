@@ -23,6 +23,17 @@ Script setup phải được chạy từ thư mục gốc repository (thư mục
 
 Sao lưu website/database cần giữ trước khi chạy. Không chạy lại setup chỉ để bật ứng dụng hoặc thử đăng nhập.
 
+## Chạy ứng dụng trên Linux (Ubuntu/Debian)
+
+Sau khi cài XAMPP, chạy ứng dụng từ thư mục gốc repository:
+
+```bash
+chmod +x run_wealthflow.sh
+./run_wealthflow.sh
+```
+
+Mặc định script dùng XAMPP tại `/opt/lampp` và cổng `8080`. Có thể đặt `XAMPP_DIR` hoặc `XAMPP_PORT` để dùng cấu hình khác. Lần chạy đầu, script sẽ cài dependencies, áp dụng migrations và triển khai source; các lần sau đồng bộ source hiện tại trước khi khởi động.
+
 ## 3. Cài mới lần đầu
 
 ### 3.1. Khởi động MySQL

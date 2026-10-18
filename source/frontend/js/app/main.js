@@ -1,10 +1,11 @@
 import { icon, safe, money, USER_NAV, ADMIN_NAV, META } from './ui-core.js';
-import { createPages } from './pages.js';
+import { createPages } from './pages.js?v=wallet-ui-5';
 import { FIELDS } from './forms.js';
 import { transactions, notifications, loadLiveData } from '../data/live-data.js';
-import { liveRender, liveAction } from './live-pages.js';
+import { liveAction } from './live-pages.js';
 // WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
+import { createWalletFeature } from './wallets.js?v=wallet-ui-5';
 
 let currentUser;
 try {
@@ -29,10 +30,17 @@ const state = {
   txFilter: 'all',
   search: '',
   onlyActiveWallets: true,
-  reportRange: '6m'
+  reportRange: '6m',
+  walletItems: [],
+  walletSummary: null,
+  walletLoading: false,
+  walletError: '',
+  walletRateWarning: '',
+  walletRatesSynced: false
 
 };
 const app = document.querySelector('#app-content'); const nav = document.querySelector('#sidebar-nav'); const sidebar = document.querySelector('#sidebar'); const dialog = document.querySelector('#action-dialog');
+let walletFeature;
 function heading(id, buttons = '') {
   const [name, description] = META[id];
   return `<div class="page-heading">\
@@ -92,6 +100,7 @@ function navigate(page) {
     app.innerHTML = PAGES[page]();
     renderNav();
   }).catch(error => { console.error('WealthFlow API refresh failed', error); });
+  if (page === 'wallets') walletFeature?.load();
   closeSidebar();
   const hash = '#' + page;
   if (location.hash !== hash) history.replaceState(null, '', hash);
@@ -105,10 +114,12 @@ function closeSidebar() {
 
 }
 const { PAGES, txTable } = createPages({ state, heading, btn, panel, currentUser });
-// Replace EVERY rendered page before first navigation; old demo templates are never displayed.
-for (const pageName of Object.keys(META)) {
-  PAGES[pageName] = () => liveRender(pageName, { state, heading, currentUser });
-}
+walletFeature = createWalletFeature({
+  state,
+  dialog,
+  toast,
+  render: () => { if (state.page === 'wallets') app.innerHTML = PAGES.wallets(); }
+});
 function toast(message) {
   const stack = document.querySelector('#toast-stack');
   const item = document.createElement('div');
@@ -270,8 +281,9 @@ function applyTransactionSearch() {
   if (target) target.innerHTML = txTable(filtered);
 
 }
-function handleAction(action) {
-  if (liveAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
+function handleAction(action, trigger) {
+ if (liveAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
+ if (walletFeature.handleAction(action, trigger)) return;
   if (action === 'password') { openPasswordForm(); return; }
   if (action === 'logout') {
     authApi('logout', {}).then(() => location.replace('index.html?auth=login')).catch(error => toast(errorMessage(error)));
@@ -362,7 +374,7 @@ document.addEventListener('click', event => {
   }
   const action = event.target.closest('[data-action]');
   if (action) {
-    handleAction(action.dataset.action);
+    handleAction(action.dataset.action, action);
     return;
 
   }
@@ -377,7 +389,12 @@ document.addEventListener('input', event => {
   }
 
 });
-document.addEventListener('submit', event => {
+document.addEventListener('submit', async event => {
+  if (['wallet-create-form', 'wallet-adjust-form', 'wallet-edit-form', 'wallet-archive-form', 'wallet-delete-form'].includes(event.target.id)) {
+    event.preventDefault();
+    await walletFeature.handleSubmit(event.target);
+    return;
+  }
   if (event.target.id !== 'action-form') return;
   event.preventDefault();
   dialog.close();

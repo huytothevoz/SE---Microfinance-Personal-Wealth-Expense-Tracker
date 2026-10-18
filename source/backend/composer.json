@@ -6,6 +6,8 @@
     "php": ">=8.2",
     "ext-pdo": "*",
     "ext-pdo_mysql": "*",
+    "ext-bcmath": "*",
+    "ext-curl": "*",
     "ext-mbstring": "*",
     "ext-openssl": "*",
     "firebase/php-jwt": "^6.11 || ^7.0",

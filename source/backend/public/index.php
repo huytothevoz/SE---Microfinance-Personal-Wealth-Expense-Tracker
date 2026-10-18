@@ -15,7 +15,7 @@ use WealthFlow\Modules\Budgets\BudgetController;
 use WealthFlow\Modules\Notifications\NotificationService;
 use WealthFlow\Modules\Recurring\RecurringController;
 use WealthFlow\Modules\Transactions\TransactionController;
-use WealthFlow\Modules\Wallets\WalletRepository;
+use WealthFlow\Modules\Wallets\WalletController;
 
 try {
     /** @var \WealthFlow\Config $config */
@@ -80,7 +80,7 @@ try {
                 'financialPostingEnabled' => true,
             ],
             'features' => [
-                'implemented' => ['FR01', 'FR03', 'FR04', 'FR05', 'FR06'],
+                'implemented' => ['FR01', 'FR02', 'FR03', 'FR04', 'FR05', 'FR06'],
                 'note' => 'Các phân hệ tài chính yêu cầu phiên đăng nhập WealthFlow hợp lệ.',
             ],
             'auth/register' => $auth->register($input),
@@ -105,10 +105,13 @@ try {
         }
     }
     $router = new Router();
-    $router->get('/wallets', static function (Request $request): void {
-        $wallets = (new WalletRepository())->findAllByUser(AuthContext::getUserId($request));
-        JsonResponse::success(['wallets' => $wallets, 'count' => count($wallets)]);
-    });
+    $walletController = new WalletController();
+    $router->get('/wallets', [$walletController, 'list']);
+    $router->post('/wallets', [$walletController, 'create']);
+    $router->put('/wallets/{id}', [$walletController, 'update']);
+    $router->post('/wallets/{id}/adjustments', [$walletController, 'adjust']);
+    $router->post('/wallets/{id}/archive', [$walletController, 'archive']);
+    $router->delete('/wallets/{id}', [$walletController, 'deletePermanently']);
 
     $txController = new TransactionController();
     $router->get('/transactions', [$txController, 'list']);
@@ -119,6 +122,7 @@ try {
     $router->get('/categories', [$txController, 'listCategories']);
     $router->post('/categories', [$txController, 'createCategory']);
     $router->get('/exchange-rates', [$txController, 'listRates']);
+    $router->post('/exchange-rates/sync', [$txController, 'syncRates']);
     $router->post('/exchange-rates', [$txController, 'recordRate']);
 
     $budgetController = new BudgetController();

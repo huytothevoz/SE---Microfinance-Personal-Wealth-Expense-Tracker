@@ -6,7 +6,7 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 $directory = dirname(__DIR__);
 try {
     if (PHP_VERSION_ID < 80200) throw new RuntimeException('PHP 8.2+ is required. Use XAMPP PHP.');
-    foreach (['pdo_mysql', 'mbstring', 'openssl'] as $extension) {
+    foreach (['pdo_mysql', 'mbstring', 'openssl', 'bcmath', 'curl'] as $extension) {
         if (!extension_loaded($extension)) throw new RuntimeException("Missing PHP extension: {$extension}");
     }
     $local = $directory . '/config.local.php';

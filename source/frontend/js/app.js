@@ -118,24 +118,24 @@ const ADMIN_NAV = [
 
 ];
 const META = {
-  overview: ['Tổng quan', 'Bức tranh tài chính trong một màn hình', 'FR08 · FR10 · FR11 / UC10'],
-  transactions: ['Giao dịch', 'Quản lý thu chi, chuyển ví và lịch sử bút toán', 'FR03 · FR04 / UC03'],
-  wallets: ['Ví & tài khoản', 'Mọi nguồn tiền của bạn tại một nơi', 'FR02 · FR04 / UC02'],
-  categories: ['Danh mục thu chi', 'Tổ chức thu nhập và chi tiêu có hệ thống', 'FR03.05'],
-  budgets: ['Ngân sách', 'Theo dõi hạn mức và nhận diện rủi ro bội chi', 'FR05 / UC05'],
-  recurring: ['Giao dịch định kỳ', 'Không bỏ lỡ khoản thanh toán hoặc thu nhập thường xuyên', 'FR06 / UC04'],
-  loans: ['Khoản vay & nợ', 'Theo dõi gốc, lãi/phí và lịch trả nợ', 'FR09 / UC06 · UC07'],
-  gold: ['Tài sản vàng', 'Đánh giá tài sản tích lũy ngoài ví', 'FR08 / UC08'],
-  goals: ['Mục tiêu tài chính', 'Chuyển kế hoạch tích lũy thành hành động', 'FR07 / UC09'],
-  reports: ['Báo cáo tài chính', 'Hiểu dòng tiền và tỷ lệ tiết kiệm', 'FR10 · FR11 · FR12 / UC10 · UC11'],
-  reconciliation: ['Đối soát & xuất CSV', 'Kiểm tra tính nhất quán và lưu trữ báo cáo', 'FR12 / UC11'],
-  notifications: ['Trung tâm thông báo', 'Theo dõi các cảnh báo và nhắc nhở quan trọng', 'FR05 · FR09 · FR13'],
-  settings: ['Cài đặt cá nhân', 'Hồ sơ, tiền cơ sở, bảo mật phiên đăng nhập', 'FR01 · FR15 / UC01'],
-  'admin-overview': ['Tổng quan hệ thống', 'Thống kê vĩ mô, không bao gồm dữ liệu tài chính cá nhân', 'FR14 / UC12'],
-  'admin-users': ['Quản lý người dùng', 'Trạng thái tài khoản và quyền truy cập', 'FR14 / UC12'],
-  'admin-categories': ['Danh mục mặc định', 'Thiết lập danh mục mẫu cho người dùng mới', 'FR13 / UC13'],
-  'admin-broadcasts': ['Thông báo hệ thống', 'Soạn và gửi broadcast announcement', 'FR13 / UC13'],
-  'admin-settings': ['Cấu hình hệ thống', 'Tham số vận hành và nhật ký quản trị', 'FR13 · FR14 / UC13']
+  overview: ['Tổng quan', 'Bức tranh tài chính trong một màn hình', 'TỔNG QUAN TÀI CHÍNH'],
+  transactions: ['Giao dịch', 'Quản lý thu chi, chuyển ví và lịch sử bút toán', 'QUẢN LÝ GIAO DỊCH'],
+  wallets: ['Ví & tài khoản', 'Mọi nguồn tiền của bạn tại một nơi', 'QUẢN LÝ VÍ'],
+  categories: ['Danh mục thu chi', 'Tổ chức thu nhập và chi tiêu có hệ thống', 'QUẢN LÝ DANH MỤC'],
+  budgets: ['Ngân sách', 'Theo dõi hạn mức và nhận diện rủi ro bội chi', 'QUẢN LÝ NGÂN SÁCH'],
+  recurring: ['Giao dịch định kỳ', 'Không bỏ lỡ khoản thanh toán hoặc thu nhập thường xuyên', 'GIAO DỊCH ĐỊNH KỲ'],
+  loans: ['Khoản vay & nợ', 'Theo dõi gốc, lãi/phí và lịch trả nợ', 'QUẢN LÝ KHOẢN VAY'],
+  gold: ['Tài sản vàng', 'Đánh giá tài sản tích lũy ngoài ví', 'QUẢN LÝ TÀI SẢN VÀNG'],
+  goals: ['Mục tiêu tài chính', 'Chuyển kế hoạch tích lũy thành hành động', 'MỤC TIÊU TÀI CHÍNH'],
+  reports: ['Báo cáo tài chính', 'Hiểu dòng tiền và tỷ lệ tiết kiệm', 'PHÂN TÍCH TÀI CHÍNH'],
+  reconciliation: ['Đối soát & xuất CSV', 'Kiểm tra tính nhất quán và lưu trữ báo cáo', 'ĐỐI SOÁT DỮ LIỆU'],
+  notifications: ['Trung tâm thông báo', 'Theo dõi các cảnh báo và nhắc nhở quan trọng', 'TRUNG TÂM THÔNG BÁO'],
+  settings: ['Cài đặt cá nhân', 'Hồ sơ, tiền cơ sở, bảo mật phiên đăng nhập', 'CÀI ĐẶT TÀI KHOẢN'],
+  'admin-overview': ['Tổng quan hệ thống', 'Thống kê vĩ mô, không bao gồm dữ liệu tài chính cá nhân', 'QUẢN TRỊ HỆ THỐNG'],
+  'admin-users': ['Quản lý người dùng', 'Trạng thái tài khoản và quyền truy cập', 'QUẢN LÝ NGƯỜI DÙNG'],
+  'admin-categories': ['Danh mục mặc định', 'Thiết lập danh mục mẫu cho người dùng mới', 'DANH MỤC HỆ THỐNG'],
+  'admin-broadcasts': ['Thông báo hệ thống', 'Soạn và gửi broadcast announcement', 'THÔNG BÁO HỆ THỐNG'],
+  'admin-settings': ['Cấu hình hệ thống', 'Tham số vận hành và nhật ký quản trị', 'CẤU HÌNH HỆ THỐNG']
 
 };
 const state = {
@@ -496,7 +496,7 @@ ${icon('download')} CSV mẫu</button>\
 <div id="transaction-table">\
 ${txTable(filtered)}</div>`)}\
 <div class="hint-box section-gap" style="margin-top:18px">\
-<strong>Nguyên tắc kế toán kép (BR01–BR06):</strong> bản ghi đã Posted không sửa/xóa vật lý; thao tác điều chỉnh về sau phải tạo bút toán đảo (Reversal) và giao dịch thay thế. Chức năng đang ở giai đoạn minh họa UI.</div>`;
+<strong>Nguyên tắc kế toán kép:</strong> bản ghi đã Posted không sửa/xóa vật lý; thao tác điều chỉnh về sau phải tạo bút toán đảo (Reversal) và giao dịch thay thế. Chức năng đang ở giai đoạn minh họa UI.</div>`;
 
 }
 function walletPage() {
@@ -609,7 +609,7 @@ ${kpi('Tổng ngân sách', money(7700000), '5 danh mục tháng 10', 'pie')}${k
 </div>\
 <div class="mini-panel">\
 <h3>Giữ ngân sách chính xác</h3>\
-<p>Ngân sách tính chi tiêu ròng, không tính chuyển ví nội bộ hoặc trả nợ gốc. Backend phải xử lý chống thông báo trùng theo BR08.</p>\
+<p>Ngân sách tính chi tiêu ròng, không tính chuyển ví nội bộ hoặc trả nợ gốc. Backend phải xử lý chống thông báo trùng.</p>\
 </div>\
 </div>`;
 
@@ -651,7 +651,7 @@ ${r.active ? 'Tạm dừng' : 'Kích hoạt'}\
 </button> · <button class="text-action" data-action="recurring-delete">Xóa</button>\
 </td>\
 </tr>`).join('')}</tbody></table></div>`)}\
-<div class="hint-box" style="margin-top:17px">SYS02 dự kiến quét lịch mỗi 5 phút, tránh sinh trùng theo <code>(subscriptionId, dueDate)</code> và lùi về cuối tháng nếu tháng thiếu ngày. Chưa có scheduler thực thi ở bản demo.</div>`;
+<div class="hint-box" style="margin-top:17px">Tác vụ nền dự kiến quét lịch mỗi 5 phút, tránh sinh trùng theo <code>(subscriptionId, dueDate)</code> và lùi về cuối tháng nếu tháng thiếu ngày. Chưa có scheduler thực thi ở bản demo.</div>`;
 
 }
 function loanPage() {
@@ -711,7 +711,7 @@ ${panel('Quy tắc trả nợ',
 <strong>Không tính thu nhập</strong>\
 </div>\
 </div>`)}${panel('Nhắc lịch trả nợ',
-      'Tác vụ nền SYS03',
+      'Tác vụ nền',
       `<div class="hint-box">\
 <strong>Dự kiến:</strong> nhắc trước hạn 3 ngày, ghi nhận tiến độ thanh toán và chuyển trạng thái Đã trả xong khi dư gốc về 0.</div>`)}</div>`;
 
@@ -746,7 +746,7 @@ ${money(g.price)} / chỉ · Cập nhật ${g.date}\
 <button class="text-action" style="text-align:left" data-action="gold-liquidate">Thanh lý / xóa tài sản →</button>\
 </article>`).join('')}\
 </div>\
-<div class="hint-box">Chỉ theo dõi vàng nhẫn và vàng miếng SJC theo FR08. Không bao gồm nhà đất, xe cộ hay khấu hao. Định giá vàng có thể biến động và cần dữ liệu thị giá đáng tin cậy khi tích hợp thực tế.</div>`;
+<div class="hint-box">Chỉ theo dõi vàng nhẫn và vàng miếng SJC. Không bao gồm nhà đất, xe cộ hay khấu hao. Định giá vàng có thể biến động và cần dữ liệu thị giá đáng tin cậy khi tích hợp thực tế.</div>`;
 
 }
 function goalsPage() {
@@ -754,7 +754,7 @@ function goalsPage() {
 <div class="kpi-grid">\
 ${kpi('Mục tiêu đang hoạt động', '3 mục tiêu', 'Đang tích lũy', 'target')}${kpi('Tổng cần tích lũy', money(55000000), 'Tổng giá trị đích', 'coin', 'blue')}${kpi('Đã phân bổ', money(32400000), 'Không cộng thêm vào tổng tài sản', 'check', 'green')}${kpi('Tiến độ tổng', '58,9%', 'Dữ liệu minh họa', 'chart', 'orange')}</div>${goalsUI()}\
 <div class="hint-box" style="margin-top:17px">\
-<strong>BR10:</strong> phân bổ tiền cho mục tiêu chỉ gắn nhãn khoản tích lũy, không làm tăng tổng tài sản ròng. Hệ thống dự kiến gợi ý số tiền cần để dành mỗi tháng theo thời hạn.</div>`;
+<strong>Nguyên tắc phân bổ:</strong> tiền cho mục tiêu chỉ gắn nhãn khoản tích lũy, không làm tăng tổng tài sản ròng. Hệ thống dự kiến gợi ý số tiền cần để dành mỗi tháng theo thời hạn.</div>`;
 
 }
 function reportPage() {
@@ -877,7 +877,7 @@ ${panel('Hồ sơ cá nhân',
 <div class="settings-row">\
 <div>\
 <strong>Yêu cầu xóa dữ liệu</strong>\
-<p>Quyền quản lý dữ liệu cá nhân theo NFR07.</p>\
+<p>Quyền quản lý dữ liệu cá nhân.</p>\
 </div>\
 <button class="btn btn--outline btn-sm" data-action="account-delete">Xem quy trình</button>\
 </div>\
@@ -922,7 +922,7 @@ ${panel('Hoạt động tài khoản', 'Thống kê người dùng theo tháng',
 </div>`)}\
 </div>\
 <div class="hint-box">\
-<strong>BR11 – bảo mật dữ liệu:</strong> trang Admin không được cung cấp số dư, tài sản, khoản nợ hoặc lịch sử giao dịch tài chính của bất kỳ người dùng nào. Các số trên màn hình chỉ là dữ liệu giả để minh họa bố cục thống kê vĩ mô.</div>`;
+<strong>Bảo mật dữ liệu:</strong> trang Admin không được cung cấp số dư, tài sản, khoản nợ hoặc lịch sử giao dịch tài chính của bất kỳ người dùng nào. Các số trên màn hình chỉ là dữ liệu giả để minh họa bố cục thống kê vĩ mô.</div>`;
 
 }
 function adminUsersPage() {
@@ -1065,14 +1065,14 @@ const PAGES = {
 const FIELDS = {
   'wallet-archive': {
     title: 'Quản lý & lưu trữ ví',
-    desc: 'FR02.03 · Chỉ lưu trữ ví số dư bằng 0',
+    desc: 'Chỉ lưu trữ ví có số dư bằng 0',
     fields: [],
     note: 'Khi có backend, chỉ cho lưu trữ ví 0 đồng, không có lịch định kỳ đang hoạt động. Nếu ví còn tiền phải chuyển hết trước. Ví lưu trữ vẫn có mặt trong lịch sử báo cáo.'
 
   },
   'budget-manage': {
     title: 'Chỉnh sửa / lưu trữ ngân sách',
-    desc: 'FR05.01 · Quản lý hạn mức',
+    desc: 'Quản lý hạn mức',
     fields: [
       [
         'category',
@@ -1095,42 +1095,42 @@ const FIELDS = {
   },
   'recurring-delete': {
     title: 'Xóa lịch định kỳ',
-    desc: 'FR06.01 · Xóa lịch và giữ dấu vết kỳ cũ',
+    desc: 'Xóa lịch và giữ dấu vết kỳ cũ',
     fields: [],
     note: 'Xóa chỉ ngừng phát sinh kỳ tiếp theo; các giao dịch đã POSTED vẫn phải giữ nguyên để phục vụ kiểm toán.'
 
   },
   'goal-complete': {
     title: 'Hoàn thành mục tiêu',
-    desc: 'FR07.01 · Đánh dấu đã hoàn thành',
+    desc: 'Đánh dấu đã hoàn thành',
     fields: [],
     note: 'Mục tiêu hoàn thành không phát sinh thêm tiền trong tài sản. Cần kiểm tra tiến độ và quyền sở hữu bằng backend.'
 
   },
   'goal-cancel': {
     title: 'Hủy mục tiêu tài chính',
-    desc: 'FR07.01 · Hủy nhưng giữ lịch sử phân bổ',
+    desc: 'Hủy nhưng giữ lịch sử phân bổ',
     fields: [],
     note: 'Các khoản tiền phân bổ không tự tạo tài sản mới và lịch sử phải được giữ để tra soát.'
 
   },
   'gold-liquidate': {
     title: 'Thanh lý / xóa tài sản vàng',
-    desc: 'FR08.01 · Ngừng theo dõi vàng tích lũy',
+    desc: 'Ngừng theo dõi vàng tích lũy',
     fields: [],
     note: 'Thanh lý vàng bằng dòng tiền thật cần nghiệp vụ hạch toán; thao tác demo chỉ mô phỏng màn hình, không trừ vàng hay cộng ví.'
 
   },
   'rate-refresh': {
     title: 'Cập nhật tỷ giá',
-    desc: 'FR04.01 · Dự kiến đồng bộ qua SYS01',
+    desc: 'Cập nhật dữ liệu từ nguồn tỷ giá',
     fields: [],
-    note: 'API tỷ giá ngoài và lịch chạy SYS01 chưa triển khai. Tỷ giá 26.000 VND/USD đang là con số minh họa, không dùng để quy đổi thật.'
+    note: 'API tỷ giá ngoài và lịch cập nhật chưa triển khai. Tỷ giá 26.000 VND/USD đang là con số minh họa, không dùng để quy đổi thật.'
 
   },
   'tx-add': {
     title: 'Ghi nhận giao dịch',
-    desc: 'UC03 · Tạo giao dịch Thu / Chi / Bản nháp',
+    desc: 'Tạo giao dịch thu, chi hoặc bản nháp',
     fields: [
       ['type', 'Loại giao dịch', 'select', ['Chi tiêu', 'Thu nhập']],
       ['amount', 'Số tiền (VND)', 'number'],
@@ -1159,7 +1159,7 @@ const FIELDS = {
   },
   transfer: {
     title: 'Chuyển giữa các ví',
-    desc: 'UC03 · Chuyển nội bộ không tính thu / chi',
+    desc: 'Chuyển nội bộ không tính thu hoặc chi',
     fields: [
       ['from', 'Từ ví', 'select', ['Vietcombank', 'Tiền mặt', 'MoMo', 'Quỹ ngoại tệ']],
       ['to', 'Đến ví', 'select', ['MoMo', 'Vietcombank', 'Tiền mặt', 'Quỹ ngoại tệ']],
@@ -1172,7 +1172,7 @@ const FIELDS = {
   },
   'wallet-add': {
     title: 'Tạo ví / tài khoản',
-    desc: 'UC02 · Mở ví, ghi nhận số dư đầu kỳ',
+    desc: 'Mở ví và ghi nhận số dư đầu kỳ',
     fields: [
       ['name', 'Tên ví', 'text'],
       [
@@ -1196,19 +1196,19 @@ const FIELDS = {
   },
   'category-add': {
     title: 'Tạo danh mục cá nhân',
-    desc: 'FR03.05 · Danh mục thu / chi',
+    desc: 'Danh mục thu hoặc chi',
     fields: [['name', 'Tên danh mục', 'text'], ['type', 'Loại danh mục', 'select', ['Chi tiêu', 'Thu nhập']]]
 
   },
   'category-edit': {
     title: 'Chỉnh sửa danh mục',
-    desc: 'Giao diện thao tác theo FR03.05',
+    desc: 'Cập nhật thông tin và trạng thái danh mục',
     fields: [['name', 'Tên danh mục mới', 'text'], ['state', 'Trạng thái', 'select', ['Đang hoạt động', 'Lưu trữ']]]
 
   },
   'budget-add': {
     title: 'Thiết lập ngân sách',
-    desc: 'UC05 · Hạn mức theo danh mục và tháng',
+    desc: 'Hạn mức theo danh mục và tháng',
     fields: [
       [
         'category',
@@ -1231,7 +1231,7 @@ const FIELDS = {
   },
   'recurring-add': {
     title: 'Lập lịch giao dịch định kỳ',
-    desc: 'UC04 · Nhắc bản nháp hoặc tự động ghi sổ',
+    desc: 'Nhắc bản nháp hoặc tự động ghi sổ',
     fields: [
       ['name', 'Tên khoản định kỳ', 'text'],
       ['amount', 'Số tiền', 'number'],
@@ -1245,7 +1245,7 @@ const FIELDS = {
   },
   'loan-add': {
     title: 'Thêm khoản vay / nợ',
-    desc: 'UC06 · Vay và cho vay vi mô',
+    desc: 'Quản lý khoản vay và cho vay',
     fields: [
       ['name', 'Tên khoản vay', 'text'],
       ['kind', 'Loại', 'select', ['Đi vay', 'Cho vay']],
@@ -1259,7 +1259,7 @@ const FIELDS = {
   },
   'loan-pay': {
     title: 'Ghi nhận kỳ trả nợ',
-    desc: 'UC07 · Bắt buộc tách nợ gốc và lãi / phí',
+    desc: 'Tách riêng nợ gốc và lãi hoặc phí',
     fields: [
       ['loan', 'Khoản vay', 'select', ['Vay mua laptop', 'Khoản vay học tập']],
       ['principal', 'Số tiền gốc trả', 'number'],
@@ -1272,7 +1272,7 @@ const FIELDS = {
   },
   'gold-add': {
     title: 'Ghi nhận tài sản vàng',
-    desc: 'UC08 · Chỉ gồm vàng nhẫn 9999 và SJC',
+    desc: 'Theo dõi vàng nhẫn 9999 và vàng miếng SJC',
     fields: [
       ['type', 'Loại vàng', 'select', ['Nhẫn tròn trơn 9999', 'Vàng miếng SJC']],
       ['weight', 'Khối lượng (chỉ)', 'number'],
@@ -1284,7 +1284,7 @@ const FIELDS = {
   },
   'gold-revalue': {
     title: 'Cập nhật định giá vàng',
-    desc: 'FR08.01 · Lưu ngày định giá',
+    desc: 'Lưu giá trị và ngày định giá',
     fields: [
       ['type', 'Tài sản', 'select', ['Nhẫn tròn trơn 9999', 'Vàng miếng SJC']],
       ['unit', 'Thị giá hiện tại / chỉ', 'number'],
@@ -1295,7 +1295,7 @@ const FIELDS = {
   },
   'goal-add': {
     title: 'Tạo mục tiêu tài chính',
-    desc: 'UC09 · Tiến độ và kế hoạch tích lũy',
+    desc: 'Theo dõi tiến độ và kế hoạch tích lũy',
     fields: [
       ['name', 'Tên mục tiêu', 'text'],
       ['target', 'Giá trị mục tiêu (VND)', 'number'],
@@ -1306,7 +1306,7 @@ const FIELDS = {
   },
   'goal-allocate': {
     title: 'Phân bổ vào mục tiêu',
-    desc: 'BR10 · Không làm tăng tổng tài sản',
+    desc: 'Không làm tăng tổng tài sản',
     fields: [
       ['name', 'Mục tiêu', 'select', ['Quỹ khẩn cấp', 'Laptop mới', 'Du lịch cuối năm']],
       ['amount', 'Số tiền phân bổ', 'number'],
@@ -1317,7 +1317,7 @@ const FIELDS = {
   },
   'broadcast-add': {
     title: 'Soạn thông báo hệ thống',
-    desc: 'UC13 · Admin broadcast (chỉ mô phỏng UI)',
+    desc: 'Thông báo toàn hệ thống',
     fields: [
       ['title', 'Tiêu đề', 'text'],
       ['level', 'Mức ưu tiên', 'select', ['Thông tin', 'Cảnh báo', 'Khẩn cấp']],
@@ -1328,39 +1328,39 @@ const FIELDS = {
   },
   'admin-category-add': {
     title: 'Danh mục hệ thống mặc định',
-    desc: 'FR13.01 · Dành cho người dùng mới',
+    desc: 'Áp dụng cho người dùng mới',
     fields: [['name', 'Tên danh mục', 'text'], ['type', 'Loại', 'select', ['Chi tiêu', 'Thu nhập']]]
 
   },
   'admin-category-edit': {
     title: 'Điều chỉnh danh mục mặc định',
-    desc: 'FR13.01 · Không ảnh hưởng giao dịch cũ',
+    desc: 'Không ảnh hưởng giao dịch cũ',
     fields: [['name', 'Tên danh mục', 'text']]
 
   },
   'admin-config': {
     title: 'Tham số hệ thống',
-    desc: 'FR13.02 · Cần quyền Admin thật khi triển khai',
+    desc: 'Yêu cầu quyền quản trị hệ thống',
     fields: [['budget', 'Ngưỡng cảnh báo (%)', 'number'], ['upload', 'Giới hạn dung lượng xuất (MB)', 'number']]
 
   },
-  'profile-edit': { title: 'Cập nhật hồ sơ', desc: 'UC01 · Hồ sơ người dùng', fields: [['name', 'Tên hiển thị', 'text']] },
+  'profile-edit': { title: 'Cập nhật hồ sơ', desc: 'Hồ sơ người dùng', fields: [['name', 'Tên hiển thị', 'text']] },
   'password': {
     title: 'Đổi mật khẩu',
-    desc: 'FR01.04 · Chỉ hiển thị form, không nhận/gửi mật khẩu thực',
+    desc: 'Cập nhật mật khẩu tài khoản',
     fields: [],
     note: 'Mẫu thao tác đổi mật khẩu không có input trong phiên bản UI vì backend chưa có xác thực an toàn. Chỉ bổ sung form thật sau khi hoàn thiện HTTPS, hash mật khẩu, quản lý JWT và thu hồi phiên.'
 
   },
   'currency-setting': {
     title: 'Tiền cơ sở của tài khoản',
-    desc: 'FR04 · Cấu hình định dạng tiền',
+    desc: 'Cấu hình định dạng tiền',
     fields: [['currency', 'Tiền cơ sở', 'select', ['VND', 'USD', 'EUR']]]
 
   },
   'notification-settings': {
     title: 'Tùy chọn nhắc nhở',
-    desc: 'FR05 · FR09 · FR13',
+    desc: 'Thiết lập cảnh báo và nhắc nhở',
     fields: [
       ['budget', 'Cảnh báo ngân sách', 'select', ['Bật', 'Tắt']],
       ['loan', 'Nhắc khoản vay', 'select', ['Bật', 'Tắt']]
@@ -1369,40 +1369,40 @@ const FIELDS = {
   },
   'account-delete': {
     title: 'Quyền quản lý dữ liệu cá nhân',
-    desc: 'NFR07 · Quy trình yêu cầu xóa',
+    desc: 'Quy trình yêu cầu xóa dữ liệu',
     fields: [],
     note: 'Khi có backend, cần xác thực lại chủ sở hữu, xác nhận yêu cầu và thiết kế chính sách lưu trữ phù hợp pháp luật. Bản demo không thao tác dữ liệu tài khoản.'
 
   },
   'admin-user-lock': {
     title: 'Khóa tài khoản người dùng',
-    desc: 'UC12 · Lý do bắt buộc; cần revoke token khi thực thi',
+    desc: 'Yêu cầu lý do và thu hồi phiên đăng nhập',
     fields: [['reason', 'Lý do khóa', 'textarea']]
 
   },
   'admin-user-unlock': {
     title: 'Mở khóa tài khoản',
-    desc: 'UC12 · Có audit log khi thực thi',
+    desc: 'Ghi nhật ký khi thực thi',
     fields: [['reason', 'Ghi chú xử lý', 'textarea']]
 
   },
   'recurring-toggle': {
     title: 'Thay đổi trạng thái định kỳ',
-    desc: 'UC04 · Tạm dừng / kích hoạt lịch',
+    desc: 'Tạm dừng hoặc kích hoạt lịch',
     fields: [],
-    note: 'Đây là hành động hiển thị demo. Dữ liệu định kỳ không được cập nhật cho đến khi hoàn thiện API và SYS02.'
+    note: 'Đây là hành động hiển thị demo. Dữ liệu định kỳ không được cập nhật cho đến khi hoàn thiện API và tác vụ nền.'
 
   },
   'loan-view': {
     title: 'Lịch thanh toán',
-    desc: 'UC06 · UC07 · Kỳ hạn gốc, lãi / phí',
+    desc: 'Kỳ hạn gốc, lãi và phí',
     fields: [],
     note: 'Bảng kỳ thanh toán chi tiết sẽ được lấy từ API sau khi có schema LoanPayment và tính toán dư nợ trong backend.'
 
   },
   'admin-logs': {
     title: 'Admin Audit Log',
-    desc: 'FR13 · FR14',
+    desc: 'Nhật ký thao tác quản trị',
     fields: [],
     note: 'Nhật ký phải được backend ghi nhận bất biến và tuyệt đối không chứa số dư / giao dịch cá nhân. Hiện chưa có dữ liệu audit thật.'
 
@@ -1461,7 +1461,7 @@ ${def.fields.map(fieldHTML).join('')}\
 function showDetails(id) {
   const t = transactions.find(row => row.id === id);
   if (!t) return;
-  document.querySelector('#modal-overline').textContent = 'FR03 · FR04 · Chi tiết giao dịch';
+  document.querySelector('#modal-overline').textContent = 'CHI TIẾT GIAO DỊCH';
   document.querySelector('#modal-title').textContent = t.name;
   document.querySelector('#modal-content').innerHTML = `<dl class="detail-grid">\
 <div>\

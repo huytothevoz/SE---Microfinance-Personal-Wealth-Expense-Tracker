@@ -1,7 +1,7 @@
 /**
  * Dữ liệu tĩnh dùng trong các màn hình chưa nối API. KHÔNG phải dữ liệu tài chính thật.
  * Không dùng để tính số dư thật, ghi sổ hay ra quyết định tài chính.
- * Nguồn đối chiếu: SRS Elaboration FR01–FR15, UC01–UC13.
+ * Dữ liệu minh họa cho các màn hình chưa kết nối API.
  */
 export const wallets = [
   {
