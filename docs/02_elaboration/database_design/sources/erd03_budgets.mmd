@@ -1,0 +1,76 @@
+erDiagram
+    %% ========================================================
+    %% ERD03: BUDGETS & RECURRING SCHEDULES (FR05, FR06)
+    %% ========================================================
+
+    USERS ||--o{ BUDGETS : "thiet_lap_han_muc"
+    USERS ||--o{ RECURRING_SCHEDULES : "cau_hinh_dinh_ky"
+
+    CATEGORIES ||--o{ BUDGETS : "ap_dung_danh_muc"
+    CATEGORIES ||--o{ RECURRING_SCHEDULES : "phan_loai_dinh_ky"
+
+    WALLETS ||--o{ RECURRING_SCHEDULES : "trich_tien_tu_vi"
+
+    RECURRING_SCHEDULES ||--o{ RECURRING_EXECUTIONS : "sinh_ky_thuc_thi"
+    RECURRING_EXECUTIONS ||--o| FINANCIAL_TRANSACTIONS : "tao_giao_dich"
+
+    USERS {
+        bigint id PK
+        varchar email UK "Email nguoi dung"
+    }
+
+    WALLETS {
+        bigint id PK
+        varchar name "Ten vi trich tien"
+        decimal cached_balance "So du vi kha dung"
+    }
+
+    CATEGORIES {
+        bigint id PK
+        varchar name "Ten danh muc chi tieu"
+        enum category_type "EXPENSE"
+    }
+
+    BUDGETS {
+        bigint id PK
+        bigint user_id FK "ON DELETE CASCADE"
+        bigint category_id FK "ON DELETE RESTRICT"
+        date budget_month "Ngay dau thang YYYY-MM-01"
+        decimal limit_amount "Han muc thang > 0"
+        decimal spent_amount "Tien da chi trong thang"
+        enum alert_level "NORMAL / YELLOW_80 / RED_100"
+        boolean is_yellow_sent "Da bao 80%"
+        boolean is_red_sent "Da bao 100%"
+        enum status "ACTIVE / ARCHIVED"
+    }
+
+    RECURRING_SCHEDULES {
+        bigint id PK
+        bigint user_id FK "ON DELETE CASCADE"
+        bigint wallet_id FK "ON DELETE RESTRICT"
+        bigint category_id FK "ON DELETE SET NULL"
+        varchar name "Ten khoan dinh ky / Goi dang ky"
+        decimal amount "So tien dinh ky > 0"
+        char currency "ISO-4217"
+        enum frequency "DAILY / WEEKLY / MONTHLY / YEARLY"
+        tinyint day_of_month "Ngay chot ky 1..31"
+        date next_due_date "Ngay den han ke tiep"
+        enum execution_mode "DRAFT_REMINDER / AUTO_POST"
+        enum status "ACTIVE / PAUSED / CANCELLED"
+    }
+
+    RECURRING_EXECUTIONS {
+        bigint id PK
+        bigint recurring_schedule_id FK "ON DELETE CASCADE"
+        date due_date "Ngay chot ky thanh toan"
+        bigint transaction_id FK "Giao dich da sinh"
+        enum status "PENDING / COMPLETED / FAILED"
+        datetime executed_at "Thoi diem xu ly"
+        varchar error_message "Loi neu that bai"
+    }
+
+    FINANCIAL_TRANSACTIONS {
+        bigint id PK
+        decimal amount "So tien ghi so"
+        date occurred_on "Ngay phat sinh"
+    }

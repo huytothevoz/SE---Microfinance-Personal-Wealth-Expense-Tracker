@@ -1,0 +1,231 @@
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% ACTORS (Tác nhân tương tác)
+    %% ==========================================
+    class GuestActor {
+        <<Actor: Khách vãng lai A01-G>>
+        +register(fullName, email, password, currency)
+        +login(email, password)
+        +requestPasswordReset(email)
+        +submitOtpResetPassword(email, otp, newPassword)
+    }
+
+    class EndUserActor {
+        <<Actor: Người dùng A01>>
+        +getProfile()
+        +updateProfile(fullName, baseCurrency)
+        +changePassword(oldPassword, newPassword)
+        +logout()
+    }
+
+    class AdminActor {
+        <<Actor: Quản trị viên A02>>
+        +listUsers(page, filter)
+        +lockUser(userId, reason)
+        +unlockUser(userId)
+        +viewAuditLogs(page)
+    }
+
+    %% ==========================================
+    %% BOUNDARY LAYER (Controllers)
+    %% ==========================================
+    class AuthController {
+        <<Boundary>>
+        +register(dto: RegisterRequestDTO): ResponseEntity
+        +login(dto: LoginRequestDTO): ResponseEntity
+        +refreshToken(refreshToken: String): ResponseEntity
+        +requestPasswordReset(dto: ForgotPasswordDTO): ResponseEntity
+        +verifyOtpAndResetPassword(dto: ResetPasswordDTO): ResponseEntity
+        +logout(userId: UUID): ResponseEntity
+    }
+
+    class UserController {
+        <<Boundary>>
+        +getProfile(userId: UUID): ResponseEntity
+        +updateProfile(userId: UUID, dto: UpdateProfileDTO): ResponseEntity
+        +changePassword(userId: UUID, dto: ChangePasswordDTO): ResponseEntity
+    }
+
+    class AdminController {
+        <<Boundary>>
+        +getUsers(page: int, search: String): ResponseEntity
+        +lockUser(userId: UUID, dto: LockUserDTO): ResponseEntity
+        +unlockUser(userId: UUID): ResponseEntity
+        +getAuditLogs(page: int): ResponseEntity
+    }
+
+    %% ==========================================
+    %% CONTROL LAYER (Services)
+    %% ==========================================
+    class AuthService {
+        <<Control>>
+        -userDAO: UserDAO
+        -tokenDAO: PasswordResetDAO
+        -jwtProvider: JwtTokenProvider
+        -passwordEncoder: Argon2PasswordEncoder
+        +register(dto: RegisterRequestDTO): User
+        +authenticate(email: String, password: String): TokenPair
+        +refreshAccessToken(refreshToken: String): TokenPair
+        +initiatePasswordReset(email: String): void
+        +resetPasswordWithOtp(email: String, otp: String, newPassword: String): boolean
+        +revokeUserTokens(userId: UUID): void
+    }
+
+    class UserService {
+        <<Control>>
+        -userDAO: UserDAO
+        -passwordEncoder: Argon2PasswordEncoder
+        +getUserProfile(userId: UUID): User
+        +updateProfile(userId: UUID, dto: UpdateProfileDTO): User
+        +changePassword(userId: UUID, oldPass: String, newPass: String): void
+    }
+
+    class AdminService {
+        <<Control>>
+        -userDAO: UserDAO
+        -auditDAO: AuditLogDAO
+        -authService: AuthService
+        +listUsers(page: int, search: String): Page~User~
+        +lockUserAccount(adminId: UUID, targetUserId: UUID, reason: String): void
+        +unlockUserAccount(adminId: UUID, targetUserId: UUID): void
+        +getAuditHistory(page: int): Page~AdminAuditLog~
+    }
+
+    %% ==========================================
+    %% DATA ACCESS LAYER (DAOs)
+    %% ==========================================
+    class UserDAO {
+        <<DataAccess>>
+        +findById(id: UUID): Optional~User~
+        +findByEmail(email: String): Optional~User~
+        +existsByEmail(email: String): boolean
+        +save(user: User): User
+        +updateStatus(id: UUID, status: UserStatus): void
+        +findUsers(page: int, search: String): Page~User~
+    }
+
+    class PasswordResetDAO {
+        <<DataAccess>>
+        +findByUserId(userId: UUID): Optional~PasswordResetToken~
+        +save(token: PasswordResetToken): void
+        +deleteByUserId(userId: UUID): void
+    }
+
+    class AuditLogDAO {
+        <<DataAccess>>
+        +save(log: AdminAuditLog): void
+        +findAll(page: int): Page~AdminAuditLog~
+        +findByTargetUserId(targetId: UUID): List~AdminAuditLog~
+    }
+
+    %% ==========================================
+    %% DOMAIN ENTITIES & VALUE OBJECTS
+    %% ==========================================
+    class User {
+        <<Entity>>
+        -id: UUID
+        -fullName: String
+        -email: String
+        -passwordHash: String
+        -role: UserRole
+        -status: UserStatus
+        -baseCurrency: String
+        -createdAt: DateTime
+        -updatedAt: DateTime
+        +validatePassword(plainPassword: String, encoder: PasswordEncoder): boolean
+        +changePassword(newPasswordHash: String): void
+        +updateProfile(fullName: String, baseCurrency: String): void
+        +lock(): void
+        +unlock(): void
+        +isActive(): boolean
+    }
+
+    class PasswordResetToken {
+        <<Entity>>
+        -userId: UUID
+        -tokenHash: String
+        -attempts: int
+        -expiresAt: DateTime
+        -createdAt: DateTime
+        +verifyOtp(inputOtp: String): boolean
+        +incrementAttempts(): void
+        +isExpired(): boolean
+        +isExceededAttempts(): boolean
+    }
+
+    class AdminAuditLog {
+        <<Entity>>
+        -id: UUID
+        -adminUserId: UUID
+        -targetUserId: UUID
+        -action: String
+        -reason: String
+        -createdAt: DateTime
+    }
+
+    class UserRole {
+        <<Enumeration>>
+        USER
+        ADMIN
+    }
+
+    class UserStatus {
+        <<Enumeration>>
+        ACTIVE
+        LOCKED
+    }
+
+    %% ==========================================
+    %% RELATIONSHIPS & INTERACTIONS
+    %% ==========================================
+    %% Actors -> Boundary
+    GuestActor ..> AuthController : interacts (HTTP/REST)
+    EndUserActor ..> AuthController : logout
+    EndUserActor ..> UserController : interacts (HTTP/REST)
+    AdminActor ..> AdminController : moderates (HTTP/REST)
+
+    %% Boundary -> Control
+    AuthController --> AuthService : delegates
+    UserController --> UserService : delegates
+    AdminController --> AdminService : delegates
+
+    %% Control -> Control / Boundary coordination
+    AdminService --> AuthService : revokes_tokens (BR11)
+
+    %% Control -> DataAccess
+    AuthService --> UserDAO : queries/persists
+    AuthService --> PasswordResetDAO : manages_otp
+    UserService --> UserDAO : queries/updates
+    AdminService --> UserDAO : locks/unlocks
+    AdminService --> AuditLogDAO : logs_action
+
+    %% DataAccess -> Entities
+    UserDAO ..> User : maps/persists
+    PasswordResetDAO ..> PasswordResetToken : maps/persists
+    AuditLogDAO ..> AdminAuditLog : maps/persists
+
+    %% Entity Relationships
+    User "1" o-- "0..1" PasswordResetToken : requests (FR01)
+    User "1" o-- "0..*" AdminAuditLog : targeted_in (FR13)
+    User --> UserRole : typed_by
+    User --> UserStatus : state_of
+
+    %% ==========================================
+    %% STYLES & HIGHLIGHTS (BCE+D Color Palette)
+    %% ==========================================
+    style AuthController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style UserController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style AdminController fill:#E0E7FF,stroke:#4338CA,stroke-width:2px
+    style AuthService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style UserService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style AdminService fill:#FEF3C7,stroke:#D97706,stroke-width:2px
+    style UserDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style PasswordResetDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style AuditLogDAO fill:#FCE7F3,stroke:#DB2777,stroke-width:2px
+    style User fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style PasswordResetToken fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style AdminAuditLog fill:#ECFDF5,stroke:#059669,stroke-width:2px
+    style UserRole fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px
+    style UserStatus fill:#F8FAFC,stroke:#94A3B8,stroke-width:1px

@@ -6,9 +6,9 @@ namespace WealthFlow\Modules\Recurring;
 
 use Exception;
 use InvalidArgumentException;
-use WealthFlow\Http\JsonResponse;
-use WealthFlow\Http\Request;
-use WealthFlow\Modules\Auth\AuthContext;
+use WealthFlow\Core\AuthContext;
+use WealthFlow\Core\JsonResponse;
+use WealthFlow\Core\Request;
 
 final class RecurringController
 {

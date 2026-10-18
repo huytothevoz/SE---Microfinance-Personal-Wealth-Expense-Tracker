@@ -9,31 +9,31 @@ use InvalidArgumentException;
 use PDOException;
 use RuntimeException;
 use Throwable;
-use WealthFlow\Config\Database;
-use WealthFlow\Modules\Wallets\WalletRepository;
+use WealthFlow\Core\Database;
+use WealthFlow\Modules\Wallets\WalletDAO;
 
 final class LedgerService
 {
-    private TransactionRepository $txRepo;
-    private WalletRepository $walletRepo;
-    private CategoryRepository $catRepo;
+    private LedgerDAO $txDao;
+    private WalletDAO $walletDao;
+    private CategoryDAO $catDao;
     private ExchangeRateService $fxService;
 
     public function __construct(
-        ?TransactionRepository $txRepo = null,
-        ?WalletRepository $walletRepo = null,
-        ?CategoryRepository $catRepo = null,
+        ?LedgerDAO $txDao = null,
+        ?WalletDAO $walletDao = null,
+        ?CategoryDAO $catDao = null,
         ?ExchangeRateService $fxService = null
     ) {
-        $this->txRepo = $txRepo ?? new TransactionRepository();
-        $this->walletRepo = $walletRepo ?? new WalletRepository();
-        $this->catRepo = $catRepo ?? new CategoryRepository();
+        $this->txDao = $txDao ?? new LedgerDAO();
+        $this->walletDao = $walletDao ?? new WalletDAO();
+        $this->catDao = $catDao ?? new CategoryDAO();
         $this->fxService = $fxService ?? new ExchangeRateService();
     }
 
     public function getPdo(): \PDO
     {
-        return $this->txRepo->getPdo();
+        return $this->txDao->getPdo();
     }
 
     /**
@@ -47,7 +47,7 @@ final class LedgerService
         }
 
         $hash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
-        $record = $this->txRepo->findIdempotency($userId, $key);
+        $record = $this->txDao->findIdempotency($userId, $key);
 
         if ($record !== null) {
             if ($record['request_hash'] !== $hash) {
@@ -75,7 +75,7 @@ final class LedgerService
             return;
         }
         $hash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
-        $this->txRepo->saveIdempotency($userId, $key, $hash, $txId, $code, json_encode($response, JSON_THROW_ON_ERROR));
+        $this->txDao->saveIdempotency($userId, $key, $hash, $txId, $code, json_encode($response, JSON_THROW_ON_ERROR));
     }
 
     /**
@@ -89,7 +89,7 @@ final class LedgerService
         int $code,
         callable $operation
     ): array {
-        $pdo = $this->txRepo->getPdo();
+        $pdo = $this->txDao->getPdo();
         $ownsTransaction = !$pdo->inTransaction();
         if ($ownsTransaction) {
             $pdo->beginTransaction();
@@ -162,31 +162,30 @@ final class LedgerService
     {
         $walletId = (int) ($dto['walletId'] ?? 0);
         $categoryId = (int) ($dto['categoryId'] ?? 0);
-        $amount = (float) ($dto['amount'] ?? 0);
-        $description = trim((string) ($dto['description'] ?? 'Chi tiêu'));
-        $occurredOn = $dto['occurredOn'] ?? date('Y-m-d');
+        $amount = $this->validateAmount($dto['amount'] ?? null, 'Số tiền chi tiêu');
+        $description = $this->validateDescription($dto['description'] ?? null, 'Chi tiêu');
+        $occurredOn = $this->validateDate((string) ($dto['occurredOn'] ?? date('Y-m-d')));
 
-        if ($amount <= 0) {
-            throw new InvalidArgumentException('Số tiền chi tiêu phải lớn hơn 0.');
-        }
-
-        $wallet = $this->walletRepo->findByIdAndUser($walletId, $userId);
+        $wallet = $this->walletDao->findActiveForUpdate($walletId, $userId);
         if (!$wallet) {
-            throw new InvalidArgumentException('Ví thanh toán không tồn tại hoặc không thuộc quyền sở hữu.');
+            throw new InvalidArgumentException('Ví thanh toán không hoạt động, không tồn tại hoặc không thuộc quyền sở hữu.');
         }
 
-        $currency = strtoupper($dto['currency'] ?? $wallet['currency']);
+        $currency = $this->validateWalletCurrency($dto['currency'] ?? null, (string) $wallet['currency']);
 
-        $category = $this->catRepo->findByIdAndUser($categoryId, $userId);
+        $category = $this->catDao->findByIdAndUser($categoryId, $userId);
         if (!$category) {
             throw new InvalidArgumentException('Danh mục chi tiêu không tồn tại hoặc không thuộc quyền sở hữu.');
+        }
+        if (strtoupper((string) $category['category_type']) !== 'EXPENSE') {
+            throw new InvalidArgumentException('Giao dịch chi tiêu phải dùng danh mục EXPENSE.');
         }
 
         // FR04: Snapshot exchange rate to base currency (VND)
         $fxRate = $this->fxService->getSnapshotRate($currency, 'VND');
         $amountBase = $this->fxService->convertToBase($amount, $fxRate);
 
-        $pdo = $this->txRepo->getPdo();
+        $pdo = $this->txDao->getPdo();
         $ownsTransaction = !$pdo->inTransaction();
         if ($ownsTransaction) {
             $pdo->beginTransaction();
@@ -194,7 +193,7 @@ final class LedgerService
 
         try {
             // 1. Insert Transaction
-            $txId = $this->txRepo->createTransaction([
+            $txId = $this->txDao->createTransaction([
                 'userId' => $userId,
                 'categoryId' => $categoryId,
                 'type' => 'EXPENSE',
@@ -209,11 +208,11 @@ final class LedgerService
             ]);
 
             // 2. Ledger Accounts
-            $expenseAccountId = $this->catRepo->getOrCreateCategoryLedgerAccountId($userId, $categoryId, 'EXPENSE');
-            $walletAccountId = $this->walletRepo->getOrCreateWalletLedgerAccountId($userId, $walletId);
+            $expenseAccountId = $this->catDao->getOrCreateCategoryLedgerAccountId($userId, $categoryId, 'EXPENSE');
+            $walletAccountId = $this->walletDao->getOrCreateWalletLedgerAccountId($userId, $walletId);
 
             // 3. Double-entry: DEBIT Expense, CREDIT Asset
-            $this->txRepo->createLedgerEntry([
+            $this->txDao->createLedgerEntry([
                 'transactionId' => $txId,
                 'ledgerAccountId' => $expenseAccountId,
                 'entrySide' => 'DEBIT',
@@ -223,7 +222,7 @@ final class LedgerService
                 'fxRateSnapshot' => $fxRate,
             ]);
 
-            $this->txRepo->createLedgerEntry([
+            $this->txDao->createLedgerEntry([
                 'transactionId' => $txId,
                 'ledgerAccountId' => $walletAccountId,
                 'entrySide' => 'CREDIT',
@@ -234,7 +233,7 @@ final class LedgerService
             ]);
 
             // 4. Update cached balance
-            $newBalance = $this->walletRepo->adjustBalance(
+            $newBalance = $this->walletDao->adjustBalance(
                 $walletId,
                 -$amount,
                 $wallet['wallet_type'] === 'CREDIT'
@@ -284,37 +283,36 @@ final class LedgerService
     {
         $walletId = (int) ($dto['walletId'] ?? 0);
         $categoryId = (int) ($dto['categoryId'] ?? 0);
-        $amount = (float) ($dto['amount'] ?? 0);
-        $description = trim((string) ($dto['description'] ?? 'Thu nhập'));
-        $occurredOn = $dto['occurredOn'] ?? date('Y-m-d');
+        $amount = $this->validateAmount($dto['amount'] ?? null, 'Số tiền thu nhập');
+        $description = $this->validateDescription($dto['description'] ?? null, 'Thu nhập');
+        $occurredOn = $this->validateDate((string) ($dto['occurredOn'] ?? date('Y-m-d')));
 
-        if ($amount <= 0) {
-            throw new InvalidArgumentException('Số tiền thu nhập phải lớn hơn 0.');
-        }
-
-        $wallet = $this->walletRepo->findByIdAndUser($walletId, $userId);
+        $wallet = $this->walletDao->findActiveForUpdate($walletId, $userId);
         if (!$wallet) {
-            throw new InvalidArgumentException('Ví nhận tiền không tồn tại hoặc không thuộc quyền sở hữu.');
+            throw new InvalidArgumentException('Ví nhận tiền không hoạt động, không tồn tại hoặc không thuộc quyền sở hữu.');
         }
 
-        $currency = strtoupper($dto['currency'] ?? $wallet['currency']);
+        $currency = $this->validateWalletCurrency($dto['currency'] ?? null, (string) $wallet['currency']);
 
-        $category = $this->catRepo->findByIdAndUser($categoryId, $userId);
+        $category = $this->catDao->findByIdAndUser($categoryId, $userId);
         if (!$category) {
             throw new InvalidArgumentException('Danh mục thu nhập không tồn tại hoặc không thuộc quyền sở hữu.');
+        }
+        if (strtoupper((string) $category['category_type']) !== 'INCOME') {
+            throw new InvalidArgumentException('Giao dịch thu nhập phải dùng danh mục INCOME.');
         }
 
         $fxRate = $this->fxService->getSnapshotRate($currency, 'VND');
         $amountBase = $this->fxService->convertToBase($amount, $fxRate);
 
-        $pdo = $this->txRepo->getPdo();
+        $pdo = $this->txDao->getPdo();
         $ownsTransaction = !$pdo->inTransaction();
         if ($ownsTransaction) {
             $pdo->beginTransaction();
         }
 
         try {
-            $txId = $this->txRepo->createTransaction([
+            $txId = $this->txDao->createTransaction([
                 'userId' => $userId,
                 'categoryId' => $categoryId,
                 'type' => 'INCOME',
@@ -328,11 +326,11 @@ final class LedgerService
                 'originalTransactionId' => null,
             ]);
 
-            $incomeAccountId = $this->catRepo->getOrCreateCategoryLedgerAccountId($userId, $categoryId, 'INCOME');
-            $walletAccountId = $this->walletRepo->getOrCreateWalletLedgerAccountId($userId, $walletId);
+            $incomeAccountId = $this->catDao->getOrCreateCategoryLedgerAccountId($userId, $categoryId, 'INCOME');
+            $walletAccountId = $this->walletDao->getOrCreateWalletLedgerAccountId($userId, $walletId);
 
             // Double entry: DEBIT Asset Wallet, CREDIT Income
-            $this->txRepo->createLedgerEntry([
+            $this->txDao->createLedgerEntry([
                 'transactionId' => $txId,
                 'ledgerAccountId' => $walletAccountId,
                 'entrySide' => 'DEBIT',
@@ -342,7 +340,7 @@ final class LedgerService
                 'fxRateSnapshot' => $fxRate,
             ]);
 
-            $this->txRepo->createLedgerEntry([
+            $this->txDao->createLedgerEntry([
                 'transactionId' => $txId,
                 'ledgerAccountId' => $incomeAccountId,
                 'entrySide' => 'CREDIT',
@@ -352,7 +350,7 @@ final class LedgerService
                 'fxRateSnapshot' => $fxRate,
             ]);
 
-            $newBalance = $this->walletRepo->adjustBalance($walletId, $amount);
+            $newBalance = $this->walletDao->adjustBalance($walletId, $amount);
 
             if ($ownsTransaction) {
                 $pdo->commit();
@@ -399,19 +397,15 @@ final class LedgerService
     {
         $fromWalletId = (int) ($dto['fromWalletId'] ?? 0);
         $toWalletId = (int) ($dto['toWalletId'] ?? 0);
-        $amount = (float) ($dto['amount'] ?? 0);
-        $description = trim((string) ($dto['description'] ?? 'Chuyển tiền nội bộ'));
-        $occurredOn = $dto['occurredOn'] ?? date('Y-m-d');
+        $amount = $this->validateAmount($dto['amount'] ?? null, 'Số tiền chuyển');
+        $description = $this->validateDescription($dto['description'] ?? null, 'Chuyển tiền nội bộ');
+        $occurredOn = $this->validateDate((string) ($dto['occurredOn'] ?? date('Y-m-d')));
 
         if ($fromWalletId === $toWalletId) {
             throw new InvalidArgumentException('Ví nguồn và ví đích phải khác nhau.');
         }
-        if ($amount <= 0) {
-            throw new InvalidArgumentException('Số tiền chuyển phải lớn hơn 0.');
-        }
-
-        $fromWallet = $this->walletRepo->findByIdAndUser($fromWalletId, $userId);
-        $toWallet = $this->walletRepo->findByIdAndUser($toWalletId, $userId);
+        $fromWallet = $this->walletDao->findActiveForUpdate($fromWalletId, $userId);
+        $toWallet = $this->walletDao->findActiveForUpdate($toWalletId, $userId);
 
         if (!$fromWallet || !$toWallet) {
             throw new InvalidArgumentException('Ví nguồn hoặc ví đích không hợp lệ hoặc không thuộc quyền sở hữu.');
@@ -427,21 +421,21 @@ final class LedgerService
             $amountBase = $this->fxService->convertToBase($amount, $this->fxService->getSnapshotRate($fromCurrency, 'VND'));
         } else {
             // Cross-currency transfer
-            $destAmount = isset($dto['destAmount']) && (float) $dto['destAmount'] > 0
-                ? (float) $dto['destAmount']
+            $destAmount = isset($dto['destAmount']) && trim((string) $dto['destAmount']) !== ''
+                ? $this->validateAmount($dto['destAmount'], 'Số tiền ví đích')
                 : (float) bcmul((string) $amount, $this->fxService->getSnapshotRate($fromCurrency, $toCurrency), 4);
             $fxRate = $this->fxService->getSnapshotRate($fromCurrency, 'VND');
             $amountBase = $this->fxService->convertToBase($amount, $fxRate);
         }
 
-        $pdo = $this->txRepo->getPdo();
+        $pdo = $this->txDao->getPdo();
         $ownsTransaction = !$pdo->inTransaction();
         if ($ownsTransaction) {
             $pdo->beginTransaction();
         }
 
         try {
-            $txId = $this->txRepo->createTransaction([
+            $txId = $this->txDao->createTransaction([
                 'userId' => $userId,
                 'categoryId' => null,
                 'type' => 'TRANSFER',
@@ -455,11 +449,11 @@ final class LedgerService
                 'originalTransactionId' => null,
             ]);
 
-            $fromAccountId = $this->walletRepo->getOrCreateWalletLedgerAccountId($userId, $fromWalletId);
-            $toAccountId = $this->walletRepo->getOrCreateWalletLedgerAccountId($userId, $toWalletId);
+            $fromAccountId = $this->walletDao->getOrCreateWalletLedgerAccountId($userId, $fromWalletId);
+            $toAccountId = $this->walletDao->getOrCreateWalletLedgerAccountId($userId, $toWalletId);
 
             // Double entry: DEBIT Destination Wallet, CREDIT Source Wallet
-            $this->txRepo->createLedgerEntry([
+            $this->txDao->createLedgerEntry([
                 'transactionId' => $txId,
                 'ledgerAccountId' => $toAccountId,
                 'entrySide' => 'DEBIT',
@@ -469,7 +463,7 @@ final class LedgerService
                 'fxRateSnapshot' => $fxRate,
             ]);
 
-            $this->txRepo->createLedgerEntry([
+            $this->txDao->createLedgerEntry([
                 'transactionId' => $txId,
                 'ledgerAccountId' => $fromAccountId,
                 'entrySide' => 'CREDIT',
@@ -479,12 +473,12 @@ final class LedgerService
                 'fxRateSnapshot' => $fxRate,
             ]);
 
-            $newFromBalance = $this->walletRepo->adjustBalance(
+            $newFromBalance = $this->walletDao->adjustBalance(
                 $fromWalletId,
                 -$amount,
                 $fromWallet['wallet_type'] === 'CREDIT'
             );
-            $newToBalance = $this->walletRepo->adjustBalance($toWalletId, $destAmount);
+            $newToBalance = $this->walletDao->adjustBalance($toWalletId, $destAmount);
 
             if ($ownsTransaction) {
                 $pdo->commit();
@@ -520,7 +514,11 @@ final class LedgerService
      */
     public function reverseTransaction(int $userId, int $txId, string $reason = 'Điều chỉnh sai sót'): array
     {
-        $tx = $this->txRepo->findByIdAndUser($txId, $userId);
+        $reason = trim($reason);
+        if ($reason === '' || mb_strlen($reason, 'UTF-8') > 120) {
+            throw new InvalidArgumentException('Lý do đảo giao dịch cần từ 1 đến 120 ký tự.');
+        }
+        $tx = $this->txDao->findByIdAndUser($txId, $userId);
         if (!$tx) {
             throw new InvalidArgumentException('Giao dịch không tồn tại hoặc không thuộc quyền sở hữu.');
         }
@@ -534,7 +532,7 @@ final class LedgerService
             throw new RuntimeException('Giao dịch không có bút toán đối ứng hợp lệ để đảo.', 500);
         }
 
-        $pdo = $this->txRepo->getPdo();
+        $pdo = $this->txDao->getPdo();
         $ownsTransaction = !$pdo->inTransaction();
         if ($ownsTransaction) {
             $pdo->beginTransaction();
@@ -542,12 +540,12 @@ final class LedgerService
 
         try {
             // 1. Create reversal transaction record
-            $revTxId = $this->txRepo->createTransaction([
+            $revTxId = $this->txDao->createTransaction([
                 'userId' => $userId,
                 'categoryId' => $tx['category_id'],
                 'type' => $tx['transaction_type'],
                 'status' => 'REVERSED',
-                'description' => '[ĐẢO] ' . $tx['description'] . ' - Lý do: ' . $reason,
+                'description' => mb_substr('[ĐẢO] ' . $tx['description'] . ' - Lý do: ' . $reason, 0, 255, 'UTF-8'),
                 'currency' => $tx['currency'],
                 'amount' => (float) $tx['amount'],
                 'fxRateSnapshot' => (float) $tx['fx_rate_snapshot'],
@@ -559,7 +557,7 @@ final class LedgerService
             // 2. Reverse each ledger entry (swap DEBIT <-> CREDIT)
             foreach ($entries as $entry) {
                 $reversedSide = $entry['entry_side'] === 'DEBIT' ? 'CREDIT' : 'DEBIT';
-                $this->txRepo->createLedgerEntry([
+                $this->txDao->createLedgerEntry([
                     'transactionId' => $revTxId,
                     'ledgerAccountId' => (int) $entry['ledger_account_id'],
                     'entrySide' => $reversedSide,
@@ -572,17 +570,17 @@ final class LedgerService
                 // If account is linked to a wallet, adjust balance back
                 if (!empty($entry['wallet_id'])) {
                     $walletId = (int) $entry['wallet_id'];
-                    $wallet = $this->walletRepo->findByIdAndUser($walletId, $userId);
+                    $wallet = $this->walletDao->findByIdAndUser($walletId, $userId);
                     if ($wallet) {
                         $entryAmt = (float) $entry['amount_original'];
                         $delta = $entry['entry_side'] === 'DEBIT' ? -$entryAmt : $entryAmt;
-                        $this->walletRepo->adjustBalance($walletId, $delta, true);
+                        $this->walletDao->adjustBalance($walletId, $delta, true);
                     }
                 }
             }
 
             // 3. Mark original transaction as REVERSED
-            if (!$this->txRepo->markReversed($txId, $userId)) {
+            if (!$this->txDao->markReversed($txId, $userId)) {
                 throw new RuntimeException('Giao dịch đã được đảo hoặc không còn ở trạng thái POSTED.', 422);
             }
 
@@ -602,5 +600,48 @@ final class LedgerService
             }
             throw $e;
         }
+    }
+
+    private function validateAmount(mixed $value, string $label): float
+    {
+        $text = trim((string) ($value ?? ''));
+        if (!preg_match('/^(?:0|[1-9]\d{0,15})(?:\.\d{1,8})?$/D', $text)) {
+            throw new InvalidArgumentException("{$label} không hợp lệ; tối đa 16 chữ số nguyên và 8 chữ số thập phân.");
+        }
+        $amount = (float) $text;
+        if (!is_finite($amount) || $amount <= 0) {
+            throw new InvalidArgumentException("{$label} phải lớn hơn 0.");
+        }
+        return $amount;
+    }
+
+    private function validateDescription(mixed $value, string $default): string
+    {
+        $description = trim((string) ($value ?? $default));
+        if ($description === '' || mb_strlen($description, 'UTF-8') > 255) {
+            throw new InvalidArgumentException('Nội dung giao dịch cần từ 1 đến 255 ký tự.');
+        }
+        return $description;
+    }
+
+    private function validateDate(string $value): string
+    {
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        if ($date === false || $date->format('Y-m-d') !== $value) {
+            throw new InvalidArgumentException('Ngày giao dịch không đúng định dạng YYYY-MM-DD.');
+        }
+        return $value;
+    }
+
+    private function validateWalletCurrency(mixed $requested, string $walletCurrency): string
+    {
+        $walletCurrency = strtoupper($walletCurrency);
+        $currency = $requested === null || trim((string) $requested) === ''
+            ? $walletCurrency
+            : strtoupper(trim((string) $requested));
+        if ($currency !== $walletCurrency) {
+            throw new InvalidArgumentException('Tiền tệ giao dịch phải trùng với tiền tệ của ví.');
+        }
+        return $currency;
     }
 }

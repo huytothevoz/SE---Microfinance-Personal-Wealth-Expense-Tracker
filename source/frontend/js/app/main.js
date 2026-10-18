@@ -1,9 +1,22 @@
-import { icon, safe, money, USER_NAV, ADMIN_NAV, META } from './ui-core.js';
-import { createPages } from './pages.js?v=wallet-ui-5';
+import { icon, safe, USER_NAV, ADMIN_NAV, META } from './ui-core.js';
+import { createPages } from './pages.js?v=wallet-refactor-20261018-5';
 import { FIELDS } from './forms.js';
-import { transactions } from '../data/fixtures.js';
 import { authApi, errorMessage } from '../services/auth-api.js';
-import { createWalletFeature } from './wallets.js?v=wallet-ui-5';
+import { preloadViews } from './view-loader.js';
+import {
+  handleWalletAction,
+  handleWalletSubmit,
+  isWalletAction,
+  isWalletForm
+} from './wallets.js?v=wallet-refactor-20261018-5';
+import {
+  handleTransactionAction,
+  handleTransactionSubmit,
+  isTransactionAction,
+  isTransactionForm,
+  showTransactionDetails,
+  updateTransactionTable
+} from './transactions.js?v=wallet-refactor-20261018-5';
 
 let currentUser;
 try {
@@ -27,18 +40,12 @@ const state = {
   admin: false,
   txFilter: 'all',
   search: '',
+  categoryFilter: 'all',
   onlyActiveWallets: true,
-  reportRange: '6m',
-  walletItems: [],
-  walletSummary: null,
-  walletLoading: false,
-  walletError: '',
-  walletRateWarning: '',
-  walletRatesSynced: false
+  reportRange: '6m'
 
 };
 const app = document.querySelector('#app-content'); const nav = document.querySelector('#sidebar-nav'); const sidebar = document.querySelector('#sidebar'); const dialog = document.querySelector('#action-dialog');
-let walletFeature;
 function heading(id, buttons = '') {
   const [name, description] = META[id];
   return `<div class="page-heading">\
@@ -84,20 +91,34 @@ ${state.admin ? 'Quay về người dùng' : 'Khu vực quản trị'}\
   document.body.classList.toggle('admin-mode', state.admin);
 
 }
-function navigate(page) {
+async function navigate(page) {
   if (page.startsWith('admin-') && currentUser.role !== 'ADMIN') page = 'overview';
   state.admin = page.startsWith('admin-') && currentUser.role === 'ADMIN';
   if (!META[page]) return;
   state.page = page;
   renderNav();
   document.querySelector('#breadcrumb-name').textContent = META[page][0];
-  app.innerHTML = PAGES[page]();
-  if (page === 'wallets') walletFeature?.load();
-  closeSidebar();
-  const hash = '#' + page;
-  if (location.hash !== hash) history.replaceState(null, '', hash);
-  window.scrollTo({ top: 0, behavior: 'instant' });
-
+  app.setAttribute('aria-busy', 'true');
+  try {
+    const content = await PAGES[page]();
+    if (typeof content !== 'string' || content.trim() === '') {
+      throw new Error('Module trang không trả về nội dung hiển thị.');
+    }
+    app.innerHTML = content;
+  } catch (error) {
+    console.error(`Không thể hiển thị trang ${page}:`, error);
+    app.innerHTML = `<section class="panel page-load-error" role="alert">
+      <div class="panel-title"><div><h2>Không thể tải trang</h2>
+      <p>${safe(error?.message || 'Đã xảy ra lỗi khi khởi tạo giao diện.')}</p></div></div>
+      <button type="button" class="btn btn--outline btn-sm" data-page="${safe(page)}">Thử tải lại</button>
+    </section>`;
+  } finally {
+    app.removeAttribute('aria-busy');
+    closeSidebar();
+    const hash = '#' + page;
+    if (location.hash !== hash) history.replaceState(null, '', hash);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
 }
 function closeSidebar() {
   sidebar.classList.remove('is-open');
@@ -105,13 +126,7 @@ function closeSidebar() {
   document.querySelector('#sidebar-toggle').setAttribute('aria-expanded', 'false');
 
 }
-const { PAGES, txTable } = createPages({ state, heading, btn, panel, currentUser });
-walletFeature = createWalletFeature({
-  state,
-  dialog,
-  toast,
-  render: () => { if (state.page === 'wallets') app.innerHTML = PAGES.wallets(); }
-});
+const { PAGES } = createPages({ state, heading, btn, panel, currentUser });
 function toast(message) {
   const stack = document.querySelector('#toast-stack');
   const item = document.createElement('div');
@@ -130,151 +145,54 @@ function fieldHTML([name, label, type, options]) {
   const required = !['note', 'receive', 'interest'].includes(name);
   const constraint = required ? 'required' : '';
   let control;
-  if (type === 'select') control = `<select id="field-${safe(name)}" name="${safe(name)}" ${constraint}>${options.map(o => `<option>${safe(o)}</option>`).join('')}</select>`; else if (type === 'textarea') control = `<textarea id="field-${safe(name)}" name="${safe(name)}" rows="3" ${constraint} placeholder="Nhập ${safe(label.toLowerCase())}..."></textarea>`; else control = `<input id="field-${safe(name)}" name="${safe(name)}" type="${type}" ${type === 'number' ? 'min="0" step="any"' : ''} ${constraint} placeholder="${type === 'number' ? '0' : safe(label)}">`;
-  return `<div class="field">\
-<label for="field-${safe(name)}">${safe(label)}${required ? ' *' : ''}</label>${control}</div>`;
-
+  if (type === 'select') {
+    control = `<select id="field-${safe(name)}" name="${safe(name)}" ${constraint}>${options.map(o => `<option>${safe(o)}</option>`).join('')}</select>`;
+  } else if (type === 'textarea') {
+    control = `<textarea id="field-${safe(name)}" name="${safe(name)}" rows="3" ${constraint} placeholder="Nhập ${safe(label.toLowerCase())}..."></textarea>`;
+  } else {
+    control = `<input id="field-${safe(name)}" name="${safe(name)}" type="${type}" ${type === 'number' ? 'min="0" step="any"' : ''} ${constraint} placeholder="${type === 'number' ? '0' : safe(label)}">`;
+  }
+  return `
+    <div class="field">
+      <label for="field-${safe(name)}">${safe(label)}${required ? ' *' : ''}</label>
+      ${control}
+    </div>
+  `;
 }
+
 function openAction(action) {
   const def = FIELDS[action];
   if (!def) {
     toast('Tính năng này đang được phát triển.');
     return;
-
   }
   document.querySelector('#modal-overline').textContent = def.desc;
   document.querySelector('#modal-title').textContent = def.title;
   const content = document.querySelector('#modal-content');
-  content.innerHTML = `<p class="form-hint">\
-${safe(def.note || 'Chức năng lưu đang được phát triển. Dữ liệu nhập sẽ không được ghi nhận.')}</p>${def.fields.length ? `<form id="action-form">\
-<div class="form-grid">\
-${def.fields.map(fieldHTML).join('')}\
-</div>\
-<div class="modal-footer">\
-<button type="button" class="btn btn--outline btn-sm" data-close-modal>Hủy</button>\
-<button type="submit" class="btn btn--primary btn-sm">Kiểm tra biểu mẫu</button>\
-</div>\
-</form>` : `<div class="modal-footer">\
-<button type="button" class="btn btn--primary btn-sm" data-close-modal>Đóng</button>\
-</div>`}`;
+  content.innerHTML = `
+    <p class="form-hint">
+      ${safe(def.note || 'Chức năng lưu đang được phát triển. Dữ liệu nhập sẽ không được ghi nhận.')}
+    </p>
+    ${def.fields.length ? `
+      <form id="action-form">
+        <div class="form-grid">
+          ${def.fields.map(fieldHTML).join('')}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn--outline btn-sm" data-close-modal>Hủy</button>
+          <button type="submit" class="btn btn--primary btn-sm">Kiểm tra biểu mẫu</button>
+        </div>
+      </form>
+    ` : `
+      <div class="modal-footer">
+        <button type="button" class="btn btn--primary btn-sm" data-close-modal>Đóng</button>
+      </div>
+    `}
+  `;
   dialog.showModal();
-
 }
-function showDetails(id) {
-  const t = transactions.find(row => row.id === id);
-  if (!t) return;
-  document.querySelector('#modal-overline').textContent = 'CHI TIẾT GIAO DỊCH';
-  document.querySelector('#modal-title').textContent = t.name;
-  document.querySelector('#modal-content').innerHTML = `<dl class="detail-grid">\
-<div>\
-<dt>Mã giao dịch</dt>\
-<dd>\
-${safe(t.id)}\
-</dd>\
-</div>\
-<div>\
-<dt>Trạng thái</dt>\
-<dd>\
-${t.status === 'DRAFT' ? 'Bản nháp (chưa ghi sổ)' : 'Posted (đã ghi sổ)'}\
-</dd>\
-</div>\
-<div>\
-<dt>Danh mục</dt>\
-<dd>\
-${safe(t.category)}\
-</dd>\
-</div>\
-<div>\
-<dt>Ngày giao dịch</dt>\
-<dd>\
-${safe(t.date)}\
-</dd>\
-</div>\
-<div>\
-<dt>Ví liên quan</dt>\
-<dd>\
-${safe(t.wallet)}\
-</dd>\
-</div>\
-<div>\
-<dt>Số tiền</dt>\
-<dd>\
-${money(Math.abs(t.amount))}\
-</dd>\
-</div>\
-<div>\
-<dt>Tiền tệ</dt>\
-<dd>\
-${safe(t.currency)}\
-</dd>\
-</div>\
-<div>\
-<dt>Tỷ giá snapshot</dt>\
-<dd>\
-${safe(t.rate)}\
-</dd>\
-</div>\
-</dl>\
-<hr class="modal-rule">\
-<p class="description">\
-${safe(t.details)}\
-</p>\
-<div class="hint-box">\
-<strong>Bút toán Nợ/Có:</strong> xem thông tin ghi sổ và các giao dịch điều chỉnh liên quan trong lịch sử.</div>\
-<div class="modal-footer">\
-<button class="btn btn--outline btn-sm" data-close-modal>Đóng</button>\
-${t.status === 'POSTED' ? `<button class="btn btn--primary btn-sm" data-action="reversal">Xem quy trình đảo giao dịch</button>` : ''}</div>`;
-  dialog.showModal();
 
-}
-function exportTransactionsCSV() {
-  const rows = [
-    [
-      'Mã giao dịch',
-      'Tên giao dịch',
-      'Danh mục',
-      'Ví',
-      'Ngày',
-      'Số tiền VND',
-      'Trạng thái'
-
-    ],
-    ...transactions.map(t => [
-      t.id,
-      t.name,
-      t.category,
-      t.wallet,
-      t.date,
-      String(t.amount),
-      t.status
-
-    ])
-
-  ];
-  const neutralize = v => {
-    const text = String(v).replace(/^[\s\u0000-\u001f]+/, '');
-    return /^[=+\-@]/.test(text) ? "'" + String(v) : String(v);
-
-  };
-  const csv = rows.map(row => row.map(col => '"' + neutralize(col).replaceAll('"', '""') + '"').join(',')).join('\r\n');
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = 'wealthflow_giao_dich.csv';
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-  toast('Đã xuất danh sách giao dịch hiện hiển thị.');
-
-}
-function applyTransactionSearch() {
-  const filtered = transactions.filter(t => (state.txFilter === 'all' || t.type === state.txFilter) && [t.name, t.id, t.category, t.wallet].join(' ').toLocaleLowerCase('vi').includes(state.search.toLocaleLowerCase('vi')));
-  const target = document.querySelector('#transaction-table');
-  if (target) target.innerHTML = txTable(filtered);
-
-}
-function handleAction(action, trigger) {
-  if (walletFeature.handleAction(action, trigger)) return;
+function handleAction(action, actionElement) {
   if (action === 'password') { openPasswordForm(); return; }
   if (action === 'logout') {
     authApi('logout', {}).then(() => location.replace('index.html?auth=login')).catch(error => toast(errorMessage(error)));
@@ -294,19 +212,16 @@ function handleAction(action, trigger) {
     return;
 
   }
-  if (action === 'export') {
-    exportTransactionsCSV();
+  if (isWalletAction(action)) {
+    handleWalletAction(action, actionElement, { state, dialog, toast, navigate });
     return;
-
+  }
+  if (isTransactionAction(action)) {
+    handleTransactionAction(action, actionElement, { state, dialog, toast, navigate });
+    return;
   }
   if (action === 'reconcile') {
     toast('Tính năng đối soát đang được phát triển. Chưa có kết quả đối soát được xác nhận.');
-    return;
-
-  }
-  if (action === 'reversal') {
-    dialog.close();
-    toast('Chức năng đảo giao dịch đang được phát triển. Giao dịch gốc không bị thay đổi.');
     return;
 
   }
@@ -350,9 +265,9 @@ document.addEventListener('click', event => {
     return;
 
   }
-  const detail = event.target.closest('[data-detail]');
+  const detail = event.target.closest('[data-transaction-detail]');
   if (detail) {
-    showDetails(detail.dataset.detail);
+    showTransactionDetails(detail.dataset.transactionDetail, { dialog, toast });
     return;
 
   }
@@ -362,6 +277,12 @@ document.addEventListener('click', event => {
     navigate('transactions');
     return;
 
+  }
+  const categoryFilter = event.target.closest('[data-category-filter]');
+  if (categoryFilter) {
+    state.categoryFilter = categoryFilter.dataset.categoryFilter;
+    navigate('categories');
+    return;
   }
   const action = event.target.closest('[data-action]');
   if (action) {
@@ -375,15 +296,20 @@ document.addEventListener('click', event => {
 document.addEventListener('input', event => {
   if (event.target.id === 'transaction-search') {
     state.search = event.target.value;
-    applyTransactionSearch();
+    updateTransactionTable(state);
 
   }
 
 });
-document.addEventListener('submit', async event => {
-  if (['wallet-create-form', 'wallet-adjust-form', 'wallet-edit-form', 'wallet-archive-form', 'wallet-delete-form'].includes(event.target.id)) {
+document.addEventListener('submit', event => {
+  if (isWalletForm(event.target)) {
     event.preventDefault();
-    await walletFeature.handleSubmit(event.target);
+    handleWalletSubmit(event.target, { dialog, toast, navigate });
+    return;
+  }
+  if (isTransactionForm(event.target)) {
+    event.preventDefault();
+    handleTransactionSubmit(event.target, { dialog, toast, navigate });
     return;
   }
   if (event.target.id !== 'action-form') return;
@@ -441,4 +367,5 @@ window.addEventListener('hashchange', () => {
   }
 
 });
+preloadViews(Object.keys(META));
 const initial = decodeURIComponent(location.hash.slice(1)); if (initial.startsWith('admin-')) state.admin = true; navigate(META[initial] ? initial : 'overview');

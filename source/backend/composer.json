@@ -1,13 +1,13 @@
 {
   "name": "voz/wealthflow",
-  "description": "WealthFlow FR01 authentication and registration email",
+  "description": "WealthFlow - Smart Personal Wealth & Microfinance Tracker Backend",
   "type": "project",
   "require": {
     "php": ">=8.2",
-    "ext-pdo": "*",
-    "ext-pdo_mysql": "*",
     "ext-bcmath": "*",
     "ext-curl": "*",
+    "ext-pdo": "*",
+    "ext-pdo_mysql": "*",
     "ext-mbstring": "*",
     "ext-openssl": "*",
     "firebase/php-jwt": "^6.11 || ^7.0",

@@ -6,21 +6,21 @@ namespace WealthFlow\Modules\Budgets;
 
 use InvalidArgumentException;
 use WealthFlow\Modules\Notifications\NotificationService;
-use WealthFlow\Modules\Transactions\CategoryRepository;
+use WealthFlow\Modules\Transactions\CategoryDAO;
 
 final class BudgetService
 {
-    private BudgetRepository $repo;
-    private CategoryRepository $catRepo;
+    private BudgetDAO $budgetDao;
+    private CategoryDAO $catDao;
     private NotificationService $notifService;
 
     public function __construct(
-        ?BudgetRepository $repo = null,
-        ?CategoryRepository $catRepo = null,
+        ?BudgetDAO $budgetDao = null,
+        ?CategoryDAO $catDao = null,
         ?NotificationService $notifService = null
     ) {
-        $this->repo = $repo ?? new BudgetRepository();
-        $this->catRepo = $catRepo ?? new CategoryRepository();
+        $this->budgetDao = $budgetDao ?? new BudgetDAO();
+        $this->catDao = $catDao ?? new CategoryDAO();
         $this->notifService = $notifService ?? new NotificationService();
     }
 
@@ -33,7 +33,7 @@ final class BudgetService
             throw new InvalidArgumentException('Hạn mức ngân sách phải lớn hơn 0.');
         }
 
-        $category = $this->catRepo->findByIdAndUser($categoryId, $userId);
+        $category = $this->catDao->findByIdAndUser($categoryId, $userId);
         if (!$category) {
             throw new InvalidArgumentException('Danh mục không tồn tại hoặc không thuộc quyền sở hữu.');
         }
@@ -41,12 +41,12 @@ final class BudgetService
             throw new InvalidArgumentException('Chỉ có thể thiết lập ngân sách cho danh mục Chi phí (EXPENSE).');
         }
 
-        $existing = $this->repo->findByUserCategoryAndMonth($userId, $categoryId, $monthYear);
+        $existing = $this->budgetDao->findByUserCategoryAndMonth($userId, $categoryId, $monthYear);
         if ($existing !== null) {
             throw new InvalidArgumentException('Ngân sách cho danh mục này trong tháng ' . $monthYear . ' đã tồn tại. Vui lòng chỉnh sửa hạn mức thay vì tạo mới.');
         }
 
-        $budgetId = $this->repo->create($userId, $categoryId, $monthYear, $limitAmount);
+        $budgetId = $this->budgetDao->create($userId, $categoryId, $monthYear, $limitAmount);
         return $this->getBudgetDetail($budgetId, $userId, $monthYear);
     }
 
@@ -59,23 +59,23 @@ final class BudgetService
             throw new InvalidArgumentException('Hạn mức ngân sách phải lớn hơn 0.');
         }
 
-        $budget = $this->repo->findByIdAndUser($budgetId, $userId);
+        $budget = $this->budgetDao->findByIdAndUser($budgetId, $userId);
         if (!$budget) {
             throw new InvalidArgumentException('Ngân sách không tồn tại hoặc không thuộc quyền sở hữu.');
         }
 
-        $this->repo->updateLimit($budgetId, $userId, $newLimitAmount);
+        $this->budgetDao->updateLimit($budgetId, $userId, $newLimitAmount);
         $month = date('Y-m', strtotime($budget['budget_month']));
         return $this->getBudgetDetail($budgetId, $userId, $month);
     }
 
     public function archiveBudget(int $budgetId, int $userId): bool
     {
-        $budget = $this->repo->findByIdAndUser($budgetId, $userId);
+        $budget = $this->budgetDao->findByIdAndUser($budgetId, $userId);
         if (!$budget) {
             throw new InvalidArgumentException('Ngân sách không tồn tại hoặc không thuộc quyền sở hữu.');
         }
-        return $this->repo->archive($budgetId, $userId);
+        return $this->budgetDao->archive($budgetId, $userId);
     }
 
     /**
@@ -85,13 +85,13 @@ final class BudgetService
     public function getBudgetsForMonth(int $userId, ?string $monthYear = null): array
     {
         $month = $monthYear ?: date('Y-m');
-        $list = $this->repo->listByMonth($userId, $month);
+        $list = $this->budgetDao->listByMonth($userId, $month);
         $result = [];
 
         foreach ($list as $b) {
             $catId = (int) $b['category_id'];
             $limit = (float) $b['limit_amount'];
-            $spent = $this->repo->getCategoryNetExpenseInMonth($userId, $catId, $month);
+            $spent = $this->budgetDao->getCategoryNetExpenseInMonth($userId, $catId, $month);
             $usage = $limit > 0 ? round(($spent / $limit) * 100, 1) : 0;
             $remaining = max(0.0, $limit - $spent);
 
@@ -124,13 +124,13 @@ final class BudgetService
     public function checkBudgetAndNotify(int $userId, int $categoryId, string $occurredOn): ?array
     {
         $month = date('Y-m', strtotime($occurredOn));
-        $budget = $this->repo->findByUserCategoryAndMonth($userId, $categoryId, $month);
+        $budget = $this->budgetDao->findByUserCategoryAndMonth($userId, $categoryId, $month);
         if (!$budget) {
             return null;
         }
 
         $limit = (float) $budget['limit_amount'];
-        $spent = $this->repo->getCategoryNetExpenseInMonth($userId, $categoryId, $month);
+        $spent = $this->budgetDao->getCategoryNetExpenseInMonth($userId, $categoryId, $month);
         $usage = $limit > 0 ? ($spent / $limit) * 100 : 0;
         $categoryName = $budget['category_name'];
 
@@ -168,13 +168,13 @@ final class BudgetService
 
     private function getBudgetDetail(int $budgetId, int $userId, string $month): array
     {
-        $b = $this->repo->findByIdAndUser($budgetId, $userId);
+        $b = $this->budgetDao->findByIdAndUser($budgetId, $userId);
         if (!$b) {
             return [];
         }
         $catId = (int) $b['category_id'];
         $limit = (float) $b['limit_amount'];
-        $spent = $this->repo->getCategoryNetExpenseInMonth($userId, $catId, $month);
+        $spent = $this->budgetDao->getCategoryNetExpenseInMonth($userId, $catId, $month);
         $usage = $limit > 0 ? round(($spent / $limit) * 100, 1) : 0;
 
         return [

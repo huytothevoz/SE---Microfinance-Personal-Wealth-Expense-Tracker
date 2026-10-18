@@ -1,0 +1,84 @@
+<div class="page-heading">
+  <div>
+    <h1>Ví & tài khoản</h1>
+    <p>Quản lý tiền mặt, tài khoản ngân hàng, ví điện tử và các sổ tiết kiệm.</p>
+  </div>
+  <div class="page-actions">
+    <button type="button" class="btn btn--primary btn-sm" data-action="wallet-add">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Tạo ví mới
+    </button>
+    <button type="button" class="btn btn--outline btn-sm" data-action="rate-refresh">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/></svg>
+      Cập nhật tỷ giá
+    </button>
+  </div>
+</div>
+
+<div class="filter-row">
+  <p class="description">Quản lý tiền mặt, ngân hàng, ví điện tử và tài khoản tiết kiệm. Số dư ngoại tệ được quy đổi khi có tỷ giá hợp lệ.</p>
+  <button class="btn btn--outline btn-sm" data-action="wallet-toggle" id="wallet-toggle-btn">
+    <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/></svg>
+    <span id="wallet-toggle-text">Hiện ví lưu trữ</span>
+  </button>
+</div>
+
+<div class="card-grid section-gap" id="wallet-card-list">
+  <!-- Dynamic wallet cards rendered by wallets.js -->
+</div>
+
+<div class="info-grid">
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Tổng số dư các ví</h2>
+        <p>Chưa bao gồm tài sản vàng</p>
+      </div>
+      <div class="panel-tools"></div>
+    </div>
+    <div class="metric-list">
+      <div class="metric-item">
+        <span id="wallets-total-label">Tổng số dư quy đổi</span>
+        <strong id="wallets-total-balance">0 đ</strong>
+      </div>
+      <div class="metric-item">
+        <span>Ví đang sử dụng</span>
+        <strong id="wallets-active-count">0</strong>
+      </div>
+      <div class="metric-item">
+        <span>Ví đã lưu trữ</span>
+        <strong id="wallets-archived-count">0</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Quy đổi tiền tệ</h2>
+        <p>Tỷ giá tham khảo</p>
+      </div>
+      <div class="panel-tools"></div>
+    </div>
+    <div class="metric-list">
+      <div class="metric-item">
+        <span id="wallets-base-currency">VND (tiền cơ sở)</span>
+        <strong>1</strong>
+      </div>
+      <div class="metric-item">
+        <span>USD → VND</span>
+        <strong id="wallets-usd-rate">Chưa có tỷ giá</strong>
+      </div>
+      <div class="metric-item">
+        <span>EUR → tiền cơ sở</span>
+        <strong id="wallets-eur-rate">Chưa có tỷ giá</strong>
+      </div>
+      <div class="metric-item">
+        <span>Ghi nhận tỷ giá</span>
+        <strong id="wallets-rate-source">Chưa đồng bộ Vietcombank</strong>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="hint-box" style="margin-top:17px">Chỉ lưu trữ ví không còn số dư và không liên kết lịch định kỳ đang hoạt động. Số dư ban đầu phải được ghi nhận trong sổ tài chính.</div>

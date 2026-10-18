@@ -1,0 +1,47 @@
+WEALTHFLOW - HUONG DAN KHOI DONG & QUAN LY HE THONG (TUI CONTROL CENTER)
+========================================================================
+
+1. KHOI DONG TRUC TIEP BANG 1 CLICK / 1 DONG LENH
+------------------------------------------------------------------------
+* Tren Windows:
+  - Cach 1: Double-click vao file `run_wealthflow.bat`.
+  - Cach 2: Mo terminal PowerShell/CMD tai thu muc project, chay:
+      .\run_wealthflow.bat
+
+* Tren Linux / macOS:
+  - Mo Terminal tai thu muc project va chay:
+      chmod +x run_wealthflow.sh
+      ./run_wealthflow.sh
+
+2. GIAO DIEN DIEU KHIEN TRUCTIEP TREN TERMINAL (INTERACTIVE TUI MENU)
+------------------------------------------------------------------------
+Khi chay script, terminal se hien thi menu tuong tac truc quan:
+
+  [1] Khoi dong he thong (Start Web + DB) va Mo trinh duyet
+      -> Tu dong mo PHP Built-in Server (http://localhost:8080)
+      -> Tu dong tao va bat MySQL SE rieng biet (Port 3307)
+      -> Tu dong nap 28 migrations CSDL va mo trinh duyet Web
+  [2] Dung toan bo he thong (Stop Web va DB an toan)
+      -> Dung tien trinh Web va shutdown MySQL sach se, khong hong data
+  [3] Kiem tra trang thai chi tiet (Health Check & API status)
+      -> Kiem tra port 8080, port 3307 va goi /api/health
+  [4] Chay cap nhat CSDL Migrations (28 SQL files 001_ den 028_)
+  [5] Reset CSDL & Du lieu mau (Reset & Seed sach se)
+      -> Xoa & tao lai DB wealthflow, tai tao data demo
+  [6] Chay bo kiem thu tu dong (36 unit tests + 7 mail smoke tests)
+  [7] Xem nhat ky loi & email OTP gia lap (.eml) gan nhat
+  [8] Mo trinh duyet Web (http://localhost:8080/)
+  [0] Thoat (Exit)
+
+3. CO CHE CO LAP AN TOAN (SAFE ISOLATION)
+------------------------------------------------------------------------
+- Script tu dong tim kiem thu muc XAMPP tren cac o dia (D:\xampp, C:\xampp, E:\xampp...).
+- Su dung PHP Built-in Server (cong 8080) va instance MySQL rieng (cong 3307).
+- HOAN TOAN KHONG ghi de hay dung cham den Apache (port 80/8000) hoac MySQL 3306
+  cua XAMPP, dam bao an toan 100% cho cac project mon hoc khac (vi du: LTW).
+
+4. THONG TIN TAI KHOAN MAU (DEMO ACCOUNTS)
+------------------------------------------------------------------------
+- URL Ung dung: http://localhost:8080/
+- Nguoi dung mau: user1@gmail.com    | Mat khau: User1234
+- Quan tri vien:  admin@wealthflow.vn | Mat khau: Admin@1234

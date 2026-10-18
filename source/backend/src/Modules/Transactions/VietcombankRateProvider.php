@@ -8,7 +8,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use RuntimeException;
 
-final class VietcombankRateProvider
+class VietcombankRateProvider
 {
     public const SOURCE_URL = 'https://www.vietcombank.com.vn/api/exchangerates';
 
@@ -24,6 +24,7 @@ final class VietcombankRateProvider
         if ($handle === false) {
             throw new RuntimeException('Không thể khởi tạo kết nối tỷ giá.');
         }
+
         curl_setopt_array($handle, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 4,

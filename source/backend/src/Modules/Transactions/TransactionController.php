@@ -7,53 +7,56 @@ namespace WealthFlow\Modules\Transactions;
 use Exception;
 use InvalidArgumentException;
 use RuntimeException;
-use WealthFlow\Http\JsonResponse;
-use WealthFlow\Http\Request;
-use WealthFlow\Modules\Auth\AuthContext;
+use WealthFlow\Core\AuthContext;
+use WealthFlow\Core\JsonResponse;
+use WealthFlow\Core\Request;
 use WealthFlow\Modules\Budgets\BudgetService;
 
 final class TransactionController
 {
     private LedgerService $ledgerService;
-    private TransactionRepository $txRepo;
-    private CategoryRepository $catRepo;
+    private LedgerDAO $txRepo;
+    private CategoryDAO $catRepo;
+    private CategoryService $categoryService;
     private ExchangeRateService $fxService;
     private BudgetService $budgetService;
 
     public function __construct(
         ?LedgerService $ledgerService = null,
-        ?TransactionRepository $txRepo = null,
-        ?CategoryRepository $catRepo = null,
+        ?LedgerDAO $txRepo = null,
+        ?CategoryDAO $catRepo = null,
         ?ExchangeRateService $fxService = null,
-        ?BudgetService $budgetService = null
+        ?BudgetService $budgetService = null,
+        ?CategoryService $categoryService = null
     ) {
         $this->ledgerService = $ledgerService ?? new LedgerService();
-        $this->txRepo = $txRepo ?? new TransactionRepository();
-        $this->catRepo = $catRepo ?? new CategoryRepository();
+        $this->txRepo = $txRepo ?? new LedgerDAO();
+        $this->catRepo = $catRepo ?? new CategoryDAO();
         $this->fxService = $fxService ?? new ExchangeRateService();
         $this->budgetService = $budgetService ?? new BudgetService();
+        $this->categoryService = $categoryService ?? new CategoryService($this->catRepo);
     }
 
     public function list(Request $request): void
     {
-        $userId = AuthContext::getUserId($request);
-        $filters = [
-            'type' => $request->getQuery('type'),
-            'status' => $request->getQuery('status'),
-            'categoryId' => $request->getQuery('categoryId'),
-            'startDate' => $request->getQuery('startDate'),
-            'endDate' => $request->getQuery('endDate'),
-            'limit' => $request->getQuery('limit', 50),
-            'offset' => $request->getQuery('offset', 0),
-        ];
-
-        $transactions = $this->txRepo->listTransactions($userId, $filters);
-        JsonResponse::success(['transactions' => $transactions, 'count' => count($transactions)]);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        try {
+            $filters = $this->validatedListFilters($request);
+            $transactions = $this->txRepo->listTransactions($userId, $filters);
+            JsonResponse::success([
+                'transactions' => $transactions,
+                'count' => count($transactions),
+                'limit' => $filters['limit'],
+                'offset' => $filters['offset'],
+            ]);
+        } catch (InvalidArgumentException $error) {
+            JsonResponse::error('VALIDATION_ERROR', $error->getMessage(), 422);
+        }
     }
 
     public function show(Request $request, int $id): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $tx = $this->txRepo->findByIdAndUser($id, $userId);
 
         if (!$tx) {
@@ -66,7 +69,7 @@ final class TransactionController
 
     public function create(Request $request): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $body = $request->getBody();
         $idempotencyKey = $request->getIdempotencyKey();
         $type = strtoupper((string) ($body['type'] ?? 'EXPENSE'));
@@ -112,7 +115,7 @@ final class TransactionController
 
     public function transfer(Request $request): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $body = $request->getBody();
         $idempotencyKey = $request->getIdempotencyKey();
 
@@ -141,7 +144,7 @@ final class TransactionController
 
     public function reverse(Request $request, int $id): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $body = $request->getBody();
         $reason = trim((string) ($body['reason'] ?? 'Điều chỉnh sai sót'));
         $idempotencyKey = $request->getIdempotencyKey();
@@ -172,38 +175,43 @@ final class TransactionController
 
     public function listCategories(Request $request): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $type = $request->getQuery('type');
-        $categories = $this->catRepo->findAllByUser($userId, $type ? (string) $type : null);
-        JsonResponse::success(['categories' => $categories]);
+        $includeArchived = strtolower((string) $request->getQuery('includeArchived', 'false')) === 'true';
+        try {
+            JsonResponse::success($this->categoryService->list(
+                $userId,
+                $type === null ? null : (string) $type,
+                $includeArchived
+            ));
+        } catch (InvalidArgumentException $error) {
+            JsonResponse::error('VALIDATION_ERROR', $error->getMessage(), 422);
+        }
     }
 
     public function createCategory(Request $request): void
     {
-        $userId = AuthContext::getUserId($request);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $body = $request->getBody();
-        $name = trim((string) ($body['name'] ?? ''));
-        $type = strtoupper((string) ($body['type'] ?? 'EXPENSE'));
-
-        if ($name === '') {
-            JsonResponse::error('VALIDATION_ERROR', 'Tên danh mục không được để trống.', 422);
-            return;
-        }
-        if (!in_array($type, ['INCOME', 'EXPENSE'], true)) {
-            JsonResponse::error('VALIDATION_ERROR', 'Loại danh mục phải là INCOME hoặc EXPENSE.', 422);
-            return;
-        }
-
         try {
-            $id = $this->catRepo->create($userId, $name, $type);
-            JsonResponse::success(['id' => $id, 'name' => $name, 'type' => $type], 201);
-        } catch (Exception $e) {
-            JsonResponse::error('DUPLICATE_CATEGORY', 'Danh mục đã tồn tại: ' . $e->getMessage(), 409);
+            $category = $this->categoryService->create(
+                $userId,
+                (string) ($body['name'] ?? ''),
+                (string) ($body['type'] ?? 'EXPENSE')
+            );
+            JsonResponse::success(['category' => $category], 201);
+        } catch (InvalidArgumentException $error) {
+            JsonResponse::error('VALIDATION_ERROR', $error->getMessage(), 422);
+        } catch (RuntimeException $error) {
+            JsonResponse::error('DUPLICATE_CATEGORY', $error->getMessage(), $error->getCode() ?: 409);
+        } catch (Exception $error) {
+            JsonResponse::error('DUPLICATE_CATEGORY', 'Danh mục đã tồn tại.', 409);
         }
     }
 
     public function listRates(Request $request): void
     {
+        AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $rates = $this->fxService->getAllLatestRates();
         JsonResponse::success(['rates' => $rates]);
     }
@@ -233,5 +241,78 @@ final class TransactionController
         } catch (Exception $e) {
             JsonResponse::error('VALIDATION_ERROR', $e->getMessage(), 422);
         }
+    }
+
+    public function updateCategory(Request $request, int $id): void
+    {
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        $body = $request->getBody();
+        try {
+            $category = $this->categoryService->rename($userId, $id, (string) ($body['name'] ?? ''));
+            JsonResponse::success(['category' => $category, 'message' => 'Cập nhật danh mục thành công.']);
+        } catch (InvalidArgumentException $error) {
+            JsonResponse::error('VALIDATION_ERROR', $error->getMessage(), 422);
+        } catch (RuntimeException $error) {
+            $status = $error->getCode() === 404 ? 404 : 409;
+            JsonResponse::error($status === 404 ? 'NOT_FOUND' : 'DUPLICATE_CATEGORY', $error->getMessage(), $status);
+        } catch (Exception $error) {
+            JsonResponse::error('DUPLICATE_CATEGORY', 'Không thể đổi tên vì danh mục đã tồn tại.', 409);
+        }
+    }
+
+    public function archiveCategory(Request $request, int $id): void
+    {
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        try {
+            $result = $this->categoryService->archive($userId, $id);
+            JsonResponse::success($result + ['message' => 'Đã lưu trữ danh mục; lịch sử giao dịch được giữ nguyên.']);
+        } catch (RuntimeException $error) {
+            $status = $error->getCode() === 404 ? 404 : 409;
+            JsonResponse::error($status === 404 ? 'NOT_FOUND' : 'ARCHIVE_FAILED', $error->getMessage(), $status);
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function validatedListFilters(Request $request): array
+    {
+        $type = strtoupper(trim((string) $request->getQuery('type', '')));
+        $status = strtoupper(trim((string) $request->getQuery('status', '')));
+        $categoryId = trim((string) $request->getQuery('categoryId', ''));
+        $startDate = trim((string) $request->getQuery('startDate', ''));
+        $endDate = trim((string) $request->getQuery('endDate', ''));
+
+        if ($type !== '' && !in_array($type, ['INCOME', 'EXPENSE', 'TRANSFER'], true)) {
+            throw new InvalidArgumentException('Bộ lọc loại giao dịch không hợp lệ.');
+        }
+        if ($status !== '' && !in_array($status, ['DRAFT', 'POSTED', 'REVERSED'], true)) {
+            throw new InvalidArgumentException('Bộ lọc trạng thái giao dịch không hợp lệ.');
+        }
+        if ($categoryId !== '' && (!ctype_digit($categoryId) || (int) $categoryId < 1)) {
+            throw new InvalidArgumentException('Mã danh mục lọc không hợp lệ.');
+        }
+        foreach (['Ngày bắt đầu' => $startDate, 'Ngày kết thúc' => $endDate] as $label => $date) {
+            if ($date !== '' && !$this->isValidDate($date)) {
+                throw new InvalidArgumentException("{$label} không đúng định dạng YYYY-MM-DD.");
+            }
+        }
+        if ($startDate !== '' && $endDate !== '' && $startDate > $endDate) {
+            throw new InvalidArgumentException('Ngày bắt đầu không được sau ngày kết thúc.');
+        }
+
+        return [
+            'type' => $type,
+            'status' => $status,
+            'categoryId' => $categoryId,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'limit' => max(1, min(100, (int) $request->getQuery('limit', 50))),
+            'offset' => max(0, (int) $request->getQuery('offset', 0)),
+        ];
+    }
+
+    private function isValidDate(string $value): bool
+    {
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        return $date !== false && $date->format('Y-m-d') === $value;
     }
 }

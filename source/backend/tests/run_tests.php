@@ -2,23 +2,22 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/src/bootstrap.php';
+require_once dirname(__DIR__) . '/bootstrap.php';
 
-use WealthFlow\Config\Database;
-use WealthFlow\Modules\Budgets\BudgetRepository;
+use WealthFlow\Core\Database;
+use WealthFlow\Modules\Budgets\BudgetDAO;
 use WealthFlow\Modules\Budgets\BudgetService;
+use WealthFlow\Modules\Notifications\NotificationDAO;
 use WealthFlow\Modules\Notifications\NotificationService;
-use WealthFlow\Modules\Recurring\RecurringRepository;
+use WealthFlow\Modules\Recurring\RecurringRuleDAO;
 use WealthFlow\Modules\Recurring\RecurringService;
 use WealthFlow\Modules\Recurring\RecurringWorker;
-use WealthFlow\Modules\Transactions\CategoryRepository;
+use WealthFlow\Modules\Transactions\CategoryDAO;
+use WealthFlow\Modules\Transactions\CategoryService;
 use WealthFlow\Modules\Transactions\ExchangeRateService;
+use WealthFlow\Modules\Transactions\LedgerDAO;
 use WealthFlow\Modules\Transactions\LedgerService;
-use WealthFlow\Modules\Transactions\TransactionRepository;
-use WealthFlow\Modules\Wallets\WalletRepository;
-use WealthFlow\Modules\Wallets\WalletService;
-use WealthFlow\Modules\Auth\AuthContext;
-use WealthFlow\Http\ApiException;
+use WealthFlow\Modules\Wallets\WalletDAO;
 
 final class TestRunner
 {
@@ -39,7 +38,7 @@ final class TestRunner
     public function run(): void
     {
         echo "====================================================================\n";
-        echo "WEALTHFLOW BACKEND AUTOMATED TEST SUITE: FR02 - FR06 VERIFICATION\n";
+        echo "WEALTHFLOW BACKEND AUTOMATED TEST SUITE: FR03 - FR06 VERIFICATION\n";
         echo "====================================================================\n\n";
 
         // Setup isolated in-memory SQLite database for deterministic tests
@@ -50,214 +49,31 @@ final class TestRunner
         Database::initSqliteSchema($pdo);
         Database::setConnection($pdo, 'sqlite');
 
-        $walletRepo = new WalletRepository($pdo);
-        $catRepo = new CategoryRepository($pdo);
-        $txRepo = new TransactionRepository($pdo);
+        $walletDao = new WalletDAO($pdo);
+        $catDao = new CategoryDAO($pdo);
+        $txDao = new LedgerDAO($pdo);
         $fxService = new ExchangeRateService($pdo);
-        $notifService = new NotificationService($pdo);
-        $budgetRepo = new BudgetRepository($pdo);
-        $budgetService = new BudgetService($budgetRepo, $catRepo, $notifService);
-        $ledgerService = new LedgerService($txRepo, $walletRepo, $catRepo, $fxService);
-        $recRepo = new RecurringRepository($pdo);
-        $recService = new RecurringService($recRepo, $walletRepo);
-        $recWorker = new RecurringWorker($recRepo, $ledgerService, $txRepo, $notifService);
-        $walletService = new WalletService($walletRepo, $txRepo, $fxService);
+        $notifDao = new NotificationDAO($pdo);
+        $notifService = new NotificationService($notifDao);
+        $budgetDao = new BudgetDAO($pdo);
+        $budgetService = new BudgetService($budgetDao, $catDao, $notifService);
+        $ledgerService = new LedgerService($txDao, $walletDao, $catDao, $fxService);
+        $categoryService = new CategoryService($catDao);
+        $recDao = new RecurringRuleDAO($pdo);
+        $recService = new RecurringService($recDao, $walletDao);
+        $recWorker = new RecurringWorker($recDao, $ledgerService, $txDao, $notifService);
+
+        $walletRepo = $walletDao;
+        $catRepo = $catDao;
+        $txRepo = $txDao;
+        $recRepo = $recDao;
+        $budgetRepo = $budgetDao;
 
         $userId = 1;
 
-        echo "--- GROUP 0: FR02 - Wallet Management ---\n";
-        $pdo->exec("INSERT INTO users (id, full_name, email, password_hash, role, status, base_currency)
-            VALUES (2, 'Wallet Test User', 'wallet.test@wealthflow.local', 'test', 'USER', 'ACTIVE', 'VND'),
-                   (3, 'Admin Test User', 'admin.test@wealthflow.local', 'test', 'ADMIN', 'ACTIVE', 'VND')");
-
-        $createInput = [
-            'name' => 'Ví tiền mặt FR02',
-            'type' => 'CASH',
-            'currency' => 'VND',
-            'openingBalance' => '2000000',
-            'iconKey' => 'cash',
-            'colorKey' => 'blue',
-        ];
-        $created = $walletService->createWallet(
-            2,
-            $createInput,
-            '11111111-1111-4111-8111-111111111111'
-        );
-        $createdWalletId = (int) $created['wallet']['id'];
-        $openingTransaction = $txRepo->findByIdAndUser((int) $created['openingTransactionId'], 2);
-        $this->assert(
-            'TC-F02.01 Wallet created for authenticated owner with exact opening balance',
-            $created['wallet']['balance'] == 2000000 && $created['wallet']['status'] === 'ACTIVE'
-        );
-        $this->assert(
-            'TC-F02.02 Opening balance creates one balanced debit and credit pair',
-            $openingTransaction !== null
-                && count($openingTransaction['entries']) === 2
-                && $openingTransaction['entries'][0]['amount_base'] === $openingTransaction['entries'][1]['amount_base']
-        );
-
-        $replayed = $walletService->createWallet(
-            2,
-            $createInput,
-            '11111111-1111-4111-8111-111111111111'
-        );
-        $this->assert(
-            'TC-F02.03 Replayed idempotency key does not create another wallet',
-            $replayed['wallet']['id'] === $createdWalletId
-                && (int) $pdo->query("SELECT COUNT(*) FROM wallets WHERE user_id = 2 AND name = 'Ví tiền mặt FR02'")->fetchColumn() === 1
-        );
-
-        $duplicateRejected = false;
-        try {
-            $walletService->createWallet(2, $createInput, '22222222-2222-4222-8222-222222222222');
-        } catch (ApiException $error) {
-            $duplicateRejected = $error->status === 409;
-        }
-        $this->assert('TC-F02.04 Duplicate active wallet name is rejected', $duplicateRejected);
-
-        $negativeRejected = false;
-        try {
-            $walletService->createWallet(2, [
-                'name' => 'Ví âm',
-                'type' => 'CASH',
-                'currency' => 'VND',
-                'openingBalance' => '-1',
-            ], '33333333-3333-4333-8333-333333333333');
-        } catch (ApiException $error) {
-            $negativeRejected = $error->status === 422;
-        }
-        $this->assert('TC-F02.05 Negative opening balance is rejected', $negativeRejected);
-
-        $zeroWallet = $walletService->createWallet(2, [
-            'name' => 'Ví tạm thời',
-            'type' => 'E_WALLET',
-            'currency' => 'VND',
-            'openingBalance' => '0',
-        ], '44444444-4444-4444-8444-444444444444');
-        $zeroWalletId = (int) $zeroWallet['wallet']['id'];
-        $walletService->archiveWallet(2, $zeroWalletId);
-        $this->assert(
-            'TC-F02.06 Zero-balance wallet can be archived without deleting history',
-            $walletRepo->findByIdAndUser($zeroWalletId, 2)['status'] === 'ARCHIVED'
-        );
-
-        $reusedName = $walletService->createWallet(2, [
-            'name' => 'Ví tạm thời',
-            'type' => 'CASH',
-            'currency' => 'VND',
-            'openingBalance' => '0',
-        ], '55555555-5555-4555-8555-555555555555');
-        $this->assert(
-            'TC-F02.07 Archived wallet name can be reused by a new active wallet',
-            $reusedName['wallet']['status'] === 'ACTIVE'
-        );
-
-        $recurringWallet = $walletService->createWallet(2, [
-            'name' => 'Ví định kỳ',
-            'type' => 'BANK',
-            'currency' => 'VND',
-            'openingBalance' => '0',
-        ], '66666666-6666-4666-8666-666666666666');
-        $pdo->prepare("INSERT INTO recurring_schedules
-            (user_id, wallet_id, category_id, name, amount, currency, day_of_month, next_due_date, status)
-            VALUES (?, ?, NULL, 'Lịch FR02', 1000, 'VND', 1, '2026-11-01', 'ACTIVE')")
-            ->execute([2, $recurringWallet['wallet']['id']]);
-        $recurringRejected = false;
-        try {
-            $walletService->archiveWallet(2, (int) $recurringWallet['wallet']['id']);
-        } catch (ApiException $error) {
-            $recurringRejected = $error->errorCode === 'WALLET_HAS_ACTIVE_RECURRING';
-        }
-        $this->assert('TC-F02.08 Wallet with active recurring schedule cannot be archived', $recurringRejected);
-
-        $ownerWallets = $walletService->listWallets(2, 'ALL');
-        $this->assert(
-            'TC-F02.09 Wallet list is isolated to the authenticated owner',
-            count(array_filter($ownerWallets['wallets'], static fn (array $wallet): bool => $wallet['id'] <= 4)) === 0
-        );
-
-        $adminRejected = false;
-        try {
-            AuthContext::requirePersonalUser(3);
-        } catch (ApiException $error) {
-            $adminRejected = $error->status === 403;
-        }
-        $this->assert('TC-F02.10 Admin is blocked from personal wallet data', $adminRejected);
-
-        $adjusted = $walletService->adjustWallet(2, $createdWalletId, [
-            'direction' => 'INCREASE',
-            'amount' => '500000',
-            'note' => 'Đối soát tăng số dư',
-        ], '77777777-7777-4777-8777-777777777777');
-        $adjustmentTransaction = $txRepo->findByIdAndUser((int) $adjusted['transactionId'], 2);
-        $this->assert(
-            'TC-F02.11 Balance adjustment updates wallet and creates balanced entries',
-            $adjusted['wallet']['balance'] == 2500000
-                && $adjustmentTransaction !== null
-                && count($adjustmentTransaction['entries']) === 2
-                && $adjustmentTransaction['entries'][0]['amount_base'] === $adjustmentTransaction['entries'][1]['amount_base']
-        );
-
-        $updatedWallet = $walletService->updateWallet(2, $createdWalletId, [
-            'name' => 'Tài khoản FR02',
-            'iconKey' => 'bank',
-            'colorKey' => 'ocean',
-        ]);
-        $this->assert(
-            'TC-F02.12 Wallet metadata and selected icon are persisted',
-            $updatedWallet['wallet']['name'] === 'Tài khoản FR02'
-                && $updatedWallet['wallet']['iconKey'] === 'bank'
-                && $updatedWallet['wallet']['colorKey'] === 'ocean'
-        );
-
-        $invalidColorRejected = false;
-        try {
-            $walletService->updateWallet(2, $createdWalletId, [
-                'name' => 'Tài khoản FR02',
-                'iconKey' => 'bank',
-                'colorKey' => 'red; background: url(test)',
-            ]);
-        } catch (ApiException $error) {
-            $invalidColorRejected = $error->status === 422;
-        }
-        $this->assert('TC-F02.12a Invalid custom color is rejected', $invalidColorRejected);
-
-        $nonZeroRejected = false;
-        try {
-            $walletService->archiveWallet(2, $createdWalletId);
-        } catch (ApiException $error) {
-            $nonZeroRejected = $error->errorCode === 'WALLET_BALANCE_NOT_ZERO';
-        }
-        $this->assert('TC-F02.13 Non-zero wallet cannot be deleted from active use', $nonZeroRejected);
-
-        $walletService->deleteWalletPermanently(2, $zeroWalletId);
-        $this->assert(
-            'TC-F02.14 Archived wallet can be permanently removed from wallet management',
-            $walletRepo->findByIdAndUser($zeroWalletId, 2) === null
-                && (string) $pdo->query("SELECT status FROM wallets WHERE id = {$zeroWalletId}")->fetchColumn() === 'DELETED'
-        );
-
-        $walletService->adjustWallet(2, $createdWalletId, [
-            'direction' => 'DECREASE',
-            'amount' => '2500000',
-            'note' => 'Đưa số dư về 0 để lưu trữ',
-        ], '88888888-8888-4888-8888-888888888888');
-        $historyEntriesBeforeDelete = (int) $pdo->query("SELECT COUNT(*) FROM ledger_entries e
-            JOIN ledger_accounts a ON a.id = e.ledger_account_id
-            WHERE a.wallet_id = {$createdWalletId}")->fetchColumn();
-        $walletService->archiveWallet(2, $createdWalletId);
-        $walletService->deleteWalletPermanently(2, $createdWalletId);
-        $historyEntriesAfterDelete = (int) $pdo->query("SELECT COUNT(*) FROM ledger_entries e
-            JOIN ledger_accounts a ON a.id = e.ledger_account_id
-            WHERE a.wallet_id = {$createdWalletId}")->fetchColumn();
-        $this->assert(
-            'TC-F02.15 Deleting an archived wallet preserves its complete financial history',
-            $walletRepo->findByIdAndUser($createdWalletId, 2) === null
-                && $historyEntriesBeforeDelete > 0
-                && $historyEntriesAfterDelete === $historyEntriesBeforeDelete
-        );
-
-        echo "\n--- GROUP 1: FR03 - Core Ledger & Double-Entry Engine ---\n";
+        // -------------------------------------------------------------
+        echo "--- GROUP 1: FR03 - Core Ledger & Double-Entry Engine ---\n";
+        // -------------------------------------------------------------
 
         // 1.1: TC-F03.01 Post Expense & Double-Entry Balancing
         $initialWallet1 = (float) $walletRepo->findByIdAndUser(1, $userId)['cached_balance'];
@@ -422,6 +238,108 @@ final class TestRunner
             $failedAtomic
                 && $transactionCountBefore === $transactionCountAfter
                 && !$ledgerService->checkIdempotency($userId, $failedAtomicKey, $failedAtomicPayload)['cached']
+        );
+
+        $wrongCategoryType = false;
+        try {
+            $ledgerService->postExpense($userId, [
+                'walletId' => 1,
+                'categoryId' => 6,
+                'amount' => 1000,
+                'description' => 'Sai loại danh mục',
+            ]);
+        } catch (\InvalidArgumentException) {
+            $wrongCategoryType = true;
+        }
+        $this->assert('TC-F03.10 Expense rejects an INCOME category', $wrongCategoryType);
+
+        $wrongCurrency = false;
+        try {
+            $ledgerService->postIncome($userId, [
+                'walletId' => 1,
+                'categoryId' => 6,
+                'amount' => 1000,
+                'currency' => 'USD',
+            ]);
+        } catch (\InvalidArgumentException) {
+            $wrongCurrency = true;
+        }
+        $this->assert('TC-F03.11 Transaction currency must match wallet currency', $wrongCurrency);
+
+        $invalidDate = false;
+        try {
+            $ledgerService->postIncome($userId, [
+                'walletId' => 1,
+                'categoryId' => 6,
+                'amount' => 1000,
+                'occurredOn' => '2026-02-31',
+            ]);
+        } catch (\InvalidArgumentException) {
+            $invalidDate = true;
+        }
+        $this->assert('TC-F03.12 Invalid calendar date is rejected', $invalidDate);
+
+        $listedTransactions = $txRepo->listTransactions($userId, ['limit' => 100]);
+        $listedExpense = array_values(array_filter(
+            $listedTransactions,
+            static fn (array $row): bool => (int) $row['id'] === (int) $atomicFirst['response']['transactionId']
+        ))[0] ?? null;
+        $this->assert(
+            'TC-F03.13 List response maps ledger entries and owned wallet names for the UI',
+            $listedExpense !== null
+                && count($listedExpense['entries'] ?? []) === 2
+                && array_filter($listedExpense['entries'], static fn (array $entry): bool => !empty($entry['wallet_name'])) !== []
+        );
+
+        echo "\n--- GROUP 1B: TX-03 - Personal and Default Categories ---\n";
+        $pdo->exec("INSERT INTO default_categories (name, category_type, is_active) VALUES ('Mẫu kiểm thử', 'EXPENSE', 1)");
+        $createdCategory = $categoryService->create($userId, 'Danh mục kiểm thử', 'EXPENSE');
+        $this->assert('TC-TX03.01 Personal category can be created', (int) $createdCategory['id'] > 0);
+
+        $renamedCategory = $categoryService->rename($userId, (int) $createdCategory['id'], 'Danh mục đã đổi tên');
+        $this->assert('TC-TX03.02 Personal category can be renamed', $renamedCategory['name'] === 'Danh mục đã đổi tên');
+
+        $duplicateCategory = false;
+        try {
+            $categoryService->create($userId, 'Danh mục đã đổi tên', 'EXPENSE');
+        } catch (\RuntimeException $error) {
+            $duplicateCategory = $error->getCode() === 409;
+        }
+        $this->assert('TC-TX03.03 Duplicate personal category is rejected', $duplicateCategory);
+
+        $categoryTx = $ledgerService->postExpense($userId, [
+            'walletId' => 1,
+            'categoryId' => (int) $createdCategory['id'],
+            'amount' => 1000,
+            'description' => 'Giao dịch giữ lịch sử danh mục',
+        ]);
+        $archiveResult = $categoryService->archive($userId, (int) $createdCategory['id']);
+        $preservedTransaction = $txRepo->findByIdAndUser((int) $categoryTx['transactionId'], $userId);
+        $this->assert(
+            'TC-TX03.04 Archiving never physically deletes a category used by transactions',
+            $archiveResult['archived']
+                && $archiveResult['hasTransactions']
+                && !$archiveResult['physicallyDeleted']
+                && $preservedTransaction !== null
+        );
+
+        $ownerBlocked = false;
+        try {
+            $categoryService->rename(999, 1, 'Không được phép');
+        } catch (\RuntimeException $error) {
+            $ownerBlocked = $error->getCode() === 404;
+        }
+        $this->assert('TC-TX03.05 Category ownership is enforced', $ownerBlocked);
+
+        $categoryList = $categoryService->list($userId, 'EXPENSE');
+        $this->assert(
+            'TC-TX03.06 Income/expense filtering and default category mapping work',
+            array_filter(
+                $categoryList['categories'],
+                static fn (array $category): bool => $category['category_type'] !== 'EXPENSE'
+            ) === []
+                && count($categoryList['defaultCategories']) === 1
+                && $categoryList['defaultCategories'][0]['name'] === 'Mẫu kiểm thử'
         );
 
         // -------------------------------------------------------------

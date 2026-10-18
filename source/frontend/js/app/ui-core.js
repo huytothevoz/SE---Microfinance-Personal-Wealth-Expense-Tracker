@@ -2,9 +2,10 @@
 const paths = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
   wallet: '<path d="M20 7V5a2 2 0 0 0-2-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h15a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H5a3 3 0 0 1-3-3"/><path d="M16 14h6"/>',
-  cash: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M7 9H6v1M17 15h1v-1"/>',
-  bank: '<path d="m3 10 9-6 9 6M5 10h14M6 10v8M10 10v8M14 10v8M18 10v8M3 20h18"/>',
-  savings: '<path d="M5 11a7 7 0 0 1 13-3h3v5h-2a7 7 0 0 1-5 5v2h-3v-2H8v2H5v-4a7 7 0 0 1 0-5z"/><path d="M9 9h4M16 10h.01"/>',
+  cash: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M17 14h.01"/><circle cx="12" cy="12" r="2.5"/>',
+  bank: '<path d="m3 10 9-6 9 6M5 10h14M6 10v7M10 10v7M14 10v7M18 10v7M4 20h16"/>',
+  savings: '<path d="M5 11a7 6 0 0 1 13-2h2a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-2.2a7 6 0 0 1-2.8 2.3V20M8 17.3V20M3 10v3"/><path d="M9 8h4M16 9h.01"/>',
+  card: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
   arrows: '<path d="M3 8h16m-5-5 5 5-5 5M21 16H5m5-5-5 5 5 5"/>',
   pie: '<path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M21 9h-6V3a9 9 0 0 1 6 6"/>',
   repeat: '<path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/>',

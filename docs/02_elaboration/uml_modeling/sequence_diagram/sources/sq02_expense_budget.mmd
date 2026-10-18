@@ -1,0 +1,112 @@
+sequenceDiagram
+    autonumber
+    actor User as Người dùng (User)
+    participant TC as <<Boundary>><br/>TransactionController
+    participant LS as <<Control>><br/>LedgerService
+    participant WD as <<DataAccess>><br/>WalletDAO
+    participant LD as <<DataAccess>><br/>LedgerDAO
+    participant BS as <<Control>><br/>BudgetService
+    participant BD as <<DataAccess>><br/>BudgetDAO
+    participant ND as <<DataAccess>><br/>NotificationDAO
+    participant DB as <<Storage>><br/>MySQL Database (InnoDB)
+
+    User ->> TC: POST /api/transactions (walletId, categoryId, amount, occurredOn, description)<br/>Header: Idempotency-Key: uuid-v4
+    activate TC
+    TC ->> LS: createExpenseTransaction(userId, dto, idempotencyKey)
+    activate LS
+
+    %% 1. Kiểm tra Idempotency
+    LS ->> LD: findIdempotencyKey(userId, idempotencyKey)
+    activate LD
+    LD ->> DB: SELECT result_code, response_json FROM idempotency_keys WHERE user_id = ? AND request_key = ?
+    DB -->> LD: null (chưa từng xử lý)
+    LD -->> LS: null
+    deactivate LD
+
+    %% 2. Mở Transaction & Khóa dòng ví (Pessimistic Locking)
+    LS ->> WD: findWalletWithLock(walletId, userId)
+    activate WD
+    WD ->> DB: START TRANSACTION
+    WD ->> DB: SELECT id, cached_balance, earmarked_balance, currency, wallet_type FROM wallets WHERE id = ? AND user_id = ? FOR UPDATE
+    DB -->> WD: walletRecord (cached_balance=1.000.000, earmarked=0)
+    WD -->> LS: walletEntity: Wallet
+    deactivate WD
+
+    %% Thẩm định số dư khả dụng (BR04)
+    alt Số dư khả dụng không đủ chi trả (cached_balance - earmarked_balance < amount)
+        LS ->> WD: rollbackTransaction()
+        activate WD
+        WD ->> DB: ROLLBACK
+        deactivate WD
+        LS -->> TC: Ném lỗi UnprocessableEntityException("Số dư khả dụng không đủ chi trả")
+        TC -->> User: 422 Unprocessable Entity {"errorCode": "INSUFFICIENT_FUNDS"}
+    else Đủ số dư khả dụng
+        %% 3. Hạch toán Sổ Cái Kép nguyên tử (BR01, BR12)
+        LS ->> LD: recordExpense(txHeader, debitEntry, creditEntry, idempotencyRecord)
+        activate LD
+        LD ->> DB: INSERT INTO financial_transactions (user_id, category_id, transaction_type='EXPENSE', status='POSTED', description, currency, amount, occurred_on, posted_at) VALUES (...)
+        DB -->> LD: newTxId
+        LD ->> DB: INSERT INTO ledger_entries (transaction_id, ledger_account_id, entry_side='DEBIT', amount_original, amount_base) VALUES (newTxId, expenseAccId, 'DEBIT', amount, amount)
+        LD ->> DB: INSERT INTO ledger_entries (transaction_id, ledger_account_id, entry_side='CREDIT', amount_original, amount_base) VALUES (newTxId, walletAccId, 'CREDIT', amount, amount)
+        
+        %% Cập nhật số dư đệm ví
+        LD ->> DB: UPDATE wallets SET cached_balance = cached_balance - ? WHERE id = ?
+        
+        %% Lưu cache Idempotency
+        LD ->> DB: INSERT INTO idempotency_keys (user_id, request_key, request_hash, transaction_id, result_code=201, response_json) VALUES (?, ?, ?, newTxId, 201, ...)
+        LD ->> DB: COMMIT
+        DB -->> LD: Transaction committed
+        LD -->> LS: TransactionResult(id=newTxId, newBalance)
+        deactivate LD
+
+        %% Phản hồi tức thì cho Client
+        LS -->> TC: ExpenseResponse(txId=newTxId, newBalance, status='POSTED')
+        deactivate LS
+        TC -->> User: 201 Created {"status": "POSTED", "transactionId": newTxId}
+        deactivate TC
+
+        %% 4. Kiểm tra Ngân sách tháng tiếp nối (BR07, BR08)
+        TC -) BS: checkBudgetExceeded(userId, categoryId, occurredOn)
+        activate BS
+        BS ->> BD: findMonthlyBudget(userId, categoryId, budgetMonth)
+        activate BD
+        BD ->> DB: SELECT id, limit_amount, spent_amount, alert_level, is_yellow_sent, is_red_sent FROM budgets WHERE user_id = ? AND category_id = ? AND budget_month = ?
+        DB -->> BD: budgetRow (limit=2.000.000, spent=1.500.000)
+        BD -->> BS: budgetEntity: Budget
+        deactivate BD
+
+        %% Tính toán chi tiêu ròng lũy kế
+        BS ->> BD: calculateNetExpenseInMonth(userId, categoryId, budgetMonth)
+        activate BD
+        BD ->> DB: SELECT SUM(le.amount_base) FROM ledger_entries le JOIN financial_transactions ft ON le.transaction_id = ft.id WHERE ft.user_id = ? AND ft.category_id = ? AND ft.occurred_on BETWEEN ? AND ? AND ft.status = 'POSTED'
+        DB -->> BD: totalNetSpent (1.650.000)
+        BD -->> BS: totalNetSpent
+        deactivate BD
+
+        BS ->> BS: evaluateAlertLevel(totalNetSpent, limitAmount) -> usageRate = 82.5%
+
+        alt 80% <= usageRate < 100% AND is_yellow_sent == false (Ngưỡng Vàng)
+            BS ->> BD: updateBudgetYellowAlert(budgetId, spent=1.650.000)
+            activate BD
+            BD ->> DB: UPDATE budgets SET spent_amount = ?, alert_level = 'YELLOW_80', is_yellow_sent = TRUE WHERE id = ?
+            deactivate BD
+
+            BS ->> ND: sendNotification(userId, title, body, type='BUDGET', dedupKey)
+            activate ND
+            ND ->> DB: INSERT INTO notifications (user_id, title, body, notification_type='BUDGET', priority='WARNING', dedup_key) VALUES (?, 'Cảnh báo Ngân sách (80%)', ?, 'BUDGET', 'WARNING', ?)
+            DB -->> ND: notifId
+            deactivate ND
+        else usageRate >= 100% AND is_red_sent == false (Ngưỡng Đỏ)
+            BS ->> BD: updateBudgetRedAlert(budgetId, spent=totalNetSpent)
+            activate BD
+            BD ->> DB: UPDATE budgets SET spent_amount = ?, alert_level = 'RED_100', is_red_sent = TRUE WHERE id = ?
+            deactivate BD
+
+            BS ->> ND: sendNotification(userId, title, body, type='BUDGET', dedupKey)
+            activate ND
+            ND ->> DB: INSERT INTO notifications (user_id, title, body, notification_type='BUDGET', priority='CRITICAL', dedup_key) VALUES (?, 'Vượt Ngân sách (100%)', ?, 'BUDGET', 'CRITICAL', ?)
+            DB -->> ND: notifId
+            deactivate ND
+        end
+        deactivate BS
+    end

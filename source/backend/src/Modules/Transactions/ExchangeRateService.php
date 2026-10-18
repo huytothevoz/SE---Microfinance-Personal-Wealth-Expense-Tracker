@@ -6,7 +6,8 @@ namespace WealthFlow\Modules\Transactions;
 
 use PDO;
 use RuntimeException;
-use WealthFlow\Config\Database;
+use Throwable;
+use WealthFlow\Core\Database;
 
 final class ExchangeRateService
 {
@@ -17,38 +18,34 @@ final class ExchangeRateService
         $this->pdo = $pdo ?? Database::getConnection();
     }
 
-    /**
-     * Get the latest effective exchange rate from a currency to the base currency (VND).
-     * BR04: Snapshot rate at commit time.
-     */
     public function getSnapshotRate(string $fromCurrency, string $toCurrency = 'VND'): string
     {
         $from = strtoupper(trim($fromCurrency));
         $to = strtoupper(trim($toCurrency));
-
         if ($from === $to) {
-            return '1.00000000';
+            return '1.0000000000';
         }
-
-        $stmt = $this->pdo->prepare('SELECT rate FROM exchange_rates
-            WHERE from_currency = ? AND to_currency = ?
-            ORDER BY effective_at DESC, id DESC LIMIT 1');
-        $stmt->execute([$from, $to]);
-        $rate = $stmt->fetchColumn();
-
-        if ($rate !== false && bccomp((string) $rate, '0', 10) === 1) {
-            return bcadd((string) $rate, '0', 10);
+        $rate = $this->findLatestRate($from, $to);
+        if ($rate === null) {
+            throw new RuntimeException("Chưa có tỷ giá hợp lệ từ {$from} sang {$to}.", 422);
         }
-        throw new RuntimeException("Chưa có tỷ giá hợp lệ từ {$from} sang {$to}.", 422);
+        return $rate['rate'];
     }
 
     /** @return array{rate: string, effectiveAt: string, provider: ?string}|null */
     public function findLatestRate(string $fromCurrency, string $toCurrency): ?array
     {
-        $stmt = $this->pdo->prepare('SELECT rate, effective_at, provider FROM exchange_rates
-            WHERE from_currency = ? AND to_currency = ? AND rate > 0
-            ORDER BY effective_at DESC, id DESC LIMIT 1');
-        $stmt->execute([strtoupper(trim($fromCurrency)), strtoupper(trim($toCurrency))]);
+        $from = strtoupper(trim($fromCurrency));
+        $to = strtoupper(trim($toCurrency));
+        if ($from === $to) {
+            return ['rate' => '1.0000000000', 'effectiveAt' => '', 'provider' => 'IDENTITY'];
+        }
+        $stmt = $this->pdo->prepare(
+            'SELECT rate, effective_at, provider FROM exchange_rates
+             WHERE from_currency = ? AND to_currency = ? AND rate > 0
+             ORDER BY effective_at DESC, id DESC LIMIT 1'
+        );
+        $stmt->execute([$from, $to]);
         $row = $stmt->fetch();
         if (!$row) {
             return null;
@@ -74,63 +71,73 @@ final class ExchangeRateService
             'USD_EUR' => bcdiv($usdVnd, $eurVnd, 10),
             'EUR_USD' => bcdiv($eurVnd, $usdVnd, 10),
         ];
-        foreach ($pairs as $pair => $rate) {
-            [$from, $to] = explode('_', $pair, 2);
-            $this->recordRate($from, $to, $rate, $snapshot['provider'], $snapshot['effectiveAt']);
+
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) {
+            $this->pdo->beginTransaction();
         }
+        try {
+            foreach ($pairs as $pair => $rate) {
+                [$from, $to] = explode('_', $pair, 2);
+                $this->recordRate($from, $to, $rate, $snapshot['provider'], $snapshot['effectiveAt']);
+            }
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $error) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $error;
+        }
+
         return $snapshot;
     }
 
-    /**
-     * Convert an amount in original currency to base currency using exact BCMath.
-     * BR03: Arithmetic precision.
-     */
     public function convertToBase(string|float $amount, string $rate): string
     {
-        $amountStr = is_float($amount) ? number_format($amount, 8, '.', '') : (string) $amount;
-        return bcmul($amountStr, $rate, 4);
+        $amountValue = is_float($amount) ? number_format($amount, 8, '.', '') : (string) $amount;
+        return bcmul($amountValue, $rate, 8);
     }
 
-    /**
-     * Add or update an exchange rate entry (IF02 integration).
-     */
     public function recordRate(
         string $fromCurrency,
         string $toCurrency,
         string|float $rate,
         ?string $provider = 'API',
         ?string $effectiveAt = null
-    ): int
-    {
-        $rateValue = trim((string) $rate);
-        if (!preg_match('/^\d+(?:\.\d+)?$/D', $rateValue) || bccomp($rateValue, '0', 10) !== 1) {
+    ): int {
+        $value = trim((string) $rate);
+        if (!preg_match('/^\d+(?:\.\d+)?$/D', $value) || bccomp($value, '0', 10) !== 1) {
             throw new \InvalidArgumentException('Tỷ giá hối đoái phải lớn hơn 0.');
         }
-
         $from = strtoupper(trim($fromCurrency));
         $to = strtoupper(trim($toCurrency));
-        $observedAt = $effectiveAt ?? date('Y-m-d H:i:s');
-        $existing = $this->pdo->prepare('SELECT id FROM exchange_rates
-            WHERE from_currency = ? AND to_currency = ? AND provider = ? AND effective_at = ? LIMIT 1');
-        $existing->execute([$from, $to, $provider, $observedAt]);
-        $existingId = $existing->fetchColumn();
-        if ($existingId !== false) {
-            return (int) $existingId;
+        if (!preg_match('/^[A-Z]{3}$/D', $from) || !preg_match('/^[A-Z]{3}$/D', $to) || $from === $to) {
+            throw new \InvalidArgumentException('Cặp tiền tệ không hợp lệ.');
         }
-
-        $stmt = $this->pdo->prepare('INSERT INTO exchange_rates (from_currency, to_currency, rate, effective_at, provider)
-            VALUES (?, ?, ?, ?, ?)');
-        $stmt->execute([$from, $to, $rateValue, $observedAt, $provider]);
+        $observedAt = $effectiveAt ?? date('Y-m-d H:i:s');
+        $existing = $this->pdo->prepare(
+            'SELECT id FROM exchange_rates
+             WHERE from_currency = ? AND to_currency = ? AND provider = ? AND effective_at = ? LIMIT 1'
+        );
+        $existing->execute([$from, $to, $provider, $observedAt]);
+        $id = $existing->fetchColumn();
+        if ($id !== false) {
+            return (int) $id;
+        }
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO exchange_rates (from_currency, to_currency, rate, effective_at, provider)
+             VALUES (?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([$from, $to, $value, $observedAt, $provider]);
         return (int) $this->pdo->lastInsertId();
     }
 
-    /**
-     * List current rates for all supported pairs.
-     * @return array<int, array<string, mixed>>
-     */
+    /** @return array<int, array<string, mixed>> */
     public function getAllLatestRates(): array
     {
-        $stmt = $this->pdo->query('SELECT * FROM exchange_rates ORDER BY effective_at DESC LIMIT 20');
+        $stmt = $this->pdo->query('SELECT * FROM exchange_rates ORDER BY effective_at DESC, id DESC LIMIT 20');
         return $stmt->fetchAll();
     }
 }

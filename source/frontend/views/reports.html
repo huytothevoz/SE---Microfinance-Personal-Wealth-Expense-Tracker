@@ -1,0 +1,117 @@
+<div class="page-heading">
+  <div>
+    <h1>Báo cáo tài chính</h1>
+    <p>Phân tích biến động tài sản ròng, dòng tiền thu chi nhiều kỳ và tỷ lệ tiết kiệm ròng.</p>
+  </div>
+  <div class="page-actions">
+    <button type="button" class="btn btn--outline btn-sm" data-action="export">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg>
+      Xuất CSV
+    </button>
+  </div>
+</div>
+
+<div class="filter-row">
+  <div class="tabs">
+    <button class="tab active" type="button">Tổng quan báo cáo</button>
+    <button class="tab" type="button" data-page="reconciliation">Đối soát</button>
+  </div>
+  <span class="date-filter">Tháng 5 – 10/2026</span>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Net Worth</span>
+      <div class="kpi-icon">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 16l4-5 4 2 5-7"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="report-net-worth">128.450.000 đ</div>
+    <div class="kpi-desc">Tổng tài sản trừ nợ</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Net Cash Flow</span>
+      <div class="kpi-icon green">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h16m-5-5 5 5-5 5M21 16H5m5-5-5 5 5 5"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="report-cash-flow">10.260.000 đ</div>
+    <div class="kpi-desc">Thu nhập trừ chi tiêu</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Saving Rate</span>
+      <div class="kpi-icon blue">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M21 9h-6V3a9 9 0 0 1 6 6"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="report-saving-rate">55,46%</div>
+    <div class="kpi-desc">(18,5 − 8,24) / 18,5 × 100%</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Tài sản tích lũy</span>
+      <div class="kpi-icon orange">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l5 6-11 12L1 9zM1 9h22M6 3l2 6 4 12 4-12 2-6"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="report-accumulated-assets">117.000.000 đ</div>
+    <div class="kpi-desc">Tiết kiệm + vàng</div>
+  </div>
+</div>
+
+<div class="panel-grid">
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Dòng tiền 6 tháng</h2>
+        <p>Biểu đồ so sánh thu nhập và chi phí</p>
+      </div>
+      <div class="panel-tools"></div>
+    </div>
+    <div id="report-cashflow-bars"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Phân tích tiết kiệm</h2>
+        <p>Tháng 10/2026</p>
+      </div>
+      <div class="panel-tools"></div>
+    </div>
+    <div class="report-stats">
+      <div class="report-stat">
+        <span>Thu nhập tháng</span>
+        <strong class="positive" id="report-month-income">18.500.000 đ</strong>
+      </div>
+      <div class="report-stat">
+        <span>Chi tiêu tháng</span>
+        <strong id="report-month-expense">8.240.000 đ</strong>
+      </div>
+      <div class="report-stat">
+        <span>Saving Rate</span>
+        <strong id="report-month-saving-rate">55,46%</strong>
+      </div>
+    </div>
+    <div class="hint-box" style="margin-top:18px">Saving Rate = (Income − Expense) / Income. Nếu Income ≤ 0, hiển thị “N/A”, không chia cho 0. Âm khi chi tiêu vượt thu nhập.</div>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-title">
+    <div>
+      <h2>Biến động tài sản ròng</h2>
+      <p>Theo lịch sử snapshot hàng ngày / theo kỳ</p>
+    </div>
+    <div class="panel-tools"></div>
+  </div>
+  <div id="report-networth-chart"></div>
+</section>
+
+<div class="foot-source">Báo cáo chưa lấy dữ liệu MySQL và không đại diện cho lịch sử giao dịch thật.</div>

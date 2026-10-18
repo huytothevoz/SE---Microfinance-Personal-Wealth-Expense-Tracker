@@ -7,15 +7,15 @@ header('Referrer-Policy: same-origin');
 try {
     $config = require __DIR__ . '/bootstrap.php';
     $config->validate();
-    $auth = new WealthFlow\Auth\AuthService(WealthFlow\Database::connect($config), $config);
+    $auth = new WealthFlow\Modules\Auth\AuthService(WealthFlow\Core\Database::connect($config), $config);
     try {
         $auth->authenticate();
-    } catch (WealthFlow\Http\ApiException) {
+    } catch (WealthFlow\Core\ApiException) {
         $auth->authenticate(true);
     }
     header('Content-Type: text/html; charset=utf-8');
     readfile(dirname(__DIR__) . '/app.html');
-} catch (WealthFlow\Http\ApiException) {
+} catch (WealthFlow\Core\ApiException) {
     header('Location: index.html?auth=login', true, 302);
 } catch (Throwable $error) {
     http_response_code(503);

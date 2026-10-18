@@ -1,0 +1,130 @@
+sequenceDiagram
+    autonumber
+    participant Sch as <<System>><br/>SYS02 Scheduler (Cron)
+    participant RJ as <<Boundary / Job>><br/>RecurringSchedulerJob
+    participant RW as <<Control / Worker>><br/>RecurringExecutionWorker
+    participant RD as <<DataAccess>><br/>RecurringRuleDAO
+    participant RX as <<DataAccess>><br/>RecurringExecutionLogDAO
+    participant LS as <<Control>><br/>LedgerService
+    participant WD as <<DataAccess>><br/>WalletDAO
+    participant LD as <<DataAccess>><br/>LedgerDAO
+    participant ND as <<DataAccess>><br/>NotificationDAO
+    participant DB as <<Storage>><br/>MySQL Database (InnoDB)
+    actor User as Người dùng (User)
+
+    Sch ->> RJ: executeCronJob() [00:05 AM hàng ngày]
+    activate RJ
+    RJ ->> RW: processDueRecurringSchedules(currentDate)
+    activate RW
+
+    %% 1. Truy vấn các khoản định kỳ đến hạn
+    RW ->> RD: findDueSchedules(currentDate)
+    activate RD
+    RD ->> DB: SELECT id, user_id, wallet_id, category_id, name, amount, currency, frequency, day_of_month, next_due_date, execution_mode FROM recurring_schedules WHERE status = 'ACTIVE' AND next_due_date <= ?
+    DB -->> RD: dueSchedulesList (tập bản ghi đến hạn)
+    RD -->> RW: dueSchedulesList
+    deactivate RD
+
+    %% 2. Lặp qua từng khoản định kỳ đến hạn
+    loop Với từng khoản schedule trong dueSchedulesList
+        %% Khởi tạo bản ghi kỳ thực thi (chống chạy trùng - BR13)
+        RW ->> RX: createPendingExecution(schedule.id, schedule.next_due_date)
+        activate RX
+        RX ->> DB: INSERT INTO recurring_executions (recurring_schedule_id, due_date, status='PENDING') VALUES (?, ?, 'PENDING')
+        DB -->> RX: executionId
+        RX -->> RW: executionId
+        deactivate RX
+
+        alt execution_mode == 'AUTO_POST'
+            %% Kiểm tra số dư ví khả dụng qua WalletDAO
+            RW ->> WD: findWalletForCheck(schedule.wallet_id)
+            activate WD
+            WD ->> DB: SELECT cached_balance, earmarked_balance FROM wallets WHERE id = ?
+            DB -->> WD: walletBalanceRow
+            WD -->> RW: availableBalance = (cached_balance - earmarked_balance)
+            deactivate WD
+
+            alt availableBalance >= schedule.amount (Đủ số dư chi trả)
+                %% Hạch toán chi phí tự động POSTED (BR01, BR12)
+                RW ->> LS: postRecurringExpense(schedule)
+                activate LS
+                LS ->> LD: recordExpense(POSTED, scheduleData)
+                activate LD
+                LD ->> DB: START TRANSACTION
+                LD ->> DB: INSERT INTO financial_transactions (user_id, category_id, transaction_type='EXPENSE', status='POSTED', amount, description) VALUES (...)
+                DB -->> LD: newTxId
+                LD ->> DB: INSERT INTO ledger_entries (...)
+                LD ->> DB: UPDATE wallets SET cached_balance = cached_balance - ? WHERE id = ?
+                LD ->> DB: COMMIT
+                DB -->> LD: Transaction committed
+                LD -->> LS: newTxId
+                deactivate LD
+                LS -->> RW: newTxId
+                deactivate LS
+
+                %% Cập nhật trạng thái kỳ thực thi COMPLETED
+                RW ->> RX: markCompleted(executionId, newTxId)
+                activate RX
+                RX ->> DB: UPDATE recurring_executions SET status = 'COMPLETED', transaction_id = ?, executed_at = NOW() WHERE id = ?
+                deactivate RX
+
+                %% Đẩy thông báo thành công
+                RW ->> ND: sendNotification(schedule.user_id, 'Thanh toán định kỳ thành công', body, 'RECURRING')
+                activate ND
+                ND ->> DB: INSERT INTO notifications (user_id, title, body, notification_type='RECURRING', priority='INFO') VALUES (...)
+                deactivate ND
+                ND -->> User: Đẩy thông báo chuông (Auto-post thành công)
+
+            else availableBalance < schedule.amount (Ví không đủ tiền)
+                %% Tạo giao dịch nháp DRAFT (chờ người dùng nạp tiền)
+                RW ->> LD: createDraftTransaction(schedule)
+                activate LD
+                LD ->> DB: INSERT INTO financial_transactions (user_id, category_id, transaction_type='EXPENSE', status='DRAFT', amount, description='[Nháp] Lịch định kỳ thiếu tiền') VALUES (...)
+                DB -->> LD: draftTxId
+                deactivate LD
+
+                RW ->> RX: markFailed(executionId, draftTxId, 'INSUFFICIENT_FUNDS')
+                activate RX
+                RX ->> DB: UPDATE recurring_executions SET status = 'FAILED', transaction_id = ?, error_message = 'Ví nguồn không đủ số dư' WHERE id = ?
+                deactivate RX
+
+                %% Đẩy cảnh báo khẩn cấp ví thiếu tiền
+                RW ->> ND: sendNotification(schedule.user_id, 'Cảnh báo ví thiếu tiền thanh toán định kỳ', body, 'RECURRING')
+                activate ND
+                ND ->> DB: INSERT INTO notifications (user_id, title, body, notification_type='RECURRING', priority='WARNING') VALUES (...)
+                deactivate ND
+                ND -->> User: Đẩy thông báo chuông (Badge Vàng cảnh báo)
+            end
+
+        else execution_mode == 'DRAFT_REMINDER' (Nhắc nhở thủ công)
+            RW ->> LD: createDraftTransaction(schedule)
+            activate LD
+            LD ->> DB: INSERT INTO financial_transactions (user_id, category_id, status='DRAFT', amount) VALUES (...)
+            DB -->> LD: draftTxId
+            deactivate LD
+
+            RW ->> RX: markCompleted(executionId, draftTxId)
+            activate RX
+            RX ->> DB: UPDATE recurring_executions SET status = 'COMPLETED', transaction_id = ? WHERE id = ?
+            deactivate RX
+
+            RW ->> ND: sendNotification(schedule.user_id, 'Khoản chi tiêu định kỳ đến hạn', body, 'RECURRING')
+            activate ND
+            ND ->> DB: INSERT INTO notifications (user_id, title, body, notification_type='RECURRING', priority='INFO') VALUES (...)
+            deactivate ND
+            ND -->> User: Đẩy thông báo nhắc nhở duyệt giao dịch nháp
+        end
+
+        %% 3. Tính ngày đến hạn kế tiếp theo thuật toán Ngày Neo (BR09)
+        RW ->> RW: calculateNextDueDate(frequency, day_of_month=31, nextMonth)
+        note over RW: Ví dụ: anchorDay = 31, tháng kế tiếp là tháng 2 (28 ngày)<br/>Hệ thống tự động lùi về ngày 28/02 và bảo lưu nguyên vẹn day_of_month = 31 cho các tháng sau
+        RW ->> RD: updateNextDueDate(schedule.id, calculatedNextDueDate)
+        activate RD
+        RD ->> DB: UPDATE recurring_schedules SET next_due_date = ? WHERE id = ?
+        deactivate RD
+    end
+
+    RW -->> RJ: ExecutionSummary(processedCount, successCount, failedCount)
+    deactivate RW
+    RJ -->> Sch: Job Completed
+    deactivate RJ

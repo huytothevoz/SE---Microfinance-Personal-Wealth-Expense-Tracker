@@ -1,0 +1,55 @@
+erDiagram
+    %% ========================================================
+    %% ERD05: GOLD PORTFOLIO & EXCHANGE RATES (FR07, FR10)
+    %% ========================================================
+
+    USERS ||--o{ GOLD_ASSETS : "nam_giu_vang"
+    USERS ||--o{ GOLD_TRANSACTIONS : "thuc_hien_giao_dich"
+
+    WALLETS ||--o{ GOLD_TRANSACTIONS : "thanh_toan_mua_ban"
+
+    GOLD_ASSETS ||--o{ GOLD_TRANSACTIONS : "nhat_ky_bien_dong"
+
+    USERS {
+        bigint id PK
+        varchar email UK "Email chu so huu"
+    }
+
+    WALLETS {
+        bigint id PK
+        varchar name "Ten vi giao dich"
+        decimal cached_balance "So du vi"
+    }
+
+    GOLD_ASSETS {
+        bigint id PK
+        bigint user_id FK "ON DELETE CASCADE"
+        enum gold_type "RING_9999 / SJC_BAR / GOLD_24K"
+        decimal quantity_chi "Khoi luong chi vang >= 0"
+        decimal total_cost_basis "Tong gia von dau tu"
+        decimal weighted_avg_cost "Gia von binh quan gia quyen"
+        decimal valuation_per_chi "Gia thi truong tren 1 chi"
+        date valuation_date "Ngay cap nhat dinh gia"
+        enum status "HELD / LIQUIDATED"
+    }
+
+    GOLD_TRANSACTIONS {
+        bigint id PK
+        bigint gold_asset_id FK "ON DELETE RESTRICT"
+        bigint user_id FK "ON DELETE CASCADE"
+        bigint wallet_id FK "ON DELETE SET NULL"
+        enum transaction_type "BUY / SELL / REVALUATION"
+        decimal quantity_chi "So luong chi giao dich"
+        decimal unit_price "Don gia 1 chi tai thoi diem"
+        decimal total_amount "Tong gia tri giao dich"
+        date occurred_on "Ngay phat sinh"
+    }
+
+    EXCHANGE_RATES {
+        bigint id PK
+        char from_currency "Tien te nguon USD"
+        char to_currency "Tien te dich VND"
+        decimal rate "Ty gia quy doi > 0"
+        datetime effective_at "Thoi diem co hieu luc"
+        varchar provider "Nguon ty gia Vietcombank"
+    }

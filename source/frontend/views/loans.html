@@ -1,0 +1,105 @@
+<div class="page-heading">
+  <div>
+    <h1>Khoản vay & nợ vi mô</h1>
+    <p>Theo dõi các khoản đi vay, cho vay bạn bè, kế hoạch trả góp và tiến độ phân kỳ gốc/lãi.</p>
+  </div>
+  <div class="page-actions">
+    <button type="button" class="btn btn--primary btn-sm" data-action="loan-add">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Tạo khoản vay / nợ
+    </button>
+    <button type="button" class="btn btn--outline btn-sm" data-action="loan-pay">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h16m-5-5 5 5-5 5M21 16H5m5-5-5 5 5 5"/></svg>
+      Ghi trả nợ
+    </button>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Dư nợ phải trả</span>
+      <div class="kpi-icon orange">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5c-2-1.5-7-1-7 1.8 0 3 7 1.5 7 4.6 0 3-5 3.4-7 1.7M12 5v14"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="loans-remaining-debt">15.100.000 đ</div>
+    <div class="kpi-desc">2 khoản đi vay</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Khoản cho vay còn lại</span>
+      <div class="kpi-icon blue">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h16m-5-5 5 5-5 5M21 16H5m5-5-5 5 5 5"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="loans-lending-asset">1.200.000 đ</div>
+    <div class="kpi-desc">Theo dõi riêng tài sản cho vay</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Đã thanh toán gốc</span>
+      <div class="kpi-icon green">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="loans-principal-paid">9.900.000 đ</div>
+    <div class="kpi-desc">Chưa tính lãi/phí</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-top">
+      <span class="kpi-label">Sắp đến hạn</span>
+      <div class="kpi-icon">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+      </div>
+    </div>
+    <div class="kpi-number" id="loans-next-due-date">20/10/2026</div>
+    <div class="kpi-desc">Khoản vay mua laptop</div>
+  </div>
+</div>
+
+<div class="card-grid section-gap" id="loan-card-list">
+  <!-- Dynamic loan cards rendered by loans.js -->
+</div>
+
+<div class="info-grid">
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Quy tắc trả nợ</h2>
+        <p>Phân biệt phần gốc và lãi/phí</p>
+      </div>
+      <div class="panel-tools"></div>
+    </div>
+    <div class="metric-list">
+      <div class="metric-item">
+        <span>Trả gốc</span>
+        <strong>Giảm dư nợ và ví</strong>
+      </div>
+      <div class="metric-item">
+        <span>Trả lãi / phí</span>
+        <strong>Hạch toán chi phí</strong>
+      </div>
+      <div class="metric-item">
+        <span>Nhận tiền đi vay</span>
+        <strong>Không tính thu nhập</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Nhắc lịch trả nợ</h2>
+        <p>Nhắc nhở thanh toán</p>
+      </div>
+      <div class="panel-tools"></div>
+    </div>
+    <div class="hint-box">
+      <strong>Theo dõi:</strong> nhắc trước hạn 3 ngày, ghi nhận tiến độ thanh toán và chuyển trạng thái Đã trả xong khi dư gốc về 0.
+    </div>
+  </section>
+</div>

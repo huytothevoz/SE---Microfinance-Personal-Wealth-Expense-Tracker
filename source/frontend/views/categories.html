@@ -1,0 +1,43 @@
+<div class="page-heading">
+  <div>
+    <h1>Danh mục thu chi</h1>
+    <p>Cây danh mục phân loại chi tiêu, nguồn thu và phục vụ kiểm soát hạn mức ngân sách.</p>
+  </div>
+  <div class="page-actions">
+    <button type="button" class="btn btn--primary btn-sm" data-action="category-add">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Tạo danh mục
+    </button>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-title">
+    <div>
+      <h2>Danh mục cá nhân</h2>
+      <p>Dùng để phân loại, lọc giao dịch và lập ngân sách</p>
+    </div>
+    <div class="panel-tools">
+      <div class="tabs" role="tablist" aria-label="Lọc loại danh mục">
+        <button class="tab active" data-category-filter="all" role="tab" aria-selected="true">Tất cả</button>
+        <button class="tab" data-category-filter="income" role="tab" aria-selected="false">Thu nhập</button>
+        <button class="tab" data-category-filter="expense" role="tab" aria-selected="false">Chi tiêu</button>
+      </div>
+    </div>
+  </div>
+  <div class="card-grid" id="category-card-list">
+    <!-- Dynamic category cards rendered by transactions.js -->
+  </div>
+</section>
+
+<section class="panel section-gap" style="margin-top:18px">
+  <div class="panel-title">
+    <div>
+      <h2>Danh mục mặc định</h2>
+      <p>Mẫu hệ thống chỉ để tham khảo; tài khoản cá nhân dùng bản sao riêng</p>
+    </div>
+  </div>
+  <div class="card-grid" id="default-category-card-list"></div>
+</section>
+
+<div class="hint-box" style="margin-top:16px">Danh mục cá nhân có thể đổi tên, lưu trữ; danh mục mặc định do Admin quản lý riêng, không xem được dữ liệu tài chính người dùng.</div>
