@@ -106,16 +106,16 @@ Toàn bộ các Endpoints của hệ thống WealthFlow đều tuân thủ cấu
 
 ---
 
-## 2. Danh Mục Tổng Hợp Các Nhóm API Endpoints
+## 2. Danh Mục Tổng Hợp 11 Nhóm API Endpoints
 
-Dưới đây là ma trận phân bổ các nhóm API theo phân hệ chức năng, ánh xạ với [class_diagram.md](./uml_modeling/class_diagram.md) và [sequence_diagram.md](./uml_modeling/sequence_diagram.md):
+Dưới đây là ma trận phân bổ toàn bộ danh mục **42 RESTful API Endpoints** theo 11 phân hệ chức năng, ánh xạ 1-1 với [class_diagram.md](./uml_modeling/class_diagram.md) và [sequence_diagram.md](./uml_modeling/sequence_diagram.md):
 
 ```
-/api
+/api/v1
 ├── /auth               (8 Endpoints)  - Định danh, Đăng ký, Đăng nhập JWT, Khôi phục mật khẩu [UC01, SQ01]
-├── /wallets            (7 Endpoints)  - Quản lý tài khoản ví tài sản, số dư mở sổ [UC02, SQ01]
+├── /wallets            (5 Endpoints)  - Quản lý tài khoản ví tài sản, số dư mở sổ [UC02, SQ01]
 ├── /transactions       (5 Endpoints)  - Ghi nhận thu chi, chuyển khoản nội bộ, đảo sổ cái [UC03, SQ02, SQ03]
-├── /categories         (4 Endpoints)  - Quản lý danh mục thu/chi người dùng [UC03]
+├── /categories         (2 Endpoints)  - Quản lý danh mục thu/chi người dùng [UC03]
 ├── /exchange-rates     (2 Endpoints)  - Tỷ giá hối đoái ngoại tệ liên ngân hàng [UC03, UC08]
 ├── /recurring          (6 Endpoints)  - Quản lý chi phí cố định định kỳ & tác vụ Cron [UC04, SQ04]
 ├── /budgets            (5 Endpoints)  - Lập ngân sách tháng & cảnh báo bội chi [UC05, SQ02]
@@ -265,52 +265,48 @@ Dưới đây là ma trận phân bổ các nhóm API theo phân hệ chức nă
 
 #### 3.2.1. `GET /api/wallets` - Danh Sách Tài Khoản Ví Của Người Dùng
 - **Quyền truy cập:** Người dùng đã xác thực (`USER`).
-- **Query Parameter:** `include_archived=1` là tùy chọn; mặc định chỉ lấy ví đang hoạt động.
 - **Phản hồi Thành công (200 OK):**
   ```json
   {
     "success": true,
+    "statusCode": 200,
     "data": {
       "wallets": [
         {
           "id": 1,
           "name": "Tiền mặt",
-          "wallet_type": "CASH",
-          "cached_balance": "1500000.00000000",
+          "walletType": "CASH",
+          "cachedBalance": "1500000.00000000",
           "currency": "VND",
-          "earmarked_balance": "0.00000000",
-          "status": "ACTIVE",
-          "created_at": "2026-10-01 00:00:00"
+          "excludeFromTotal": false,
+          "createdAt": "2026-10-01T00:00:00Z"
         },
         {
           "id": 2,
           "name": "Techcombank",
-          "wallet_type": "BANK",
-          "cached_balance": "25000000.00000000",
+          "walletType": "BANK",
+          "cachedBalance": "25000000.00000000",
           "currency": "VND",
-          "earmarked_balance": "0.00000000",
-          "status": "ACTIVE",
-          "created_at": "2026-10-01 00:00:00"
+          "excludeFromTotal": false,
+          "createdAt": "2026-10-01T00:00:00Z"
         }
       ],
-      "count": 2
-    },
-    "error": null,
-    "requestId": "a1b2c3d4e5f60708"
+      "totalBalanceVnd": "26500000.00000000"
+    }
   }
   ```
 
 #### 3.2.2. `POST /api/wallets` - Tạo Ví Mới & Khởi Tạo Số Dư Mở Sổ
 - **Quyền truy cập:** Người dùng đã xác thực (`USER`).
-- **Headers:** `Idempotency-Key: <UUID>` để lần gửi lại cùng yêu cầu không tạo ví trùng.
-- **Mô tả nghiệp vụ:** Tạo ví tài chính mới. Nếu `initialBalance > 0`, hệ thống tự động sinh một giao dịch loại `OTHER` mô tả số dư mở sổ, kèm 2 bút toán sổ cái kép: `DEBIT Asset:Wallet` và `CREDIT Equity:OpeningBalance` theo đúng quy tắc kế toán chuẩn ([BR01, BR02](../SRS.md#br01)).
+- **Mô tả nghiệp vụ:** Tạo ví tài chính mới. Nếu `initialBalance > 0`, hệ thống tự động sinh một giao dịch khởi tạo `OPENING_BALANCE` kèm 2 bút toán sổ cái kép: `DEBIT Asset:Wallet` và `CREDIT Equity:OpeningBalance` theo đúng quy tắc kế toán chuẩn ([BR01, BR02](../SRS.md#br01)).
 - **Request Body JSON Schema:**
   ```json
   {
     "name": "Ví MoMo",
     "walletType": "E_WALLET",
     "currency": "VND",
-    "initialBalance": "500000"
+    "initialBalance": 500000,
+    "excludeFromTotal": false
   }
   ```
 - **Ràng buộc dữ liệu:**
@@ -322,22 +318,11 @@ Dưới đây là ma trận phân bổ các nhóm API theo phân hệ chức nă
 
 #### 3.2.4. `PUT /api/wallets/{id}` - Cập Nhật Thông Tin Ví
 - **Quyền truy cập:** Người dùng sở hữu ví.
-- **Request Body:** `{ "name": "Techcombank Payroll" }`.
-- **Mô tả nghiệp vụ:** Chỉ cập nhật tên ví. Không cho phép đổi trực tiếp số dư đệm tại endpoint này.
+- **Request Body:** `{ "name": "Techcombank Payroll", "excludeFromTotal": false }`. (Không cho phép đổi trực tiếp số dư đệm tại đây; mọi thay đổi số dư bắt buộc phải đi qua giao dịch tài chính).
 
-#### 3.2.5. `POST /api/wallets/{id}/adjustments` - Điều Chỉnh Số Dư Ví
-- **Quyền truy cập:** Người dùng sở hữu ví đang hoạt động.
-- **Headers:** `Idempotency-Key: <UUID>` để ngăn ghi nhận lặp.
-- **Request Body:** `{ "direction": "INCREASE", "amount": "50000", "note": "Bổ sung tiền mặt" }`.
-- **Mô tả nghiệp vụ:** `direction` nhận `INCREASE` hoặc `DECREASE`. Mỗi lần điều chỉnh tạo một giao dịch tài chính cùng hai dòng ghi sổ cân bằng; ví không phải thẻ tín dụng không được giảm xuống số dư âm.
-
-#### 3.2.6. `POST /api/wallets/{id}/archive` - Lưu Trữ Ví
+#### 3.2.5. `DELETE /api/wallets/{id}` - Lưu Trữ / Xóa Ví
 - **Quyền truy cập:** Người dùng sở hữu ví.
-- **Mô tả nghiệp vụ:** Chỉ lưu trữ ví đang hoạt động khi `cached_balance = 0`, `earmarked_balance = 0` và không còn lịch định kỳ ở trạng thái `ACTIVE`.
-
-#### 3.2.7. `DELETE /api/wallets/{id}` - Xóa Vĩnh Viễn Ví Không Có Lịch Sử
-- **Quyền truy cập:** Người dùng sở hữu ví.
-- **Mô tả nghiệp vụ:** Chỉ xóa ví đã lưu trữ, có số dư và tiền phân bổ bằng 0, đồng thời không được tham chiếu bởi sổ giao dịch, lịch định kỳ, khoản vay, giao dịch vàng hoặc mục tiêu tài chính. Ví có lịch sử được giữ ở trạng thái lưu trữ để bảo toàn dữ liệu.
+- **Mô tả nghiệp vụ:** Nếu ví đã có giao dịch kế toán trong lịch sử, từ chối xóa vật lý (Foreign key constraint `ON DELETE RESTRICT`) và chuyển trạng thái sang lưu trữ ẩn.
 
 ---
 
@@ -429,26 +414,10 @@ Dưới đây là ma trận phân bổ các nhóm API theo phân hệ chức nă
 - **Mô tả nghiệp vụ kỹ thuật:** Tuân thủ nguyên tắc kế toán bất biến (Accounting Immutability - BR05), không xóa bản ghi gốc mà tạo một giao dịch mới mang loại `TRANSFER_REVERSAL` hoặc `EXPENSE_REVERSAL`, gắn `original_transaction_id = ?`, và tạo các bút toán đảo ngược chiều để hoàn nguyên số dư chính xác.
 - **Phản hồi Thành công (200 OK):** Trả về ID giao dịch đảo và số dư mới đã phục hồi.
 
-#### 3.3.5. `GET /api/categories` - Danh Sách Danh Mục Thu/Chi
-- **Quyền truy cập:** Người dùng đã xác thực (`USER`).
-- **Query Parameter:** `type=INCOME|EXPENSE` là tùy chọn.
-- **Mô tả nghiệp vụ:** Chỉ trả danh mục đang hoạt động thuộc người dùng hiện tại; có thể lọc riêng danh mục thu nhập hoặc chi tiêu.
+#### 3.3.5. `GET /api/categories` & `POST /api/categories` - Danh Mục Thu/Chi
+- Quản lý danh mục cha/con, biểu tượng icon, mã màu và hạn ngạch chi tiêu.
 
-#### 3.3.6. `POST /api/categories` - Tạo Danh Mục Cá Nhân
-- **Quyền truy cập:** Người dùng đã xác thực (`USER`).
-- **Request Body:** `{ "name": "Ăn trưa", "type": "EXPENSE" }`.
-- **Ràng buộc:** Tên không được để trống; `type` chỉ nhận `INCOME` hoặc `EXPENSE`; tên và loại không được trùng trong cùng tài khoản.
-
-#### 3.3.7. `PUT /api/categories/{id}` - Đổi Tên Danh Mục
-- **Quyền truy cập:** Người dùng sở hữu danh mục.
-- **Request Body:** `{ "name": "Ăn uống hằng ngày" }`.
-- **Mô tả nghiệp vụ:** Chỉ đổi tên; không thay đổi loại thu nhập/chi tiêu của danh mục.
-
-#### 3.3.8. `DELETE /api/categories/{id}` - Lưu Trữ Danh Mục
-- **Quyền truy cập:** Người dùng sở hữu danh mục.
-- **Mô tả nghiệp vụ:** Đây là xóa mềm bằng `archived_at`; không xóa vật lý nên các giao dịch cũ vẫn giữ được lịch sử danh mục.
-
-#### 3.3.9. `GET /api/exchange-rates` & `POST /api/exchange-rates` - Tỷ Giá Hối Đoái
+#### 3.3.6. `GET /api/exchange-rates` & `POST /api/exchange-rates` - Tỷ Giá Hối Đoái
 - Truy vấn và cập nhật tỷ giá quy đổi ngoại tệ (USD, EUR, JPY) sang đơn vị tiền tệ gốc VND.
 
 ---
@@ -767,9 +736,8 @@ Bảng dưới đây xác nhận tính toàn vẹn và mức độ bao phủ 100
 | Phân hệ API | Endpoints Tiêu biểu | Use Cases | Quy tắc BR | Controller Tương ứng (BCE+D) | DAO / Bảng CSDL Tác động | Kịch bản Tuần tự |
 | :--- | :--- | :---: | :---: | :--- | :--- | :---: |
 | **Auth** | `POST /api/auth/register`<br>`POST /api/auth/login` | `UC01` | BR01, BR11, BR15 | `AuthController` | `UserDAO` (`users`, `auth_sessions`) | [SQ01](./uml_modeling/sequence_diagram.md#31-sq01-đăng-ký-tài-khoản-mã-hóa-argon2id--đăng-nhập-jwt) |
-| **Wallets** | `GET /api/wallets`<br>`POST /api/wallets`<br>`GET /api/wallets/{id}`<br>`PUT /api/wallets/{id}`<br>`POST /api/wallets/{id}/adjustments`<br>`POST /api/wallets/{id}/archive`<br>`DELETE /api/wallets/{id}` | `UC02` | BR01, BR02 | `WalletController` | `WalletDAO`, `LedgerDAO` (`wallets`, `financial_transactions`, `ledger_entries`) | [SQ01](./uml_modeling/sequence_diagram.md#31-sq01-đăng-ký-tài-khoản-mã-hóa-argon2id--đăng-nhập-jwt) |
+| **Wallets** | `GET /api/wallets`<br>`POST /api/wallets` | `UC02` | BR01, BR02 | `WalletController` | `WalletDAO` (`wallets`) | [SQ01](./uml_modeling/sequence_diagram.md#31-sq01-đăng-ký-tài-khoản-mã-hóa-argon2id--đăng-nhập-jwt) |
 | **Transactions** | `POST /api/transactions`<br>`POST /api/transactions/transfer` | `UC03` | BR01, BR05, BR06 | `TransactionController` | `WalletDAO`, `LedgerDAO` (`transactions`, `ledger_entries`) | [SQ02](./uml_modeling/sequence_diagram.md#32-sq02-ghi-nhận-chi-tiêu-khóa-bi-quan--cảnh-báo-ngân-sách), [SQ03](./uml_modeling/sequence_diagram.md#33-sq03-chuyển-tiền-nội-bộ--đảo-giao-dịch-reversal) |
-| **Categories** | `GET /api/categories`<br>`POST /api/categories`<br>`PUT /api/categories/{id}`<br>`DELETE /api/categories/{id}` | `UC03` | BR01 | `TransactionController` | `CategoryDAO` (`categories`) | [SQ02](./uml_modeling/sequence_diagram.md#32-sq02-ghi-nhận-chi-tiêu-khóa-bi-quan--cảnh-báo-ngân-sách) |
 | **Recurring** | `POST /api/recurring`<br>`POST /api/recurring/{id}/trigger` | `UC04`, `SYS02` | BR07, BR09, BR13 | `RecurringController` | `RecurringRuleDAO` (`recurring_schedules`, `recurring_executions`) | [SQ04](./uml_modeling/sequence_diagram.md#34-sq04-xử-lý-giao-dịch-định-kỳ-tự-động-subscription-cron) |
 | **Budgets** | `GET /api/budgets/summary`<br>`POST /api/budgets` | `UC05`, `SYS03` | BR07, BR08 | `BudgetController` | `BudgetDAO` (`budgets`, `notifications`) | [SQ02](./uml_modeling/sequence_diagram.md#32-sq02-ghi-nhận-chi-tiêu-khóa-bi-quan--cảnh-báo-ngân-sách) |
 | **Loans** | `POST /api/loans`<br>`POST /api/loans/{id}/payments` | `UC06`, `UC07` | BR09, BR10, BR17 | `LoanController` | `LoanDAO` (`micro_loans`, `loan_repayment_schedules`, `loan_payments`) | [SQ05](./uml_modeling/sequence_diagram.md#35-sq05-khởi-tạo-khoản-vay--thanh-toán-trả-nợ-vi-mô) |
