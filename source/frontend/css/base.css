@@ -111,6 +111,17 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   border-color: #789cb8;
 }
 
+.btn--danger {
+  color: #fff;
+  background: #b84d55;
+  border-color: #b84d55;
+}
+
+.btn--danger:hover {
+  background: #963b43;
+  border-color: #963b43;
+}
+
 .btn--white {
   background: #fff;
   color: var(--navy);

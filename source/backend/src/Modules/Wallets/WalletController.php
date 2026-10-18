@@ -6,10 +6,10 @@ namespace WealthFlow\Modules\Wallets;
 
 use InvalidArgumentException;
 use Throwable;
+use WealthFlow\Core\ApiException;
 use WealthFlow\Core\AuthContext;
 use WealthFlow\Core\JsonResponse;
 use WealthFlow\Core\Request;
-use WealthFlow\Core\ApiException;
 
 final class WalletController
 {
@@ -45,11 +45,14 @@ final class WalletController
         $body = $request->getBody();
 
         try {
-            $wallet = $this->walletService->createWallet($userId, $body);
+            $wallet = $this->walletService->createWallet($userId, $body, $request->getIdempotencyKey());
             JsonResponse::success(['wallet' => $wallet, 'message' => 'Tạo ví mới thành công.'], 201);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
         } catch (InvalidArgumentException $e) {
             JsonResponse::error('VALIDATION_ERROR', $e->getMessage(), 422);
         } catch (Throwable $e) {
+            error_log(sprintf('Wallet create failed [%s]: %s', $e::class, $e->getMessage()));
             JsonResponse::error('SERVER_ERROR', 'Không thể tạo ví lúc này. Vui lòng kiểm tra dữ liệu và liên hệ quản trị viên nếu lỗi tiếp diễn.', 500);
         }
     }
@@ -67,6 +70,18 @@ final class WalletController
         }
     }
 
+    public function adjust(Request $request, int $id): void
+    {
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        $result = $this->walletService->adjustWallet(
+            $id,
+            $userId,
+            $request->getBody(),
+            $request->getIdempotencyKey()
+        );
+        JsonResponse::success($result, 201);
+    }
+
     public function archive(Request $request, int $id): void
     {
         $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
@@ -80,7 +95,14 @@ final class WalletController
 
     public function delete(Request $request, int $id): void
     {
-        // Deletion is intentionally a non-destructive archive operation.
-        $this->archive($request, $id);
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        try {
+            $this->walletService->deleteWallet($id, $userId);
+            JsonResponse::success(['message' => 'Đã xóa vĩnh viễn ví chưa có lịch sử sử dụng.']);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
+        } catch (Throwable) {
+            JsonResponse::error('SERVER_ERROR', 'Không thể xóa ví lúc này.', 500);
+        }
     }
 }

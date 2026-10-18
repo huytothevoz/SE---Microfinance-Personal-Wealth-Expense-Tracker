@@ -10,6 +10,16 @@ use WealthFlow\Core\Database;
 
 final class WalletDAO
 {
+    /** @var array<string, string> */
+    private const REFERENCE_TABLES = [
+        'ledger_accounts' => 'sổ giao dịch',
+        'recurring_schedules' => 'lịch định kỳ',
+        'micro_loans' => 'khoản vay hoặc nợ',
+        'gold_transactions' => 'giao dịch vàng',
+        'financial_goals' => 'mục tiêu tài chính',
+        'goal_allocations' => 'lịch sử phân bổ mục tiêu',
+    ];
+
     private PDO $pdo;
 
     public function __construct(?PDO $pdo = null)
@@ -49,6 +59,20 @@ final class WalletDAO
         return $stmt->fetchAll();
     }
 
+    public function nameExists(int $userId, string $name, ?int $exceptId = null): bool
+    {
+        $sql = 'SELECT 1 FROM wallets WHERE user_id = ? AND LOWER(name) = LOWER(?)';
+        $params = [$userId, trim($name)];
+        if ($exceptId !== null) {
+            $sql .= ' AND id <> ?';
+            $params[] = $exceptId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchColumn() !== false;
+    }
+
     public function create(
         int $userId,
         string $name,
@@ -78,17 +102,65 @@ final class WalletDAO
         return $stmt->execute([trim($name), $id, $userId]);
     }
 
+    public function setBalance(int $id, int $userId, string $balance): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE wallets SET cached_balance = ? WHERE id = ? AND user_id = ? AND status = 'ACTIVE'"
+        );
+        $stmt->execute([$balance, $id, $userId]);
+        return $stmt->rowCount() === 1;
+    }
+
     public function archive(int $id, int $userId): bool
     {
         $stmt = $this->pdo->prepare(
             "UPDATE wallets SET status = 'ARCHIVED' WHERE id = ? AND user_id = ? AND status = 'ACTIVE' "
         );
-        return $stmt->execute([$id, $userId]);
+        $stmt->execute([$id, $userId]);
+        return $stmt->rowCount() === 1;
     }
 
     public function delete(int $id, int $userId): bool
     {
-        throw new RuntimeException('Không hỗ trợ xóa cứng ví có liên quan dữ liệu tài chính. Hãy lưu trữ ví.');
+        $stmt = $this->pdo->prepare(
+            "DELETE FROM wallets WHERE id = ? AND user_id = ? AND status = 'ARCHIVED'"
+        );
+        $stmt->execute([$id, $userId]);
+        return $stmt->rowCount() === 1;
+    }
+
+    /** @return array<string, int> Human-readable reference label => count. */
+    public function getReferenceCounts(int $walletId): array
+    {
+        $counts = [];
+        foreach (self::REFERENCE_TABLES as $table => $label) {
+            if (!$this->tableExists($table)) {
+                continue;
+            }
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM {$table} WHERE wallet_id = ?");
+            $stmt->execute([$walletId]);
+            $count = (int) $stmt->fetchColumn();
+            if ($count > 0) {
+                $counts[$label] = $count;
+            }
+        }
+        return $counts;
+    }
+
+    private function tableExists(string $table): bool
+    {
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $stmt = $this->pdo->prepare(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
+            );
+            $stmt->execute([$table]);
+            return $stmt->fetchColumn() !== false;
+        }
+        $stmt = $this->pdo->prepare(
+            'SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ? LIMIT 1'
+        );
+        $stmt->execute([$table]);
+        return $stmt->fetchColumn() !== false;
     }
 
     /**
@@ -147,5 +219,46 @@ final class WalletDAO
         );
         $stmt->execute([$userId, $walletId, $code, $liability ? 'LIABILITY' : 'ASSET']);
         return (int) $this->pdo->lastInsertId();
+    }
+
+    public function getOrCreateOpeningEquityAccountId(int $userId): int
+    {
+        $code = 'EQUITY_OPENING_BALANCE';
+        $stmt = $this->pdo->prepare('SELECT id FROM ledger_accounts WHERE user_id = ? AND code = ?');
+        $stmt->execute([$userId, $code]);
+        $id = $stmt->fetchColumn();
+        if ($id !== false) {
+            return (int) $id;
+        }
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO ledger_accounts (user_id, wallet_id, code, account_type) VALUES (?, NULL, ?, ?)'
+        );
+        $stmt->execute([$userId, $code, 'EQUITY']);
+        return (int) $this->pdo->lastInsertId();
+    }
+
+    public function getOrCreateBalanceAdjustmentAccountId(int $userId): int
+    {
+        $code = 'EQUITY_BALANCE_ADJUSTMENT';
+        $stmt = $this->pdo->prepare('SELECT id FROM ledger_accounts WHERE user_id = ? AND code = ?');
+        $stmt->execute([$userId, $code]);
+        $id = $stmt->fetchColumn();
+        if ($id !== false) {
+            return (int) $id;
+        }
+
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO ledger_accounts (user_id, wallet_id, code, account_type) VALUES (?, NULL, ?, "EQUITY")'
+        );
+        $stmt->execute([$userId, $code]);
+        return (int) $this->pdo->lastInsertId();
+    }
+
+    public function getUserBaseCurrency(int $userId): ?string
+    {
+        $stmt = $this->pdo->prepare("SELECT base_currency FROM users WHERE id = ? AND status = 'ACTIVE'");
+        $stmt->execute([$userId]);
+        $currency = $stmt->fetchColumn();
+        return $currency === false ? null : strtoupper((string) $currency);
     }
 }
