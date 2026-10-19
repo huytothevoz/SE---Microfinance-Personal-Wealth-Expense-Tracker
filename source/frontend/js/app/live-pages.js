@@ -87,14 +87,78 @@ function overview(currentUser) {
     <section class="panel"><div class="panel-title"><h2>Ngân sách</h2></div>${budgetCards(3)}</section></div>
     <section class="panel"><div class="panel-title"><h2>Tình hình thu–chi</h2></div>${reports()}</section>`;
 }
-function budgetCards(limit = Infinity) {
+function budgetCards(limit = Infinity, showActions = false) {
   const issue = problem('budgets'); if (issue) return issue;
   if (!budgets.length) return empty('budgets','ngân sách');
   return budgets.slice(0,limit).map(b => {
-    const rate = b.limit > 0 ? Math.max(0,b.spent / b.limit * 100) : 0;
-    return `<div class="budget-row"><div class="budget-info"><strong>${esc(b.name)}</strong><span>${vnd(b.spent)} / ${vnd(b.limit)}</span></div>
-    <div class="wf-progress"><i style="width:${Math.min(rate,100)}%;background:${rate >=100?'#bb4545':rate>=80?'#e1a145':'#16869e'}"></i></div><div class="budget-foot">${rate.toFixed(1)}% · ${rate >= 100 ? 'Đã vượt hạn mức' : rate >= 80 ? 'Sắp chạm hạn mức' : 'Trong hạn mức'}</div></div>`;
+    const rate = b.limit > 0 ? Math.max(0, b.spent / b.limit * 100) : 0;
+    const statusText = rate >= 100 ? 'Cảnh báo Đỏ · Đã vượt hạn mức (≥ 100%)' : rate >= 80 ? 'Cảnh báo Vàng · Sắp chạm hạn mức (≥ 80%)' : 'An toàn · Trong hạn mức (< 80%)';
+    const remainingText = b.spent > b.limit ? `Vượt ${vnd(b.spent - b.limit)}` : `Còn lại ${vnd(Math.max(0, b.limit - b.spent))}`;
+    const actionsHtml = showActions && b.id ? `<div class="wf-table-actions" style="margin-top:8px;display:flex;gap:12px">
+      <button type="button" class="text-action" data-action="live:detail:budgets:${encodeURIComponent(String(b.id))}">Chi tiết</button>
+      <button type="button" class="text-action" data-action="live:edit:budgets:${encodeURIComponent(String(b.id))}">Sửa hạn mức</button>
+      <button type="button" class="text-action" data-action="live:delete:budgets:${encodeURIComponent(String(b.id))}">Lưu trữ</button>
+    </div>` : '';
+    return `<div class="budget-row"><div class="budget-info"><strong>${esc(b.name)}${b.month ? ` <small class="wf-muted">(${esc(b.month)})</small>` : ''}</strong><span>${vnd(b.spent)} / ${vnd(b.limit)}</span></div>
+    <div class="wf-progress"><i style="width:${Math.min(rate,100)}%;background:${rate >=100?'#bb4545':rate>=80?'#e1a145':'#16869e'}"></i></div><div class="budget-foot">${rate.toFixed(1)}% · ${statusText} · ${remainingText}</div>${actionsHtml}</div>`;
   }).join('');
+}
+
+function budgetsPage() {
+  const issue = problem('budgets');
+  const totalLimit = ready('budgets') ? budgets.reduce((s, b) => s + Number(b.limit || 0), 0) : 0;
+  const totalSpent = ready('budgets') ? budgets.reduce((s, b) => s + Number(b.spent || 0), 0) : 0;
+  const overallRemaining = Math.max(0, totalLimit - totalSpent);
+  const overallRate = totalLimit > 0 ? (totalSpent / totalLimit * 100) : 0;
+  const redCount = ready('budgets') ? budgets.filter(b => b.limit > 0 && (b.spent / b.limit * 100) >= 100).length : 0;
+  const yellowCount = ready('budgets') ? budgets.filter(b => b.limit > 0 && (b.spent / b.limit * 100) >= 80 && (b.spent / b.limit * 100) < 100).length : 0;
+  const kpis = ready('budgets') ? `<div class="kpi-grid">
+    ${card('Tổng ngân sách tháng', vnd(totalLimit), `${budgets.length} danh mục chi tiêu đang theo dõi`)}
+    ${card('Chi tiêu ròng trong kỳ', vnd(totalSpent), 'Không tính chuyển ví nội bộ & trả nợ gốc')}
+    ${card('Hạn mức còn lại', vnd(overallRemaining), `Tỷ lệ sử dụng chung: ${overallRate.toFixed(1)}%`)}
+    ${card('Ngưỡng cảnh báo', `${redCount} Đỏ · ${yellowCount} Vàng`, 'Cảnh báo tự động ở mốc 80% và 100%')}
+  </div>` : '';
+  return `<div class="wf-grid-actions">${addButton('budgets', 'Thiết lập ngân sách')}</div>${kpis}<section class="panel"><div class="panel-title"><h2>Hạn mức ngân sách theo danh mục (${esc(month())})</h2></div>${issue || budgetCards(Infinity, true)}</section>`;
+}
+
+function notificationsPage(state = {}) {
+  const issue = problem('notifications');
+  if (issue) return `<section class="panel">${issue}</section>`;
+  const unreadFilter = String(state.notifFilter || 'all') === 'unread';
+  const unreadCount = notifications.filter(n => !n.isRead && !n.read_at && !n.readAt).length;
+  const budgetAlertCount = notifications.filter(n => String(n.type || n.notification_type || '').toUpperCase() === 'BUDGET').length;
+  const list = unreadFilter ? notifications.filter(n => !n.isRead && !n.read_at && !n.readAt) : notifications;
+  const typeLabel = t => ({ BUDGET: 'Ngân sách', RECURRING: 'Định kỳ', LOAN: 'Khoản vay', BROADCAST: 'Hệ thống', SYSTEM: 'Hệ thống' }[String(t || '').toUpperCase()] || String(t || 'Thông báo'));
+  return `<div class="kpi-grid">
+    ${card('Tổng thông báo', String(notifications.length), 'Đồng bộ trực tiếp từ máy chủ')}
+    ${card('Chưa đọc', String(unreadCount), unreadCount > 0 ? 'Cần kiểm tra các cảnh báo mới' : 'Bạn đã đọc hết thông báo')}
+    ${card('Cảnh báo ngân sách', String(budgetAlertCount), 'Ngưỡng 80% (Vàng) và 100% (Đỏ)')}
+  </div>
+  <section class="panel">
+    <div class="filter-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div class="tabs">
+        <button type="button" data-notif-filter="all" class="${!unreadFilter ? 'active' : ''}">Tất cả (${notifications.length})</button>
+        <button type="button" data-notif-filter="unread" class="${unreadFilter ? 'active' : ''}">Chưa đọc (${unreadCount})</button>
+      </div>
+      <button type="button" class="btn btn--outline btn-sm" data-action="live:read-all:notifications" ${unreadCount === 0 ? 'disabled' : ''}>Đánh dấu tất cả đã đọc</button>
+    </div>
+    ${!list.length ? empty('notifications', unreadFilter ? 'thông báo chưa đọc' : 'thông báo') : `<div class="data-table-wrap"><table class="data-table"><thead><tr><th>Thông báo</th><th>Phân loại</th><th>Ngày tạo</th><th>Trạng thái</th><th></th></tr></thead><tbody>${list.map(row => {
+      const unread = !row.isRead && !row.read_at && !row.readAt;
+      const title = val(row, 'title', 'message') || 'Thông báo';
+      const body = val(row, 'body', 'details') || '';
+      const idEnc = encodeURIComponent(String(row.id ?? ''));
+      return `<tr style="${unread ? 'font-weight:600' : ''}">
+        <td><div><strong>${esc(title)}</strong>${body ? `<p class="wf-muted" style="margin:4px 0 0;font-weight:400;font-size:13px">${esc(body)}</p>` : ''}</div></td>
+        <td>${esc(typeLabel(val(row, 'type', 'notification_type')))}</td>
+        <td>${display(val(row, 'createdAt', 'created_at'), 'date')}</td>
+        <td>${unread ? '<span style="color:#b45309">● Chưa đọc</span>' : '<span class="wf-muted">Đã đọc</span>'}</td>
+        <td class="wf-table-actions">
+          <button type="button" class="text-action" data-action="live:detail:notifications:${idEnc}">Chi tiết</button>
+          ${unread && row.id ? `<button type="button" class="text-action" data-action="live:read:notifications:${idEnc}">Đã đọc</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`}
+  </section>`;
 }
 
 export function liveTransactionTable(items = transactions) {
@@ -150,7 +214,8 @@ export function liveRender(page, { state, heading, currentUser }) {
   if (page.startsWith('admin-') && currentUser.role !== 'ADMIN') return message('Không có quyền','Chỉ quản trị viên mới truy cập được mục này.');
   const section = page === 'overview' ? overview(currentUser)
     : page === 'transactions' ? `<div class="wf-grid-actions">${addButton('transactions','Ghi giao dịch')}</div><section class="panel">${transactionList(state)}</section>`
-    : page === 'budgets' ? `<div class="wf-grid-actions">${addButton('budgets')}</div><section class="panel">${budgetCards()}</section>`
+    : page === 'budgets' ? budgetsPage()
+    : page === 'notifications' ? notificationsPage(state)
     : page === 'reports' || page === 'report' ? reports()
     : page === 'settings' ? settingsPage(currentUser)
     : page === 'admin-settings' ? message('Cấu hình quản trị', 'Các API quản trị chưa được xác minh ở bản nguồn này; không hiển thị dữ liệu giả.')
@@ -201,6 +266,73 @@ export function liveAction(action, { dialog, toast, reload }) {
       .map(([k,v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
     document.querySelector('#modal-content').innerHTML = `<dl class="detail-grid">${dl}</dl><div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Đóng</button></div>`;
     dialog.showModal(); return true;
+  }
+  if (name === 'notifications' && verb === 'read') {
+    const id = decodeURIComponent(encodedId || '');
+    if (!/^\d+$/.test(id)) { toast('Mã thông báo không hợp lệ.'); return true; }
+    void httpClient(`api/notifications/${encodeURIComponent(id)}/read`, { method: 'POST', data: {} })
+      .then(async () => { await loadLiveData(); reload(); toast('Đã đánh dấu thông báo là đã đọc.'); })
+      .catch(error => toast(`Không thể cập nhật thông báo: ${error.message}`));
+    return true;
+  }
+  if (name === 'notifications' && verb === 'read-all') {
+    void httpClient('api/notifications/read-all', { method: 'POST', data: {} })
+      .then(async () => { await loadLiveData(); reload(); toast('Đã đánh dấu tất cả thông báo là đã đọc.'); })
+      .catch(error => toast(`Không thể cập nhật thông báo: ${error.message}`));
+    return true;
+  }
+  if (name === 'budgets' && verb === 'edit') {
+    const id = decodeURIComponent(encodedId || '');
+    const item = collection.find(x => String(x.id) === id);
+    if (!item || !/^\d+$/.test(id)) { toast('Không tìm thấy ngân sách trong tài khoản.'); return true; }
+    document.querySelector('#modal-overline').textContent = 'CẬP NHẬT HẠN MỨC';
+    document.querySelector('#modal-title').textContent = `Sửa ngân sách: ${item.name}`;
+    document.querySelector('#modal-content').innerHTML = `<p class="form-hint">Điều chỉnh hạn mức ngân sách cho danh mục <strong>${esc(item.name)}</strong> (${esc(item.month || month())}). Đã chi ròng: <strong>${vnd(item.spent)}</strong>.</p>
+    <form id="live-budget-edit-form"><div class="form-grid">${field('limitAmount', 'Hạn mức mới (VND)', 'number', `min="0.01" step="any" value="${esc(item.limit)}"`)}</div><p id="live-form-feedback" role="status" aria-live="polite"></p><div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary">Cập nhật hạn mức</button></div></form>`;
+    const form = document.querySelector('#live-budget-edit-form');
+    form.addEventListener('submit', async e => {
+      e.preventDefault(); if (!form.reportValidity()) return;
+      const submit = form.querySelector('[type=submit]');
+      const feedback = form.querySelector('#live-form-feedback');
+      const limitAmount = Number(form.elements.namedItem('limitAmount').value);
+      submit.disabled = true; feedback.textContent = 'Đang cập nhật hạn mức…';
+      try {
+        await mutateLiveData('budgets', 'PUT', { limitAmount }, id);
+        dialog.close();
+        await loadLiveData();
+        reload();
+        toast('Đã cập nhật hạn mức ngân sách.');
+      } catch (error) { feedback.textContent = `Không thể cập nhật: ${error.message}`; }
+      finally { submit.disabled = false; }
+    });
+    dialog.showModal();
+    return true;
+  }
+  if (name === 'budgets' && verb === 'delete') {
+    const id = decodeURIComponent(encodedId || '');
+    const item = collection.find(x => String(x.id) === id);
+    if (!item || !/^\d+$/.test(id)) { toast('Không tìm thấy ngân sách trong tài khoản.'); return true; }
+    document.querySelector('#modal-overline').textContent = 'LƯU TRỮ NGÂN SÁCH';
+    document.querySelector('#modal-title').textContent = `Lưu trữ ngân sách: ${item.name}`;
+    document.querySelector('#modal-content').innerHTML = `<p class="form-hint">Ngân sách của danh mục <strong>${esc(item.name)}</strong> sẽ được chuyển sang trạng thái Lưu trữ (Archived). Các giao dịch chi tiêu đã ghi sổ không bị ảnh hưởng.</p>
+    <form id="live-budget-delete-form"><p id="live-form-feedback" role="status" aria-live="polite"></p><div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary">Xác nhận lưu trữ</button></div></form>`;
+    const form = document.querySelector('#live-budget-delete-form');
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const submit = form.querySelector('[type=submit]');
+      const feedback = form.querySelector('#live-form-feedback');
+      submit.disabled = true; feedback.textContent = 'Đang lưu trữ ngân sách…';
+      try {
+        await mutateLiveData('budgets', 'DELETE', null, id);
+        dialog.close();
+        await loadLiveData();
+        reload();
+        toast('Đã lưu trữ ngân sách thành công.');
+      } catch (error) { feedback.textContent = `Không thể lưu trữ: ${error.message}`; }
+      finally { submit.disabled = false; }
+    });
+    dialog.showModal();
+    return true;
   }
   if (name === 'recurring' && (verb === 'pause' || verb === 'resume')) {
     const id = decodeURIComponent(encodedId || '');

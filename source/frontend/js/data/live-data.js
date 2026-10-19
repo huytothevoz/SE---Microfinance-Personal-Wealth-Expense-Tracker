@@ -72,9 +72,15 @@ function shape(name, row) {
     r.currency = String(r.currency ?? 'VND');
   }
   if (name === 'budgets') {
+    r.id = String(r.id ?? '');
+    r.categoryId = Number(r.categoryId ?? r.category_id ?? 0);
     r.name = String(r.name ?? r.categoryName ?? r.category_name ?? r.category?.name ?? 'Ngân sách');
+    r.month = String(r.month ?? r.budget_month ?? '').slice(0, 7);
     r.limit = Number(r.limit ?? r.limitAmount ?? r.limit_amount ?? r.amount ?? 0);
     r.spent = Number(r.spent ?? r.spentAmount ?? r.spent_amount ?? r.used ?? 0);
+    r.remaining = Number(r.remaining ?? r.remainingAmount ?? Math.max(0, r.limit - r.spent));
+    r.usagePercent = Number(r.usagePercent ?? (r.limit > 0 ? Math.round((r.spent / r.limit) * 1000) / 10 : 0));
+    r.alertLevel = String(r.alertLevel ?? r.alert_level ?? (r.usagePercent >= 100 ? 'RED' : r.usagePercent >= 80 ? 'YELLOW' : 'GREEN')).toUpperCase();
   }
   if (name === 'categories') {
     r.type = String(r.type ?? r.category_type ?? '').toUpperCase();
@@ -87,6 +93,18 @@ function shape(name, row) {
     r.name = String(r.name ?? r.title ?? 'Mục tiêu');
     r.target = Number(r.target ?? r.targetAmount ?? 0);
     r.current = Number(r.current ?? r.savedAmount ?? r.saved ?? 0);
+  }
+  if (name === 'notifications') {
+    r.id = String(r.id ?? '');
+    r.title = String(r.title ?? r.message ?? 'Thông báo');
+    r.body = String(r.body ?? r.details ?? '');
+    r.message = r.title;
+    r.type = String(r.type ?? r.notification_type ?? 'SYSTEM').toUpperCase();
+    r.priority = String(r.priority ?? 'INFO').toUpperCase();
+    r.readAt = r.readAt ?? r.read_at ?? null;
+    r.isRead = Boolean(r.readAt);
+    r.status = r.isRead ? 'Đã đọc' : 'Chưa đọc';
+    r.createdAt = String(r.createdAt ?? r.created_at ?? '');
   }
   return r;
 }

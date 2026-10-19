@@ -63,7 +63,7 @@ final class TestRunner
         $ledgerService = new LedgerService($txDao, $walletDao, $catDao, $fxService);
         $recDao = new RecurringRuleDAO($pdo);
         $recService = new RecurringService($recDao, $walletDao);
-        $recWorker = new RecurringWorker($recDao, $ledgerService, $txDao, $notifService);
+        $recWorker = new RecurringWorker($recDao, $ledgerService, $txDao, $notifService, $budgetService);
 
         $walletRepo = $walletDao;
         $catRepo = $catDao;
@@ -335,6 +335,102 @@ final class TestRunner
         ]);
         $checkSuppress = $budgetService->checkBudgetAndNotify($userId, 1, date('Y-m-d'));
         $this->assert('TC-F05.02.3 Duplicate alert suppressed: alertTriggered is null', $checkSuppress['alertTriggered'] === null);
+
+        // 3.3: TC-12 / BR08 Jump-Over-Yellow (<80% directly to >=100%) & Reversal Deduplication
+        $budgetCat2 = $budgetService->createBudget($userId, 2, $curMonth, 1000000.0); // Category 2: Di chuyển
+        $jumpTx1 = $ledgerService->postExpense($userId, [
+            'walletId' => 2,
+            'categoryId' => 2,
+            'amount' => 850000,
+            'description' => 'Vé máy bay công tác chặng 1',
+        ]);
+        $jumpTx2 = $ledgerService->postExpense($userId, [
+            'walletId' => 2,
+            'categoryId' => 2,
+            'amount' => 250000,
+            'description' => 'Taxi sân bay',
+        ]);
+        // Evaluate threshold once at 1,100,000 / 1,000,000 (110%) — jumps from 0% straight to >=100%
+        $checkJumpRed = $budgetService->checkBudgetAndNotify($userId, 2, date('Y-m-d'));
+        $this->assert('TC-12.1 Jump from <80% to >=100% triggers RED immediately', $checkJumpRed['alertTriggered'] === 'RED');
+        // Reverse the 250,000 VND taxi expense so net spend drops to 850,000 VND (85% - in Yellow zone)
+        $ledgerService->reverseTransaction($userId, (int) $jumpTx2['transactionId'], 'Hoàn cước taxi');
+        $checkAfterRev = $budgetService->checkBudgetAndNotify($userId, 2, date('Y-m-d'));
+        $this->assert(
+            'TC-12.2 BR08 Jump-over-yellow marks yellow sent so dropping to 85% does not emit belated YELLOW',
+            $checkAfterRev['alertTriggered'] === null && (float) $checkAfterRev['spentAmount'] === 850000.0
+        );
+
+        // 3.4: TC-13 / BR07 Net Spend Excludes Transfers, Reversals & Loan Principal
+        $spentBeforeTransfer = (float) $budgetDao->getCategoryNetExpenseInMonth($userId, 2, $curMonth);
+        $ledgerService->postTransfer($userId, [
+            'fromWalletId' => 2,
+            'toWalletId' => 1,
+            'amount' => 300000,
+            'description' => 'Rút tiền mặt ATM',
+        ]);
+        // Simulate a LOAN_PAYMENT principal transaction in financial_transactions
+        $pdo->prepare("INSERT INTO financial_transactions
+            (user_id, category_id, transaction_type, amount, currency, fx_rate_snapshot, status, description, occurred_on)
+            VALUES (?, 2, 'LOAN_PAYMENT', 400000, 'VND', 1.0, 'POSTED', 'Trả gốc khoản vay', ?)")
+            ->execute([$userId, date('Y-m-d')]);
+        $spentAfterExclusions = (float) $budgetDao->getCategoryNetExpenseInMonth($userId, 2, $curMonth);
+        $this->assert(
+            'TC-13 BR07 Internal transfer, reversed expense, and LOAN_PAYMENT principal do not inflate budget net spend',
+            abs($spentAfterExclusions - $spentBeforeTransfer) < 0.0001 && $spentAfterExclusions === 850000.0
+        );
+
+        // 3.5: PLAN-03 Budget Update, Archive & Reactivation
+        $updatedBudget = $budgetService->updateBudget((int) $budgetCat2['id'], $userId, 2000000.0);
+        $this->assert(
+            'TC-F05.03.1 Budget limit updated to 2,000,000 VND and usage recalculated to 42.5% (GREEN)',
+            $updatedBudget['limitAmount'] === 2000000.0
+                && $updatedBudget['usagePercent'] === 42.5
+                && $updatedBudget['alertLevel'] === 'GREEN'
+        );
+        $archivedOk = $budgetService->archiveBudget((int) $budgetCat2['id'], $userId);
+        $activeIdsAfterArchive = array_map(
+            static fn(array $b): int => (int) $b['id'],
+            $budgetService->getBudgetsForMonth($userId, $curMonth)
+        );
+        $this->assert(
+            'TC-F05.03.2 Archived budget is removed from active monthly budget list',
+            $archivedOk && !in_array((int) $budgetCat2['id'], $activeIdsAfterArchive, true)
+        );
+        $reactivatedBudget = $budgetService->createBudget($userId, 2, $curMonth, 1000000.0);
+        $this->assert(
+            'TC-F05.03.3 Re-creating archived budget for same (user, category, month) reactivates it and triggers threshold check',
+            (int) $reactivatedBudget['id'] === (int) $budgetCat2['id']
+                && $reactivatedBudget['alertLevel'] === 'YELLOW'
+        );
+
+        // 3.6: PLAN-05 Notification Center (Read/Unread Filter & User Isolation)
+        $notifListAll = $notifService->getNotificationsForUser($userId, 50, false);
+        $unreadBefore = $notifService->countUnreadForUser($userId);
+        $this->assert(
+            'TC-F05.04.1 Notification center lists generated budget alerts with unreadCount > 0',
+            count($notifListAll) >= 3 && $unreadBefore >= 3
+        );
+        $firstNotifId = (int) $notifListAll[0]['id'];
+        $crossUserMark = $notifService->markAsRead($firstNotifId, 2); // User 2 attempts to mark User 1's notification
+        $this->assert('TC-F05.04.2 Cross-user markAsRead is rejected (returns false)', $crossUserMark === false);
+
+        $ownerMark = $notifService->markAsRead($firstNotifId, $userId);
+        $notifAfterOneRead = $notifService->getNotificationsForUser($userId, 50, true);
+        $unreadAfterOne = $notifService->countUnreadForUser($userId);
+        $this->assert(
+            'TC-F05.04.3 Owner markAsRead succeeds and unreadOnly filter excludes read notification',
+            $ownerMark === true
+                && $unreadAfterOne === ($unreadBefore - 1)
+                && count($notifAfterOneRead) === $unreadAfterOne
+        );
+        $markedAllOk = $notifService->markAllAsRead($userId);
+        $notifAfterAllRead = $notifService->getNotificationsForUser($userId, 50, true);
+        $unreadAfterAll = $notifService->countUnreadForUser($userId);
+        $this->assert(
+            'TC-F05.04.4 markAllAsRead clears all remaining unread notifications for owner',
+            $markedAllOk === true && $unreadAfterAll === 0 && count($notifAfterAllRead) === 0
+        );
 
         // -------------------------------------------------------------
         echo "\n--- GROUP 4: FR06 - Recurring Schedules & Background Worker ---\n";

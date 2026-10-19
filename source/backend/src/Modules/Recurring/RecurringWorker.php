@@ -135,6 +135,13 @@ final class RecurringWorker
                         $this->recurringDao->recordExecution($scheduleId, $dueDate, $txId, 'COMPLETED');
                         $summary['autoPosted']++;
 
+                        $budgetService = new \WealthFlow\Modules\Budgets\BudgetService(
+                            new \WealthFlow\Modules\Budgets\BudgetDAO($pdo),
+                            new \WealthFlow\Modules\Transactions\CategoryDAO($pdo),
+                            $this->notifService
+                        );
+                        $budgetService->checkBudgetAndNotify($userId, $categoryId, $dueDate);
+
                         $this->notifService->notify(
                             $userId,
                             "Tự động thanh toán: {$name}",
