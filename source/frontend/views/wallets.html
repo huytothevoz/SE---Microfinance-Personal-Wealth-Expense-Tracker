@@ -16,7 +16,6 @@
 </div>
 
 <div class="filter-row">
-  <p class="description">Quản lý tiền mặt, ngân hàng, ví điện tử và tài khoản tiết kiệm. Số dư ngoại tệ được quy đổi khi có tỷ giá hợp lệ.</p>
   <button class="btn btn--outline btn-sm" data-action="wallet-toggle" id="wallet-toggle-btn">
     <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/></svg>
     <span id="wallet-toggle-text">Hiện ví lưu trữ</span>
@@ -38,16 +37,16 @@
     </div>
     <div class="metric-list">
       <div class="metric-item">
-        <span>Tổng số dư quy đổi (VND)</span>
-        <strong id="wallets-total-balance">—</strong>
+        <span>Tổng số dư VND (không quy đổi ngoại tệ)</span>
+        <strong id="wallets-total-balance">0 đ</strong>
       </div>
       <div class="metric-item">
         <span>Ví đang sử dụng</span>
-        <strong id="wallets-active-count">—</strong>
+        <strong id="wallets-active-count">0</strong>
       </div>
       <div class="metric-item">
         <span>Ví đã lưu trữ</span>
-        <strong id="wallets-archived-count">—</strong>
+        <strong id="wallets-archived-count">0</strong>
       </div>
     </div>
   </section>
@@ -63,18 +62,20 @@
     <div class="metric-list">
       <div class="metric-item">
         <span>VND (tiền cơ sở)</span>
-        <strong>—</strong>
+        <strong>1</strong>
       </div>
       <div class="metric-item">
         <span>USD → VND</span>
-        <strong id="wallets-usd-rate">Chưa có tỷ giá xác thực</strong>
+        <strong id="wallets-usd-rate">Chưa có tỷ giá</strong>
+      </div>
+      <div class="metric-item">
+        <span>EUR → VND</span>
+        <strong id="wallets-eur-rate">Chưa có tỷ giá</strong>
       </div>
       <div class="metric-item">
         <span>Ghi nhận tỷ giá</span>
-        <strong>Lưu tỷ giá tại thời điểm ghi sổ</strong>
+        <strong id="wallets-rate-source">Chưa đồng bộ Vietcombank</strong>
       </div>
     </div>
   </section>
 </div>
-
-<div class="hint-box" style="margin-top:17px">Chỉ lưu trữ ví không còn số dư và không liên kết lịch định kỳ đang hoạt động. Số dư ban đầu phải được ghi nhận trong sổ tài chính.</div>

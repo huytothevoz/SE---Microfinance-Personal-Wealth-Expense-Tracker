@@ -1,12 +1,12 @@
-import { icon, safe, money, USER_NAV, ADMIN_NAV, META } from './ui-core.js';
-import { createPages } from './pages.js?v=wallet-ui-5';
+import { icon, safe, money, USER_NAV, ADMIN_NAV, META } from './ui-core.js?v=settings-ui-1';
+import { createPages } from './pages.js?v=wallet-ui-9';
 import { FIELDS } from './forms.js';
 import { transactions, notifications, loadLiveData } from '../data/live-data.js';
 import { liveAction } from './live-pages.js';
 // WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';
-import { createWalletFeature } from './wallet-feature.js';
+import { createWalletFeature } from './wallet-feature.js?v=wallet-ui-10';
 
 let currentUser;
 try {

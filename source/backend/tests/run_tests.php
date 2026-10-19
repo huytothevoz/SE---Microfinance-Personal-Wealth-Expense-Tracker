@@ -16,6 +16,7 @@ use WealthFlow\Modules\Transactions\CategoryDAO;
 use WealthFlow\Modules\Transactions\ExchangeRateService;
 use WealthFlow\Modules\Transactions\LedgerDAO;
 use WealthFlow\Modules\Transactions\LedgerService;
+use WealthFlow\Modules\Transactions\VietcombankRateProvider;
 use WealthFlow\Modules\Wallets\WalletDAO;
 
 final class TestRunner
@@ -84,6 +85,33 @@ final class TestRunner
         $createdId = (int) $created['id'];
         $this->assert('TC-F02.01 Create wallet with server-owned opening balance',
             $createdId > 0 && (float) $created['cached_balance'] == 2000000);
+        $duplicateNameRejected = false;
+        try {
+            $walletService->createWallet(2, [
+                'name' => '  Ví   kiểm thử  ', 'walletType' => 'BANK', 'currency' => 'VND', 'initialBalance' => '0'
+            ]);
+        } catch (\WealthFlow\Core\ApiException $e) {
+            $duplicateNameRejected = $e->status === 409 && $e->errorCode === 'DUPLICATE_WALLET_NAME';
+        }
+        $this->assert('TC-F02.01a Duplicate wallet name returns a business conflict instead of server error',
+            $duplicateNameRejected);
+        $createKey = '023e4567-e89b-42d3-a456-426614174000';
+        $idempotentInput = [
+            'name' => 'Ví tạo một lần', 'walletType' => 'CASH', 'currency' => 'VND', 'initialBalance' => '0'
+        ];
+        $firstCreate = $walletService->createWallet(2, $idempotentInput, $createKey);
+        $replayedCreate = $walletService->createWallet(2, $idempotentInput, $createKey);
+        $sameNameCount = (int) $pdo->query("SELECT COUNT(*) FROM wallets WHERE user_id = 2 AND name = 'Ví tạo một lần'")->fetchColumn();
+        $this->assert('TC-F02.01b Retried create request returns the first wallet without duplication',
+            (int) $firstCreate['id'] === (int) $replayedCreate['id'] && $sameNameCount === 1);
+        $createKeyConflict = false;
+        try {
+            $walletService->createWallet(2, array_merge($idempotentInput, ['name' => 'Tên khác']), $createKey);
+        } catch (\WealthFlow\Core\ApiException $e) {
+            $createKeyConflict = $e->status === 409 && $e->errorCode === 'IDEMPOTENCY_CONFLICT';
+        }
+        $this->assert('TC-F02.01c Reusing create idempotency key with another payload is rejected',
+            $createKeyConflict);
         $entryCount = (int) $pdo->query("SELECT COUNT(*) FROM ledger_entries e JOIN ledger_accounts a ON e.ledger_account_id = a.id WHERE a.wallet_id = $createdId")->fetchColumn();
         $this->assert('TC-F02.02 Opening balance records ledger entry', $entryCount >= 1);
         $walletService->updateWallet($createdId, 2, ['name' => 'Ví đã đổi tên']);
@@ -91,12 +119,59 @@ final class TestRunner
             $walletRepo->findByIdAndUser($createdId, 2)['name'] === 'Ví đã đổi tên');
         $invalid = false;
         try { $walletService->createWallet(2, ['name' => 'Không hợp lệ', 'walletType'=>'CASH', 'initialBalance'=>'-1']); }
-        catch (InvalidArgumentException $e) { $invalid = true; }
+        catch (\WealthFlow\Core\ApiException $e) { $invalid = $e->status === 422; }
         $this->assert('TC-F02.04 Negative opening balance rejected', $invalid);
+        $pdo->exec("DELETE FROM exchange_rates WHERE from_currency = 'USD' AND to_currency = 'VND'");
         $invalidFX = false;
         try { $walletService->createWallet(2, ['name'=>'USD chưa chốt FX', 'walletType'=>'CASH', 'currency'=>'USD','initialBalance'=>'100']); }
         catch (InvalidArgumentException $e) { $invalidFX = true; }
         $this->assert('TC-F02.05 Foreign opening without verified rate rejected', $invalidFX);
+        $fxService->recordRate('USD', 'VND', '26000', 'TEST', '2099-10-18 10:00:00');
+        $foreign = $walletService->createWallet(2, [
+            'name'=>'Ví USD kiểm thử', 'walletType'=>'BANK', 'currency'=>'USD', 'initialBalance'=>'123,45'
+        ]);
+        $foreignId = (int) $foreign['id'];
+        $foreignEntryBase = (string) $pdo->query(
+            "SELECT amount_base FROM ledger_entries e
+             JOIN ledger_accounts a ON e.ledger_account_id = a.id
+             WHERE a.wallet_id = {$foreignId} LIMIT 1"
+        )->fetchColumn();
+        $this->assert('TC-F02.05a Foreign opening accepts manually entered decimal amount',
+            (string) $foreign['currency'] === 'USD' && (float) $foreign['cached_balance'] === 123.45);
+        $this->assert('TC-F02.05b Foreign opening stores converted base amount using verified rate',
+            bccomp($foreignEntryBase, '3209700', 4) === 0);
+        $formattedVnd = $walletService->createWallet(2, [
+            'name'=>'Ví VND có phân cách', 'walletType'=>'CASH', 'currency'=>'VND', 'initialBalance'=>'1.250.000'
+        ]);
+        $this->assert('TC-F02.05c VND accepts a valid thousands separator',
+            (float) $formattedVnd['cached_balance'] === 1250000.0);
+        $badAmounts = ['1.25', '1.000,00', '12e3', '1 000', '+1000', '1000đ'];
+        $badAmountsRejected = true;
+        foreach ($badAmounts as $index => $badAmount) {
+            try {
+                $walletService->createWallet(2, [
+                    'name'=>'Ví sai định dạng ' . $index,
+                    'walletType'=>'CASH',
+                    'currency'=>'VND',
+                    'initialBalance'=>$badAmount,
+                ]);
+                $badAmountsRejected = false;
+            } catch (\WealthFlow\Core\ApiException $e) {
+                $badAmountsRejected = $badAmountsRejected && $e->status === 422;
+            }
+        }
+        $this->assert('TC-F02.05d VND rejects decimal, mixed separators, exponent, spaces and symbols',
+            $badAmountsRejected);
+        $badForeignRejected = false;
+        try {
+            $walletService->createWallet(2, [
+                'name'=>'USD sai định dạng', 'walletType'=>'BANK', 'currency'=>'USD', 'initialBalance'=>'1,234'
+            ]);
+        } catch (\WealthFlow\Core\ApiException $e) {
+            $badForeignRejected = $e->status === 422;
+        }
+        $this->assert('TC-F02.05e Foreign amount rejects ambiguous thousands/three-decimal input',
+            $badForeignRejected);
         $cannotArchive = false;
         try { $walletService->archiveWallet($createdId, 2); }
         catch (InvalidArgumentException $e) { $cannotArchive = true; }
@@ -105,8 +180,57 @@ final class TestRunner
         $walletService->archiveWallet((int) $zero['id'], 2);
         $this->assert('TC-F02.07 Empty wallet can be archived',
             $walletRepo->findByIdAndUser((int)$zero['id'],2)['status']==='ARCHIVED');
+        $walletService->deleteWallet((int) $zero['id'], 2);
+        $this->assert('TC-F02.07a Unused archived wallet can be permanently deleted',
+            $walletRepo->findByIdAndUser((int) $zero['id'], 2) === null);
+        $activeEmpty = $walletService->createWallet(2, [
+            'name'=>'Ví chưa lưu trữ', 'walletType'=>'CASH', 'initialBalance'=>'0'
+        ]);
+        $activeDeleteRejected = false;
+        try { $walletService->deleteWallet((int) $activeEmpty['id'], 2); }
+        catch (\WealthFlow\Core\ApiException $e) { $activeDeleteRejected = $e->errorCode === 'WALLET_MUST_BE_ARCHIVED'; }
+        $this->assert('TC-F02.07b Active wallet must be archived before permanent deletion',
+            $activeDeleteRejected);
         $this->assert('TC-F02.08 Other user cannot list test wallet',
             count(array_filter($walletService->getWallets(1,true), static fn(array $w):bool => (int)$w['id'] === $createdId))===0);
+
+        $adjustKey = '123e4567-e89b-42d3-a456-426614174000';
+        $adjusted = $walletService->adjustWallet($createdId, 2, [
+            'direction' => 'INCREASE', 'amount' => '300,000', 'note' => 'Bổ sung tiền kiểm thử'
+        ], $adjustKey);
+        $adjustTx = $txRepo->findByIdAndUser((int) $adjusted['transactionId'], 2);
+        $debit = 0.0;
+        $credit = 0.0;
+        foreach ($adjustTx['entries'] as $entry) {
+            if ($entry['entry_side'] === 'DEBIT') $debit += (float) $entry['amount_base'];
+            if ($entry['entry_side'] === 'CREDIT') $credit += (float) $entry['amount_base'];
+        }
+        $this->assert('TC-F02.09 Add money updates only the owned active wallet',
+            (float) $walletRepo->findByIdAndUser($createdId, 2)['cached_balance'] === 2300000.0);
+        $this->assert('TC-F02.10 Balance adjustment creates two balanced ledger entries',
+            count($adjustTx['entries']) === 2 && abs($debit - $credit) < 0.0001);
+        $walletService->adjustWallet($createdId, 2, [
+            'direction' => 'INCREASE', 'amount' => '300,000', 'note' => 'Bổ sung tiền kiểm thử'
+        ], $adjustKey);
+        $this->assert('TC-F02.11 Idempotent replay does not add money twice',
+            (float) $walletRepo->findByIdAndUser($createdId, 2)['cached_balance'] === 2300000.0);
+
+        $foreignOwnerRejected = false;
+        try { $walletService->adjustWallet($createdId, 1, ['direction'=>'INCREASE', 'amount'=>'50000']); }
+        catch (\WealthFlow\Core\ApiException $e) { $foreignOwnerRejected = $e->status === 404; }
+        $this->assert('TC-F02.12 Other user cannot adjust wallet balance', $foreignOwnerRejected);
+
+        $walletService->adjustWallet($createdId, 2, [
+            'direction' => 'DECREASE', 'amount' => '2.300.000', 'note' => 'Đưa ví về số dư 0'
+        ], '223e4567-e89b-42d3-a456-426614174001');
+        $this->assert('TC-F02.13 Decrease money updates balance through the ledger',
+            (float) $walletRepo->findByIdAndUser($createdId, 2)['cached_balance'] === 0.0);
+        $walletService->archiveWallet($createdId, 2);
+        $historyDeleteRejected = false;
+        try { $walletService->deleteWallet($createdId, 2); }
+        catch (\WealthFlow\Core\ApiException $e) { $historyDeleteRejected = $e->errorCode === 'WALLET_HISTORY_REQUIRED'; }
+        $this->assert('TC-F02.14 Wallet with ledger history stays archived when permanent deletion is requested',
+            $historyDeleteRejected && $walletRepo->findByIdAndUser($createdId, 2)['status'] === 'ARCHIVED');
 
         echo "\n--- GROUP 1: FR03 - Core Ledger & Double-Entry Engine ---\n";
 
@@ -295,6 +419,23 @@ final class TestRunner
         $expectedBase = bcmul('50', $usdRate, 4);
         $this->assert('TC-F04.01.2 fx_rate_snapshot saved immutably on transaction', (float) $usdTxDetail['fx_rate_snapshot'] === (float) $usdRate);
         $this->assert('TC-F04.01.3 amount_base calculated accurately via BCMath', abs((float) $usdTxDetail['entries'][0]['amount_base'] - (float) $expectedBase) < 0.01);
+
+        $fakeVietcombank = new class extends VietcombankRateProvider {
+            public function fetch(): array
+            {
+                return [
+                    'provider' => 'VIETCOMBANK_TRANSFER',
+                    'effectiveAt' => '2026-10-18 10:00:00',
+                    'sourceUrl' => self::SOURCE_URL,
+                    'rates' => ['USD' => '26000', 'EUR' => '28000'],
+                ];
+            }
+        };
+        $fxService->syncPublicRates($fakeVietcombank);
+        $vcbPairCount = (int) $pdo->query(
+            "SELECT COUNT(*) FROM exchange_rates WHERE provider = 'VIETCOMBANK_TRANSFER' AND effective_at = '2026-10-18 10:00:00'"
+        )->fetchColumn();
+        $this->assert('TC-F04.02 Vietcombank sync stores direct, inverse and cross rates', $vcbPairCount === 6);
 
         // -------------------------------------------------------------
         echo "\n--- GROUP 3: FR05 - Expense Budgeting & Thresholds ---\n";

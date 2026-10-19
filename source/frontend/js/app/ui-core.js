@@ -2,6 +2,10 @@
 const paths = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
   wallet: '<path d="M20 7V5a2 2 0 0 0-2-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h15a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H5a3 3 0 0 1-3-3"/><path d="M16 14h6"/>',
+  cash: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M17 14h.01"/><circle cx="12" cy="12" r="2.5"/>',
+  bank: '<path d="m3 10 9-6 9 6M5 10h14M6 10v7M10 10v7M14 10v7M18 10v7M4 20h16"/>',
+  savings: '<path d="M5 11a7 6 0 0 1 13-2h2a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-2.2a7 6 0 0 1-2.8 2.3V20M8 17.3V20M3 10v3"/><path d="M9 8h4M16 9h.01"/>',
+  card: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
   arrows: '<path d="M3 8h16m-5-5 5 5-5 5M21 16H5m5-5-5 5 5 5"/>',
   pie: '<path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M21 9h-6V3a9 9 0 0 1 6 6"/>',
   repeat: '<path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/>',
@@ -25,7 +29,8 @@ const paths = {
   lock: '<rect x="4" y="10" width="16" height="12" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   download: '<path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/>',
   dots: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
-  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/>'
 
 };
 export function icon(key) {
@@ -112,7 +117,7 @@ export const META = {
   reports: ['Báo cáo tài chính', 'Hiểu dòng tiền và tỷ lệ tiết kiệm'],
   reconciliation: ['Đối soát & xuất CSV', 'Kiểm tra tính nhất quán và lưu trữ báo cáo'],
   notifications: ['Trung tâm thông báo', 'Theo dõi các cảnh báo và nhắc nhở quan trọng'],
-  settings: ['Cài đặt cá nhân', 'Hồ sơ, tiền cơ sở, bảo mật phiên đăng nhập'],
+  settings: ['Cài đặt & bảo mật', 'Hồ sơ, tiền cơ sở, bảo mật phiên đăng nhập'],
   'admin-overview': ['Tổng quan hệ thống', 'Thống kê vĩ mô, không bao gồm dữ liệu tài chính cá nhân'],
   'admin-users': ['Quản lý người dùng', 'Trạng thái tài khoản và quyền truy cập'],
   'admin-categories': ['Danh mục mặc định', 'Thiết lập danh mục mẫu cho người dùng mới'],

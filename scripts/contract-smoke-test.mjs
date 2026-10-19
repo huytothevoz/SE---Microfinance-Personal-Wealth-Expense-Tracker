@@ -1,5 +1,6 @@
 /** Offline interface contract test. Does not start a server, send email or write to a database. */
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 const requests = [];
 globalThis.document = { querySelector: () => null };
 globalThis.fetch = async (path, init = {}) => {
@@ -12,7 +13,7 @@ globalThis.fetch = async (path, init = {}) => {
     '/api/categories': { categories: [{ id: 5, name: 'Đi lại', category_type: 'EXPENSE' }] },
     '/api/notifications': { notifications: [{ id: 6, title: 'Cảnh báo Ngân sách (Vàng): Đi lại', message: 'Chi tiêu đạt 84%.', notification_type: 'BUDGET_YELLOW', priority: 'MEDIUM', is_read: 0, created_at: '2026-10-18 10:00:00' }], unreadCount: 1 },
   };
-  if (init.method === 'POST' || init.method === 'PUT' || init.method === 'DELETE') {
+  if (['POST', 'PUT', 'DELETE'].includes(init.method)) {
     assert.equal(init.headers['X-WealthFlow'], '1');
     return { status: 201, ok: true, headers: new Map([['content-type', 'application/json']]), json: async () => ({ success: true, data: { message: 'ok' } }) };
   }
@@ -41,4 +42,44 @@ assert.match(render('settings'), /Dữ liệu và quyền riêng tư/, 'Restore 
 assert.match(render('settings'), /Đổi mật khẩu/, 'Keep password changing');
 await data.mutateLiveData('transactions', 'POST', { walletId: 1, categoryId: 5, amount: 10000 });
 assert.match(requests.at(-1).init.headers['Idempotency-Key'], /^[0-9a-f-]{36}$/i, 'Idempotency header for financial writes');
-console.log('OK: 17 offline API/frontend contract checks passed. Does NOT verify DB or SMTP.');
+const { walletApi } = await import('../source/frontend/js/services/wallet-api.js');
+await walletApi.create({ name: 'Ví mới', walletType: 'CASH', currency: 'VND', initialBalance: '0' });
+assert.equal(requests.at(-1).path, 'api/wallets', 'Wallet creation uses the wallet endpoint');
+assert.match(requests.at(-1).init.headers['Idempotency-Key'], /^[0-9a-f-]{36}$/i, 'Wallet creation carries an idempotency key');
+await walletApi.adjust(7, { direction: 'INCREASE', amount: '50000' });
+assert.equal(requests.at(-1).path, 'api/wallets/7/adjustments', 'Wallet adjustment uses its dedicated endpoint');
+assert.match(requests.at(-1).init.headers['Idempotency-Key'], /^[0-9a-f-]{36}$/i, 'Wallet adjustment carries an idempotency key');
+await walletApi.remove(8);
+assert.equal(requests.at(-1).path, 'api/wallets/8', 'Permanent wallet deletion uses DELETE on the wallet endpoint');
+assert.equal(requests.at(-1).init.method, 'DELETE', 'Permanent wallet deletion uses the DELETE method');
+const walletFeatureSource = await readFile(new URL('../source/frontend/js/app/wallet-feature.js', import.meta.url), 'utf8');
+const walletViewSource = await readFile(new URL('../source/frontend/js/app/wallets.js', import.meta.url), 'utf8');
+const appCssSource = await readFile(new URL('../source/frontend/css/app.css', import.meta.url), 'utf8');
+const uiCoreSource = await readFile(new URL('../source/frontend/js/app/ui-core.js', import.meta.url), 'utf8');
+const mainSource = await readFile(new URL('../source/frontend/js/app/main.js', import.meta.url), 'utf8');
+const routesSource = await readFile(new URL('../source/backend/public/index.php', import.meta.url), 'utf8');
+assert.match(uiCoreSource, /\['settings', 'Cài đặt & bảo mật', 'gear'\][\s\S]+settings: \['Cài đặt & bảo mật'/, 'Settings navigation and page title use one consistent label');
+assert.match(mainSource, /#user-menu'[\s\S]+navigate\(state\.admin \? 'admin-settings' : 'settings'\)/, 'Account button opens Settings & Security');
+assert.match(mainSource, /authApi\('change-password'/, 'Password form calls the real change-password API');
+assert.ok(/authApi\('logout'/.test(mainSource) && /post\('\/auth\/logout'/.test(routesSource), 'Logout control is connected to the backend route');
+assert.match(walletFeatureSource, /50000[\s\S]+CUSTOM/, 'Opening balance offers 50,000 VND presets and custom input');
+assert.match(walletFeatureSource, /if \(!isVnd\) preset\.value = 'CUSTOM'/, 'USD/EUR opening balance always uses manual input');
+assert.doesNotMatch(walletFeatureSource, /VND có các mức gợi ý/, 'Wallet creation omits redundant explanatory note');
+assert.doesNotMatch(walletFeatureSource, /Mỗi điều chỉnh tạo một giao dịch/, 'Wallet adjustment omits internal accounting note');
+assert.ok(
+  /wallet-opening-custom" type="text"/.test(walletFeatureSource) && /custom\.pattern = isVnd/.test(walletFeatureSource),
+  'Wallet amount fields apply locale-aware strict patterns'
+);
+assert.match(walletFeatureSource, /Thêm hoặc bớt tiền[\s\S]+Lưu trữ ví/, 'Wallet edit menu groups adjustment and archive actions');
+assert.match(walletViewSource, /Chỉnh sửa<\/button>/, 'Wallet card exposes one concise edit action');
+assert.match(walletViewSource, /wallet-delete[\s\S]+Xóa vĩnh viễn/, 'Archived wallet exposes permanent deletion');
+assert.match(appCssSource, /\.wallet-card \{[\s\S]*?background: linear-gradient\(145deg,#fff 55%,var\(--wallet-soft\)\)/, 'Wallet cards keep the owner-selected type color palette');
+const { createWalletFeature } = await import('../source/frontend/js/app/wallet-feature.js');
+const feature = createWalletFeature({
+  state: { walletItems: [] },
+  dialog: {},
+  toast: () => {},
+  render: () => {}
+});
+assert.equal(feature.handleAction('wallet-toggle', { dataset: {} }), false, 'Wallet feature leaves archive visibility toggle to the page controller');
+console.log('OK: 37 offline API/frontend contract checks passed. Does NOT verify MySQL or SMTP.');
