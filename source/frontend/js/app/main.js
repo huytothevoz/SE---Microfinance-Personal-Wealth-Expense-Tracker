@@ -29,6 +29,7 @@ const state = {
   page: 'overview',
   admin: false,
   txFilter: 'all',
+  notifFilter: 'all',
   search: '',
   onlyActiveWallets: true,
   reportRange: '6m',
@@ -69,13 +70,14 @@ ${subtitle}</p>` : ''}\
 ${right}</div></div>${content}</section>`;
 function renderNav() {
   let groups = state.admin ? ADMIN_NAV : USER_NAV;
+  const unreadNotifs = notifications.filter(n => !n.isRead && !n.read_at && !n.readAt).length;
   nav.innerHTML = groups.map(group => `<div class="sidebar-label">\
 ${group.group}\
 </div>\
 <div class="sidebar-group">\
 ${group.items.map(([id, label, ico]) => `<button type="button" data-page="${id}" class="nav-link ${state.page === id ? 'is-active' : ''}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(ico)}\
 <span>\
-${label}</span>${id === 'notifications' ? (notifications.length ? `<span class="nav-count">${notifications.length}</span>` : '') : ''}</button>`).join('')}</div>`).join('') + (currentUser.role === 'ADMIN' ? `<div class="sidebar-label">QUẢN TRỊ</div>\
+${label}</span>${id === 'notifications' ? (unreadNotifs ? `<span class="nav-count">${unreadNotifs}</span>` : '') : ''}</button>`).join('')}</div>`).join('') + (currentUser.role === 'ADMIN' ? `<div class="sidebar-label">QUẢN TRỊ</div>\
 <div class="sidebar-group">\
 <button class="nav-link" data-action="switch-role">\
 ${icon(state.admin ? 'user' : 'lock')}\
@@ -84,6 +86,8 @@ ${state.admin ? 'Quay về người dùng' : 'Khu vực quản trị'}\
 </span>\
 </button>\
 </div>` : '');
+  const dot = document.querySelector('.notify-dot');
+  if (dot) dot.style.display = (!state.admin && unreadNotifs > 0) ? '' : 'none';
   document.body.classList.toggle('admin-mode', state.admin);
 
 }
@@ -100,6 +104,7 @@ async function navigate(page) {
   app.innerHTML = '<div class="panel" role="status">Đang đồng bộ dữ liệu từ máy chủ…</div>';
   await loadLiveData({ admin: currentUser.role === 'ADMIN' });
   if (thisNavigation !== navigateVersion) return;
+  renderNav();
   if (page === 'wallets') await walletFeature.load();
   if (thisNavigation !== navigateVersion) return;
   app.innerHTML = await PAGES[page]();
@@ -367,6 +372,13 @@ document.addEventListener('click', event => {
   if (filter) {
     state.txFilter = filter.dataset.txFilter;
     navigate('transactions');
+    return;
+
+  }
+  const notifFilter = event.target.closest('[data-notif-filter]');
+  if (notifFilter) {
+    state.notifFilter = notifFilter.dataset.notifFilter;
+    navigate('notifications');
     return;
 
   }

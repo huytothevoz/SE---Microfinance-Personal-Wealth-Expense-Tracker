@@ -29,6 +29,10 @@ final class BudgetService
      */
     public function createBudget(int $userId, int $categoryId, string $monthYear, float $limitAmount): array
     {
+        $monthYear = trim($monthYear);
+        if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $monthYear)) {
+            throw new InvalidArgumentException('Kỳ ngân sách không hợp lệ (định dạng chuẩn: YYYY-MM).');
+        }
         if ($limitAmount <= 0) {
             throw new InvalidArgumentException('Hạn mức ngân sách phải lớn hơn 0.');
         }
@@ -47,6 +51,7 @@ final class BudgetService
         }
 
         $budgetId = $this->budgetDao->create($userId, $categoryId, $monthYear, $limitAmount);
+        $this->checkBudgetAndNotify($userId, $categoryId, $monthYear . '-01');
         return $this->getBudgetDetail($budgetId, $userId, $monthYear);
     }
 
@@ -60,12 +65,13 @@ final class BudgetService
         }
 
         $budget = $this->budgetDao->findByIdAndUser($budgetId, $userId);
-        if (!$budget) {
+        if (!$budget || ($budget['status'] ?? 'ACTIVE') !== 'ACTIVE') {
             throw new InvalidArgumentException('Ngân sách không tồn tại hoặc không thuộc quyền sở hữu.');
         }
 
         $this->budgetDao->updateLimit($budgetId, $userId, $newLimitAmount);
         $month = date('Y-m', strtotime($budget['budget_month']));
+        $this->checkBudgetAndNotify($userId, (int) $budget['category_id'], $month . '-01');
         return $this->getBudgetDetail($budgetId, $userId, $month);
     }
 
@@ -84,15 +90,17 @@ final class BudgetService
      */
     public function getBudgetsForMonth(int $userId, ?string $monthYear = null): array
     {
-        $month = $monthYear ?: date('Y-m');
+        $month = $monthYear && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', trim($monthYear))
+            ? trim($monthYear)
+            : date('Y-m');
         $list = $this->budgetDao->listByMonth($userId, $month);
         $result = [];
 
         foreach ($list as $b) {
             $catId = (int) $b['category_id'];
             $limit = (float) $b['limit_amount'];
-            $spent = $this->budgetDao->getCategoryNetExpenseInMonth($userId, $catId, $month);
-            $usage = $limit > 0 ? round(($spent / $limit) * 100, 1) : 0;
+            $spent = (float) $this->budgetDao->getCategoryNetExpenseInMonth($userId, $catId, $month);
+            $usage = $limit > 0 ? round(($spent / $limit) * 100, 1) : 0.0;
             $remaining = max(0.0, $limit - $spent);
 
             $alertLevel = match (true) {
@@ -120,6 +128,7 @@ final class BudgetService
     /**
      * Check budget limit and dispatch notification upon expense posting (FR05.03, BR08).
      * Rule: Only 1 notification per level/budget/month.
+     * If usage jumps from <80% directly to >=100%, only RED is sent and YELLOW is marked as sent (BR08).
      */
     public function checkBudgetAndNotify(int $userId, int $categoryId, string $occurredOn): ?array
     {
@@ -129,39 +138,52 @@ final class BudgetService
             return null;
         }
 
+        $budgetId = (int) $budget['id'];
         $limit = (float) $budget['limit_amount'];
-        $spent = $this->budgetDao->getCategoryNetExpenseInMonth($userId, $categoryId, $month);
-        $usage = $limit > 0 ? ($spent / $limit) * 100 : 0;
+        $spent = (float) $this->budgetDao->getCategoryNetExpenseInMonth($userId, $categoryId, $month);
+        $usage = $limit > 0 ? ($spent / $limit) * 100 : 0.0;
+        $usageRounded = round($usage, 1);
         $categoryName = $budget['category_name'];
 
+        $yellowSent = !empty($budget['is_yellow_sent']);
+        $redSent = !empty($budget['is_red_sent']);
         $alertTriggered = null;
 
         if ($usage >= 100) {
-            // RED Alert
+            // RED Alert (BR08: also marks Yellow as activated so reversal to 80-99% won't emit a belated Yellow alert)
             $dedupKey = "BUDGET_RED_{$userId}_{$categoryId}_{$month}";
-            $title = "Cảnh báo Đỏ: Ngân sách [{$categoryName}] đã vượt {$usage}%";
-            $body = "Chi tiêu thực tế {$spent} đ đã vượt hạn mức {$limit} đ trong tháng {$month}.";
-            $sent = $this->notifService->notify($userId, $title, $body, 'BUDGET', $dedupKey);
+            $title = "Cảnh báo Đỏ: Ngân sách [{$categoryName}] đã vượt {$usageRounded}%";
+            $body = 'Chi tiêu thực tế ' . number_format($spent, 0, ',', '.') . ' đ đã vượt hạn mức ' . number_format($limit, 0, ',', '.') . " đ trong tháng {$month}.";
+            $sent = $this->notifService->notify($userId, $title, $body, 'BUDGET', $dedupKey, 'CRITICAL');
             if ($sent) {
                 $alertTriggered = 'RED';
             }
+            $redSent = true;
+            $yellowSent = true;
         } elseif ($usage >= 80) {
-            // YELLOW Alert
-            $dedupKey = "BUDGET_YELLOW_{$userId}_{$categoryId}_{$month}";
-            $title = "Cảnh báo Vàng: Ngân sách [{$categoryName}] đạt {$usage}%";
-            $body = "Chi tiêu thực tế {$spent} đ đã chạm ngưỡng cảnh báo 80% hạn mức {$limit} đ trong tháng {$month}.";
-            $sent = $this->notifService->notify($userId, $title, $body, 'BUDGET', $dedupKey);
-            if ($sent) {
-                $alertTriggered = 'YELLOW';
+            // YELLOW Alert — only if neither Yellow nor Red was previously triggered in this period
+            if (!$yellowSent && !$redSent) {
+                $dedupKey = "BUDGET_YELLOW_{$userId}_{$categoryId}_{$month}";
+                $title = "Cảnh báo Vàng: Ngân sách [{$categoryName}] đạt {$usageRounded}%";
+                $body = 'Chi tiêu thực tế ' . number_format($spent, 0, ',', '.') . ' đ đã chạm ngưỡng cảnh báo 80% hạn mức ' . number_format($limit, 0, ',', '.') . " đ trong tháng {$month}.";
+                $sent = $this->notifService->notify($userId, $title, $body, 'BUDGET', $dedupKey, 'WARNING');
+                if ($sent) {
+                    $alertTriggered = 'YELLOW';
+                }
             }
+            $yellowSent = true;
         }
+
+        $dbAlertLevel = $usage >= 100 ? 'RED_100' : ($usage >= 80 ? 'YELLOW_80' : 'NORMAL');
+        $this->budgetDao->syncBudgetState($budgetId, $userId, $spent, $dbAlertLevel, $yellowSent, $redSent);
 
         return [
             'categoryId' => $categoryId,
             'month' => $month,
             'limitAmount' => $limit,
             'spentAmount' => $spent,
-            'usagePercent' => round($usage, 1),
+            'usagePercent' => $usageRounded,
+            'alertLevel' => $usage >= 100 ? 'RED' : ($usage >= 80 ? 'YELLOW' : 'GREEN'),
             'alertTriggered' => $alertTriggered,
         ];
     }
@@ -174,8 +196,8 @@ final class BudgetService
         }
         $catId = (int) $b['category_id'];
         $limit = (float) $b['limit_amount'];
-        $spent = $this->budgetDao->getCategoryNetExpenseInMonth($userId, $catId, $month);
-        $usage = $limit > 0 ? round(($spent / $limit) * 100, 1) : 0;
+        $spent = (float) $this->budgetDao->getCategoryNetExpenseInMonth($userId, $catId, $month);
+        $usage = $limit > 0 ? round(($spent / $limit) * 100, 1) : 0.0;
 
         return [
             'id' => (int) $b['id'],

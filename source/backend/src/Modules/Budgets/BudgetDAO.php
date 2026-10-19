@@ -26,6 +26,19 @@ final class BudgetDAO
         $monthDate = date('Y-m-01', strtotime($monthYear . '-01'));
         $limitStr = is_string($limitAmount) ? $limitAmount : number_format((float) $limitAmount, 8, '.', '');
 
+        $checkArchived = $this->pdo->prepare(
+            'SELECT id FROM budgets WHERE user_id = ? AND category_id = ? AND budget_month = ? AND status = "ARCHIVED"'
+        );
+        $checkArchived->execute([$userId, $categoryId, $monthDate]);
+        $archivedId = $checkArchived->fetchColumn();
+        if ($archivedId !== false) {
+            $reactivate = $this->pdo->prepare(
+                'UPDATE budgets SET limit_amount = ?, spent_amount = 0, alert_level = "NORMAL", is_yellow_sent = 0, is_red_sent = 0, status = "ACTIVE" WHERE id = ? AND user_id = ?'
+            );
+            $reactivate->execute([$limitStr, (int) $archivedId, $userId]);
+            return (int) $archivedId;
+        }
+
         $stmt = $this->pdo->prepare('INSERT INTO budgets (user_id, category_id, budget_month, limit_amount, status)
             VALUES (?, ?, ?, ?, "ACTIVE")');
         $stmt->execute([$userId, $categoryId, $monthDate, $limitStr]);
@@ -37,6 +50,28 @@ final class BudgetDAO
         $limitStr = is_string($limitAmount) ? $limitAmount : number_format((float) $limitAmount, 8, '.', '');
         $stmt = $this->pdo->prepare('UPDATE budgets SET limit_amount = ? WHERE id = ? AND user_id = ?');
         return $stmt->execute([$limitStr, $id, $userId]);
+    }
+
+    public function syncBudgetState(
+        int $id,
+        int $userId,
+        float|string $spentAmount,
+        string $dbAlertLevel,
+        bool $yellowSent,
+        bool $redSent
+    ): bool {
+        $spentStr = is_string($spentAmount) ? $spentAmount : number_format((float) $spentAmount, 8, '.', '');
+        $stmt = $this->pdo->prepare(
+            'UPDATE budgets SET spent_amount = ?, alert_level = ?, is_yellow_sent = ?, is_red_sent = ? WHERE id = ? AND user_id = ?'
+        );
+        return $stmt->execute([
+            $spentStr,
+            $dbAlertLevel,
+            $yellowSent ? 1 : 0,
+            $redSent ? 1 : 0,
+            $id,
+            $userId,
+        ]);
     }
 
     /** @return array<string, mixed>|null */
@@ -84,8 +119,8 @@ final class BudgetDAO
     }
 
     /**
-     * Calculate Net Spend for a category in a month (BR07).
-     * Net Spend = SUM(POSTED Expense amount)
+     * Calculate Net Spend for a category in a month in base currency (BR07).
+     * Net Spend = SUM(POSTED Expense amount * fx_rate_snapshot), excluding TRANSFER, LOAN_PAYMENT, DRAFT, REVERSED.
      * Returns string decimal.
      */
     public function getCategoryNetExpenseInMonth(int $userId, int $categoryId, string $monthYear): string
@@ -93,7 +128,7 @@ final class BudgetDAO
         $startDate = date('Y-m-01', strtotime($monthYear . '-01'));
         $endDate = date('Y-m-t', strtotime($monthYear . '-01'));
 
-        $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM financial_transactions
+        $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(amount * COALESCE(fx_rate_snapshot, 1)), 0) FROM financial_transactions
             WHERE user_id = ? AND category_id = ? AND transaction_type = "EXPENSE"
             AND status = "POSTED" AND occurred_on BETWEEN ? AND ?');
         $stmt->execute([$userId, $categoryId, $startDate, $endDate]);
