@@ -1,12 +1,12 @@
 import { icon, safe, money, USER_NAV, ADMIN_NAV, META } from './ui-core.js?v=settings-ui-1';
-import { createPages } from './pages.js?v=wallet-ui-9';
+import { createPages } from './pages.js?v=wallet-ui-13';
 import { FIELDS } from './forms.js';
 import { transactions, notifications, loadLiveData } from '../data/live-data.js';
 import { liveAction } from './live-pages.js';
 // WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';
-import { createWalletFeature } from './wallet-feature.js?v=wallet-ui-10';
+import { createWalletFeature } from './wallet-feature.js?v=wallet-ui-13';
 
 let currentUser;
 try {
@@ -32,6 +32,7 @@ const state = {
   notifFilter: 'all',
   search: '',
   onlyActiveWallets: true,
+  walletTypeFilter: ['ALL'],
   reportRange: '6m',
   walletItems: [],
   walletSummary: null,
@@ -399,8 +400,11 @@ document.addEventListener('input', event => {
   }
 
 });
+document.addEventListener('change', event => {
+  walletFeature.handleChange(event.target);
+});
 document.addEventListener('submit', async event => {
-  if (['wallet-create-form', 'wallet-adjust-form', 'wallet-edit-form', 'wallet-archive-form', 'wallet-delete-form'].includes(event.target.id)) {
+  if (['wallet-filter-form', 'wallet-create-form', 'wallet-adjust-form', 'wallet-edit-form', 'wallet-archive-form', 'wallet-delete-form'].includes(event.target.id)) {
     event.preventDefault();
     await walletFeature.handleSubmit(event.target);
     return;

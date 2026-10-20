@@ -3,6 +3,7 @@ export const walletApi = {
   async list(scope='active') { return httpClient('wallets',{params:{include_archived:scope==='all'?'1':'0'}}); },
   create(data) { return httpClient('wallets',{method:'POST',data}); },
   update(id,data) { return httpClient(`wallets/${encodeURIComponent(id)}`,{method:'PUT',data}); },
+  history(id) { return httpClient(`wallets/${encodeURIComponent(id)}/history`); },
   adjust(id,data) { return httpClient(`wallets/${encodeURIComponent(id)}/adjustments`,{method:'POST',data}); },
   archive(id) { return httpClient(`wallets/${encodeURIComponent(id)}/archive`,{method:'POST',data:{}}); },
   remove(id) { return httpClient(`wallets/${encodeURIComponent(id)}`,{method:'DELETE'}); },

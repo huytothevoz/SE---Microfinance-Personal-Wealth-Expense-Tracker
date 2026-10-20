@@ -68,6 +68,7 @@ try {
     $router->get('/wallets', [$walletController, 'list']);
     $router->post('/wallets', [$walletController, 'create']);
     $router->get('/wallets/{id}', [$walletController, 'show']);
+    $router->get('/wallets/{id}/history', [$walletController, 'history']);
     $router->put('/wallets/{id}', [$walletController, 'update']);
     $router->post('/wallets/{id}/adjustments', [$walletController, 'adjust']);
     $router->delete('/wallets/{id}', [$walletController, 'delete']);

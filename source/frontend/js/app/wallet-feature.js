@@ -12,9 +12,64 @@ const OPENING_BALANCES = [
   ['5000000', '5.000.000 đ']
 ];
 
+const TRANSACTION_LABELS = {
+  INCOME: 'Thu nhập',
+  EXPENSE: 'Chi tiêu',
+  TRANSFER: 'Chuyển tiền',
+  LOAN_DISBURSEMENT: 'Giải ngân khoản vay',
+  LOAN_PAYMENT: 'Thanh toán khoản vay',
+  GOLD_PURCHASE: 'Mua vàng',
+  GOLD_SALE: 'Bán vàng',
+  OTHER: 'Số dư'
+};
+
+const WALLET_TYPE_OPTIONS = [
+  ['ALL', 'Tất cả'],
+  ['CASH', 'Tiền mặt'],
+  ['BANK', 'Ngân hàng'],
+  ['E_WALLET', 'Ví điện tử'],
+  ['SAVINGS', 'Tiết kiệm'],
+  ['CREDIT', 'Thẻ tín dụng']
+];
+
+function formatAmount(value, currency) {
+  const digits = currency === 'VND' ? 0 : 2;
+  const match = String(value ?? '0').trim().match(/^(-?)(\d+)(?:\.(\d+))?$/);
+  if (!match) return `0${digits ? `,${'0'.repeat(digits)}` : ''} ${currency === 'VND' ? 'đ' : currency}`;
+  const whole = match[2].replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const fraction = (match[3] || '').padEnd(digits, '0').slice(0, digits);
+  return `${match[1]}${whole}${digits ? `,${fraction}` : ''} ${currency === 'VND' ? 'đ' : currency}`;
+}
+
+function formatDate(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+  return match ? `${match[3]}/${match[2]}/${match[1]}${match[4] ? ` ${match[4]}:${match[5]}` : ''}` : String(value || '');
+}
+
+function historyMarkup(wallet, history) {
+  if (!history.length) return '<p class="wallet-history-empty">Ví này chưa có lịch sử.</p>';
+  return `<div class="wallet-history-list">${history.map(item => {
+    const created = item.kind === 'WALLET_CREATED';
+    const currency = String(item.currency || wallet.currency || 'VND');
+    const isCredit = String(wallet.wallet_type) === 'CREDIT';
+    const increases = isCredit ? item.wallet_entry_side === 'CREDIT' : item.wallet_entry_side === 'DEBIT';
+    const sign = created ? '' : (increases ? '+' : '−');
+    const title = created ? 'Đã tạo ví' : (TRANSACTION_LABELS[item.transaction_type] || item.transaction_type || 'Giao dịch');
+    const detail = created
+      ? `Số dư đầu kỳ: ${formatAmount(item.wallet_amount_original, currency)} · không tính là giao dịch sử dụng`
+      : `${safe(item.description || item.category_name || 'Không có mô tả')} · ${safe(item.status || '')}`;
+    return `<article class="wallet-history-item${created ? ' wallet-history-item--created' : ''}">
+      <span class="wallet-history-icon">${icon(created ? 'plus' : 'arrows')}</span>
+      <div class="wallet-history-copy"><strong>${safe(title)}</strong><small>${detail}</small><time>${safe(formatDate(item.posted_at || item.created_at || item.occurred_on))}</time></div>
+      <b class="wallet-history-amount${increases ? ' is-positive' : ''}">${sign}${formatAmount(item.wallet_amount_original ?? item.amount, currency)}</b>
+    </article>`;
+  }).join('')}</div>`;
+}
+
 export function createWalletFeature({ state, dialog, toast, render }) {
   const show = (title, content) => {
-    document.querySelector('#modal-overline').textContent = 'VÍ & TÀI KHOẢN';
+    delete dialog.dataset.walletDetailId;
+    document.querySelector('#modal-overline').textContent = '';
     document.querySelector('#modal-title').textContent = title;
     document.querySelector('#modal-content').innerHTML = content;
     if (!dialog.open) dialog.showModal();
@@ -35,6 +90,7 @@ export function createWalletFeature({ state, dialog, toast, render }) {
       try {
         const rateResult = await walletApi.listRates();
         state.walletRates = rateResult.rates ?? [];
+        if (rateResult.syncedAt) state.walletRateSyncedAt = rateResult.syncedAt;
       } catch (error) {
         state.walletRates = [];
         state.walletRateWarning = error.message;
@@ -95,8 +151,30 @@ export function createWalletFeature({ state, dialog, toast, render }) {
     configureOpeningBalanceForm();
   }
 
+  function openTypeFilter() {
+    const selected = Array.isArray(state.walletTypeFilter)
+      ? state.walletTypeFilter
+      : [state.walletTypeFilter || 'ALL'];
+    const checked = selected.length ? selected : ['ALL'];
+    const options = WALLET_TYPE_OPTIONS.map(([value, label]) => `
+      <label class="wallet-filter-option">
+        <input type="checkbox" name="walletTypeFilter" value="${value}" ${checked.includes(value) ? 'checked' : ''}>
+        <span>${label}</span>
+      </label>`).join('');
+    show('Lọc theo loại ví', `<form id="wallet-filter-form">
+      <div class="wallet-filter-options">${options}</div>
+      <div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary">Áp dụng</button></div>
+    </form>`);
+  }
+
   function openManageMenu(wallet) {
-    show('Chỉnh sửa ví', `<div class="wallet-edit-menu">
+    const active = String(wallet.status) === 'ACTIVE';
+    show('Chi tiết ví', `<div class="wallet-detail-summary">
+      <div><small>Tên ví</small><strong>${safe(wallet.name)}</strong></div>
+      <div><small>Số dư hiện tại</small><strong>${formatAmount(wallet.cached_balance, String(wallet.currency))}</strong></div>
+      <div><small>Trạng thái</small><strong>${active ? 'Đang sử dụng' : 'Đã lưu trữ'}</strong></div>
+    </div>
+    ${active ? `<div class="wallet-edit-menu">
       <button type="button" class="wallet-edit-option" data-action="wallet-rename" data-wallet-id="${Number(wallet.id)}">
         <span class="wallet-edit-option__icon">${icon('file')}</span><span><strong>Đổi tên ví</strong><small>Cập nhật tên hiển thị của ví hoặc tài khoản</small></span>
       </button>
@@ -106,8 +184,22 @@ export function createWalletFeature({ state, dialog, toast, render }) {
       <button type="button" class="wallet-edit-option wallet-edit-option--danger" data-action="wallet-archive" data-wallet-id="${Number(wallet.id)}">
         <span class="wallet-edit-option__icon">${icon('layers')}</span><span><strong>Lưu trữ ví</strong><small>Chỉ áp dụng khi số dư, tiền phân bổ và lịch định kỳ đều hợp lệ</small></span>
       </button>
-      <div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Đóng</button></div>
-    </div>`);
+    </div>` : ''}
+    <section class="wallet-history-section" aria-labelledby="wallet-history-title">
+      <div class="wallet-history-heading"><h3 id="wallet-history-title">Lịch sử</h3><small>Tối đa 100 mục gần nhất</small></div>
+      <div id="wallet-history-list" role="status">Đang tải lịch sử…</div>
+    </section>
+    <div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Đóng</button></div>`);
+    dialog.dataset.walletDetailId = String(wallet.id);
+    void walletApi.history(wallet.id).then(result => {
+      if (dialog.dataset.walletDetailId !== String(wallet.id)) return;
+      const target = document.querySelector('#wallet-history-list');
+      if (target) target.innerHTML = historyMarkup(wallet, result.history || []);
+    }).catch(error => {
+      if (dialog.dataset.walletDetailId !== String(wallet.id)) return;
+      const target = document.querySelector('#wallet-history-list');
+      if (target) target.innerHTML = `<p class="wallet-history-empty" role="alert">${safe(error.message)}</p>`;
+    });
   }
 
   function handleAction(action, trigger) {
@@ -119,10 +211,17 @@ export function createWalletFeature({ state, dialog, toast, render }) {
       openCreateForm();
       return true;
     }
+    if (action === 'wallet-filter') {
+      openTypeFilter();
+      return true;
+    }
     if (action === 'rate-refresh') {
       trigger.disabled = true;
       void walletApi.syncRates()
-        .then(result => toast(`Đã cập nhật tỷ giá Vietcombank lúc ${result.effectiveAt}.`))
+        .then(result => {
+          state.walletRateSyncedAt = result.fetchedAt || result.effectiveAt;
+          toast(`Đã gọi Vietcombank và đồng bộ lúc ${formatDate(state.walletRateSyncedAt)}.`);
+        })
         .then(load)
         .catch(error => toast(error.message))
         .finally(() => { trigger.disabled = false; });
@@ -147,12 +246,12 @@ export function createWalletFeature({ state, dialog, toast, render }) {
         <p id="wallet-form-feedback" role="status" aria-live="polite"></p><div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--danger">Xóa vĩnh viễn</button></div></form>`);
       return true;
     }
-    if (String(wallet.status) !== 'ACTIVE') {
-      toast('Ví không còn hoạt động. Vui lòng tải lại trang.');
-      return true;
-    }
     if (action === 'wallet-manage') {
       openManageMenu(wallet);
+      return true;
+    }
+    if (String(wallet.status) !== 'ACTIVE') {
+      toast('Ví không còn hoạt động. Vui lòng tải lại trang.');
       return true;
     }
     if (action === 'wallet-rename') {
@@ -186,6 +285,15 @@ export function createWalletFeature({ state, dialog, toast, render }) {
   }
 
   async function handleSubmit(form) {
+    if (form.id === 'wallet-filter-form') {
+      const selected = [...form.querySelectorAll('input[name="walletTypeFilter"]:checked')]
+        .map(input => input.value)
+        .filter(value => value !== 'ALL');
+      state.walletTypeFilter = selected.length ? selected : ['ALL'];
+      dialog.close();
+      render();
+      return true;
+    }
     if (!['wallet-create-form', 'wallet-edit-form', 'wallet-adjust-form', 'wallet-archive-form', 'wallet-delete-form'].includes(form.id)) return false;
     const button = form.querySelector('[type="submit"]');
     const info = form.querySelector('#wallet-form-feedback');
@@ -227,5 +335,20 @@ export function createWalletFeature({ state, dialog, toast, render }) {
     return true;
   }
 
-  return { load, handleAction, handleSubmit };
+  function handleChange(target) {
+    if (target.name !== 'walletTypeFilter') return false;
+    const form = target.closest('#wallet-filter-form');
+    if (!form) return false;
+    const all = form.querySelector('input[value="ALL"]');
+    const types = [...form.querySelectorAll('input[name="walletTypeFilter"]:not([value="ALL"])')];
+    if (target.value === 'ALL' && target.checked) {
+      types.forEach(input => { input.checked = false; });
+    } else if (target.value !== 'ALL' && target.checked) {
+      all.checked = false;
+    }
+    if (!types.some(input => input.checked)) all.checked = true;
+    return true;
+  }
+
+  return { load, handleAction, handleSubmit, handleChange };
 }

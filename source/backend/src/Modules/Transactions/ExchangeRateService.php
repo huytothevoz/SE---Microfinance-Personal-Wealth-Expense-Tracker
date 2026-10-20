@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WealthFlow\Modules\Transactions;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use PDO;
 use RuntimeException;
 use WealthFlow\Core\Database;
@@ -60,10 +62,14 @@ final class ExchangeRateService
         ];
     }
 
-    /** @return array{provider: string, effectiveAt: string, sourceUrl: string, rates: array<string, string>} */
+    /** @return array{provider: string, effectiveAt: string, fetchedAt: string, sourceUrl: string, rates: array<string, string>} */
     public function syncPublicRates(?VietcombankRateProvider $provider = null): array
     {
         $snapshot = ($provider ?? new VietcombankRateProvider())->fetch();
+        $snapshot['fetchedAt'] = (new DateTimeImmutable(
+            'now',
+            new DateTimeZone('Asia/Ho_Chi_Minh')
+        ))->format('Y-m-d H:i:s');
         $usdVnd = $snapshot['rates']['USD'];
         $eurVnd = $snapshot['rates']['EUR'];
         $pairs = [
@@ -78,6 +84,7 @@ final class ExchangeRateService
             [$from, $to] = explode('_', $pair, 2);
             $this->recordRate($from, $to, $rate, $snapshot['provider'], $snapshot['effectiveAt']);
         }
+        $this->recordLastSyncAt($snapshot['fetchedAt']);
         return $snapshot;
     }
 
@@ -115,6 +122,8 @@ final class ExchangeRateService
         $existing->execute([$from, $to, $provider, $observedAt]);
         $existingId = $existing->fetchColumn();
         if ($existingId !== false) {
+            $update = $this->pdo->prepare('UPDATE exchange_rates SET rate = ? WHERE id = ?');
+            $update->execute([$rateValue, (int) $existingId]);
             return (int) $existingId;
         }
 
@@ -132,5 +141,31 @@ final class ExchangeRateService
     {
         $stmt = $this->pdo->query('SELECT * FROM exchange_rates ORDER BY effective_at DESC LIMIT 20');
         return $stmt->fetchAll();
+    }
+
+    public function getLastSyncAt(): ?string
+    {
+        try {
+            $stmt = $this->pdo->prepare("SELECT config_value FROM system_config WHERE config_key = 'EXCHANGE_RATES_LAST_SYNC_AT'");
+            $stmt->execute();
+            $value = $stmt->fetchColumn();
+            return $value === false ? null : (string) $value;
+        } catch (\PDOException) {
+            return null;
+        }
+    }
+
+    private function recordLastSyncAt(string $fetchedAt): void
+    {
+        try {
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO system_config (config_key, config_value)
+                 VALUES ('EXCHANGE_RATES_LAST_SYNC_AT', ?)
+                 ON DUPLICATE KEY UPDATE config_value = VALUES(config_value), updated_at = CURRENT_TIMESTAMP"
+            );
+            $stmt->execute([$fetchedAt]);
+        } catch (\PDOException) {
+            // The rate rows remain valid if an older database has no system_config table.
+        }
     }
 }

@@ -205,7 +205,7 @@ final class TransactionController
     public function listRates(Request $request): void
     {
         $rates = $this->fxService->getAllLatestRates();
-        JsonResponse::success(['rates' => $rates]);
+        JsonResponse::success(['rates' => $rates, 'syncedAt' => $this->fxService->getLastSyncAt()]);
     }
 
     public function syncRates(Request $request): void
@@ -261,4 +261,3 @@ final class TransactionController
         JsonResponse::success(['message' => 'Đã lưu trữ danh mục thành công.']);
     }
 }
-

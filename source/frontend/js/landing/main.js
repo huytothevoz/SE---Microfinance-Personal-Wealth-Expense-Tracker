@@ -1,6 +1,7 @@
 import { authApi, errorMessage } from '../services/auth-api.js';
 
 const dialog = document.querySelector('#auth-dialog');
+const form = document.querySelector('#auth-form');
 const tabs = [...document.querySelectorAll('[data-auth-tab]')];
 const title = document.querySelector('#auth-title');
 const description = document.querySelector('#auth-desc');
@@ -43,12 +44,39 @@ const confirmationField = document.querySelector('#confirmation-field');
 const tabsContainer = document.querySelector('.auth-tabs');
 const forgotLink = document.querySelector('#auth-forgot-link');
 const backToLogin = document.querySelector('#auth-back-login');
+const passwordToggles = [...document.querySelectorAll('[data-password-toggle]')];
 let currentMode = 'login';
-function setMode(mode) {
-  if (currentMode !== mode && (mode === 'forgot' || mode === 'reset')) {
+
+function resetPasswordVisibility() {
+  passwordToggles.forEach(button => {
+    const input = document.querySelector(`#${button.dataset.passwordToggle}`);
+    input.type = 'password';
+    button.setAttribute('aria-pressed', 'false');
+    button.setAttribute('aria-label', 'Hiện mật khẩu');
+  });
+}
+
+function clearForm({ preserveEmail = false } = {}) {
+  const email = preserveEmail ? emailInput.value.trim() : '';
+  form.reset();
+  emailInput.value = email;
+  confirmation.setCustomValidity('');
+  resetPasswordVisibility();
+  clearInterval(resendTimer);
+  resendTimer = null;
+  resendSeconds = 0;
+  resendOtpButton.disabled = false;
+  resendOtpButton.textContent = 'Gửi lại mã OTP';
+}
+
+function setMode(mode, { clear = false, preserveEmail = false } = {}) {
+  if (clear) {
+    clearForm({ preserveEmail });
+  } else if (currentMode !== mode && mode === 'forgot') {
     password.value = '';
     confirmation.value = '';
     otpInput.value = '';
+    resetPasswordVisibility();
   }
   currentMode = mode;
   tabs.forEach(button => {
@@ -92,20 +120,27 @@ function setMode(mode) {
   feedback.textContent = '';
 }
 document.querySelectorAll('[data-open-auth]').forEach(button => button.addEventListener('click', () => {
-  setMode(button.dataset.openAuth);
+  setMode(button.dataset.openAuth, { clear: true });
   dialog.showModal();
 }));
 document.querySelector('[data-close-dialog]').addEventListener('click', () => { if (!submit.disabled) dialog.close(); });
-// WealthFlow: close auth only by explicit button. Clicking/dragging outside and ESC keep input intact.
 dialog.addEventListener('cancel', event => event.preventDefault());
-// Password confirmation validation before contacting backend.
+dialog.addEventListener('close', () => clearForm());
 [password, confirmation].forEach(field => field.addEventListener('input', () => confirmation.setCustomValidity('')));
-tabs.forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.authTab)));
+passwordToggles.forEach(button => button.addEventListener('click', () => {
+  const input = document.querySelector(`#${button.dataset.passwordToggle}`);
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  button.setAttribute('aria-pressed', String(show));
+  button.setAttribute('aria-label', show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+  input.focus();
+}));
+tabs.forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.authTab, { clear: true })));
 forgotLink.addEventListener('click', () => {
   setMode('forgot');
   emailInput.focus();
 });
-backToLogin.addEventListener('click', () => setMode('login'));
+backToLogin.addEventListener('click', () => setMode('login', { clear: true }));
 resendOtpButton.addEventListener('click', async () => {
   if (resendOtpButton.disabled || currentMode !== 'reset') return;
   resendOtpButton.disabled = true;
@@ -121,7 +156,7 @@ resendOtpButton.addEventListener('click', async () => {
     resendOtpButton.disabled = false;
   }
 });
-document.querySelector('#auth-form').addEventListener('submit', async event => {
+form.addEventListener('submit', async event => {
   event.preventDefault();
   if (['register', 'reset'].includes(currentMode) && password.value !== confirmation.value) {
     confirmation.setCustomValidity('Mật khẩu xác nhận không trùng khớp.');
@@ -130,7 +165,6 @@ document.querySelector('#auth-form').addEventListener('submit', async event => {
   }
   if (!event.currentTarget.reportValidity()) return;
   const mode = currentMode;
-  const form = event.currentTarget;
   const data = {
     email: emailInput.value, password: password.value,
     fullName: nameInput.value, baseCurrency: document.querySelector('#auth-currency').value,
@@ -155,9 +189,7 @@ document.querySelector('#auth-form').addEventListener('submit', async event => {
       return;
     }
     if (mode === 'register') {
-      setMode('login');
-      password.value = '';
-      confirmation.value = '';
+      setMode('login', { clear: true });
       const mailMessage = result.emailDelivery === 'sent' ? ' Email chào mừng đã được gửi; hãy kiểm tra cả thư rác.'
         : result.emailDelivery === 'preview' ? ' Email được lưu ở chế độ xem thử trên máy chủ.'
           : ' Email chào mừng đang chờ gửi. Bạn vẫn có thể đăng nhập ngay.';
@@ -169,8 +201,7 @@ document.querySelector('#auth-form').addEventListener('submit', async event => {
       startResendCooldown();
       otpInput.focus();
     } else {
-      form.reset();
-      setMode('login');
+      setMode('login', { clear: true });
       feedback.textContent = result.message;
       emailInput.focus();
     }
@@ -192,6 +223,6 @@ document.querySelectorAll('.landing-nav a').forEach(link => link.addEventListene
 }));
 const requestedTab = new URLSearchParams(location.search).get('auth');
 if (['login', 'register'].includes(requestedTab)) {
-  setMode(requestedTab);
+  setMode(requestedTab, { clear: true });
   dialog.showModal();
 }

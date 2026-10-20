@@ -19,15 +19,16 @@ WEB_LOG="$LOG_DIR/web_$WEB_PORT.log"
 
 mkdir -p "$PID_DIR" "$LOG_DIR" "$STORAGE_DIR"
 
-# 1. Tim PHP
+# 1. Tim PHP 8.2+ phu hop voi Composer dependencies
 PHP_BIN=""
-if command -v php >/dev/null 2>&1; then
-    PHP_BIN="$(command -v php)"
-elif [[ -x "/opt/lampp/bin/php" ]]; then
-    PHP_BIN="/opt/lampp/bin/php"
-elif [[ -x "/usr/bin/php" ]]; then
-    PHP_BIN="/usr/bin/php"
-fi
+SYSTEM_PHP="$(command -v php 2>/dev/null || true)"
+for php_candidate in "$SYSTEM_PHP" "/opt/lampp/bin/php" "/usr/bin/php"; do
+    if [[ -n "$php_candidate" && -x "$php_candidate" ]] \
+        && "$php_candidate" -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);' >/dev/null 2>&1; then
+        PHP_BIN="$php_candidate"
+        break
+    fi
+done
 
 if [[ -z "$PHP_BIN" ]]; then
     echo -e "\033[0;31m[LỖI] Không tìm thấy PHP 8.2+. Vui lòng cài đặt PHP hoặc XAMPP (/opt/lampp).\033[0m"
@@ -75,9 +76,18 @@ init_env() {
     export DB_NAME="$DB_NAME"
     export DB_USER="${DB_USER:-root}"
     export DB_PASSWORD="${DB_PASSWORD:-}"
-    export MAIL_TRANSPORT="log"
+    local mail_transport_override="${SE_MAIL_TRANSPORT:-${MAIL_TRANSPORT:-}}"
+    if [[ -n "$mail_transport_override" ]]; then
+        if [[ "$mail_transport_override" != "smtp" && "$mail_transport_override" != "log" ]]; then
+            echo "[LỖI] MAIL_TRANSPORT chỉ nhận smtp hoặc log." >&2
+            return 1
+        fi
+        export MAIL_TRANSPORT="$mail_transport_override"
+    else
+        unset MAIL_TRANSPORT
+    fi
     if [[ -z "${APP_KEY:-}" ]]; then
-        export APP_KEY="$(LC_ALL=C tr -dc 'a-f0-9' < /dev/urandom | head -c 32 || echo '12345678901234567890123456789012')"
+        export APP_KEY="$("$PHP_BIN" -r 'echo bin2hex(random_bytes(16));')"
     fi
 }
 

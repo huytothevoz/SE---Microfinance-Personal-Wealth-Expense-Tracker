@@ -39,6 +39,17 @@ final class WalletController
         }
     }
 
+    public function history(Request $request, int $id): void
+    {
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        try {
+            $history = $this->walletService->getWalletHistory($id, $userId);
+            JsonResponse::success(['history' => $history, 'count' => count($history)]);
+        } catch (InvalidArgumentException $e) {
+            JsonResponse::error('NOT_FOUND', $e->getMessage(), 404);
+        }
+    }
+
     public function create(Request $request): void
     {
         $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));

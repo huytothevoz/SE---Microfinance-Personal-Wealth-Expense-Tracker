@@ -757,6 +757,49 @@
   box-shadow: 0 2px 8px #1c42620c;
 }
 
+.password-control {
+  position: relative;
+}
+
+.password-control input {
+  padding-right: 44px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #718499;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  background: #eef3f8;
+  color: #153c65;
+}
+
+.password-toggle svg {
+  display: block;
+  width: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.password-toggle[aria-pressed="true"] .password-toggle-slash {
+  display: none;
+}
+
 .auth-forgot,.auth-back {
   display: block;
   border: 0;

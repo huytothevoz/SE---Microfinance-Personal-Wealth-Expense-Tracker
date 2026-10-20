@@ -44,6 +44,13 @@ final class WalletService
         return $wallet;
     }
 
+    /** @return array<int, array<string, mixed>> */
+    public function getWalletHistory(int $walletId, int $userId): array
+    {
+        $this->getWallet($walletId, $userId);
+        return $this->walletDao->listHistory($walletId, $userId);
+    }
+
     /**
      * Create a new wallet and optionally post an opening balance (BR01, BR02).
      *
@@ -434,6 +441,7 @@ final class WalletService
                     409
                 );
             }
+            $this->walletDao->deleteCreationBookkeeping($walletId, $userId);
             if (!$this->walletDao->delete($walletId, $userId)) {
                 throw new ApiException('WALLET_DELETE_CONFLICT', 'Trạng thái ví đã thay đổi. Vui lòng tải lại trang.', 409);
             }

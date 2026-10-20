@@ -12,7 +12,6 @@ final class WalletDAO
 {
     /** @var array<string, string> */
     private const REFERENCE_TABLES = [
-        'ledger_accounts' => 'sổ giao dịch',
         'recurring_schedules' => 'lịch định kỳ',
         'micro_loans' => 'khoản vay hoặc nợ',
         'gold_transactions' => 'giao dịch vàng',
@@ -133,6 +132,10 @@ final class WalletDAO
     public function getReferenceCounts(int $walletId): array
     {
         $counts = [];
+        $transactionCount = $this->countUsageTransactions($walletId);
+        if ($transactionCount > 0) {
+            $counts['giao dịch tài chính'] = $transactionCount;
+        }
         foreach (self::REFERENCE_TABLES as $table => $label) {
             if (!$this->tableExists($table)) {
                 continue;
@@ -145,6 +148,147 @@ final class WalletDAO
             }
         }
         return $counts;
+    }
+
+    /**
+     * Return the wallet timeline. The synthetic creation event is deliberately
+     * marked as non-usage so it never prevents deletion of an otherwise unused wallet.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function listHistory(int $walletId, int $userId, int $limit = 100): array
+    {
+        $wallet = $this->findByIdAndUser($walletId, $userId);
+        if ($wallet === null) {
+            return [];
+        }
+
+        $limit = max(1, min(200, $limit));
+        $transactionLimit = $limit - 1;
+        $openingCondition = $this->openingTransactionCondition('t');
+        $sql = "SELECT t.id, t.transaction_type, t.status, t.description, t.currency,
+                       t.amount, t.fx_rate_snapshot, t.occurred_on, t.posted_at, t.created_at,
+                       c.name AS category_name, we.entry_side AS wallet_entry_side,
+                       we.amount_original AS wallet_amount_original,
+                       we.amount_base AS wallet_amount_base
+                FROM financial_transactions t
+                JOIN ledger_entries we ON we.transaction_id = t.id
+                JOIN ledger_accounts wa ON wa.id = we.ledger_account_id
+                LEFT JOIN categories c ON c.id = t.category_id
+                WHERE t.user_id = ? AND wa.wallet_id = ? AND NOT ({$openingCondition})
+                ORDER BY COALESCE(t.posted_at, t.created_at) DESC, t.id DESC
+                LIMIT {$transactionLimit}";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$userId, $walletId]);
+        $rows = $stmt->fetchAll();
+
+        $history = array_map(static function (array $row): array {
+            $row['kind'] = 'TRANSACTION';
+            $row['counts_as_usage'] = true;
+            return $row;
+        }, $rows);
+
+        $openingStmt = $this->pdo->prepare("SELECT t.id, we.amount_original
+            FROM financial_transactions t
+            JOIN ledger_entries we ON we.transaction_id = t.id
+            JOIN ledger_accounts wa ON wa.id = we.ledger_account_id
+            WHERE t.user_id = ? AND wa.wallet_id = ? AND {$openingCondition}
+            ORDER BY t.id ASC LIMIT 1");
+        $openingStmt->execute([$userId, $walletId]);
+        $opening = $openingStmt->fetch();
+        $openingAmount = $opening ? (string) $opening['amount_original'] : '0';
+        $openingTransactionId = $opening ? (int) $opening['id'] : null;
+
+        $history[] = [
+            'id' => null,
+            'transaction_id' => $openingTransactionId,
+            'kind' => 'WALLET_CREATED',
+            'counts_as_usage' => false,
+            'transaction_type' => 'WALLET_CREATED',
+            'status' => 'RECORDED',
+            'description' => 'Đã tạo ví',
+            'currency' => (string) $wallet['currency'],
+            'amount' => $openingAmount,
+            'wallet_amount_original' => $openingAmount,
+            'wallet_amount_base' => null,
+            'wallet_entry_side' => null,
+            'category_name' => null,
+            'occurred_on' => substr((string) $wallet['created_at'], 0, 10),
+            'posted_at' => (string) $wallet['created_at'],
+            'created_at' => (string) $wallet['created_at'],
+        ];
+
+        usort($history, static function (array $left, array $right): int {
+            $leftAt = (string) ($left['posted_at'] ?: $left['created_at']);
+            $rightAt = (string) ($right['posted_at'] ?: $right['created_at']);
+            return strcmp($rightAt, $leftAt);
+        });
+        return $history;
+    }
+
+    /** Remove bookkeeping that belongs only to wallet creation before deleting the wallet. */
+    public function deleteCreationBookkeeping(int $walletId, int $userId): void
+    {
+        if ($this->countUsageTransactions($walletId) > 0) {
+            throw new RuntimeException('Ví đã có giao dịch sử dụng nên không thể dọn dữ liệu tạo ví.');
+        }
+
+        $openingCondition = $this->openingTransactionCondition('t');
+        $stmt = $this->pdo->prepare("SELECT DISTINCT t.id
+            FROM financial_transactions t
+            JOIN ledger_entries e ON e.transaction_id = t.id
+            JOIN ledger_accounts a ON a.id = e.ledger_account_id
+            WHERE t.user_id = ? AND a.wallet_id = ? AND {$openingCondition}");
+        $stmt->execute([$userId, $walletId]);
+        $transactionIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+
+        if ($transactionIds !== []) {
+            $placeholders = implode(',', array_fill(0, count($transactionIds), '?'));
+            $deleteKeys = $this->pdo->prepare("DELETE FROM idempotency_keys WHERE transaction_id IN ({$placeholders})");
+            $deleteKeys->execute($transactionIds);
+            $deleteEntries = $this->pdo->prepare("DELETE FROM ledger_entries WHERE transaction_id IN ({$placeholders})");
+            $deleteEntries->execute($transactionIds);
+            $deleteTransactions = $this->pdo->prepare("DELETE FROM financial_transactions WHERE id IN ({$placeholders})");
+            $deleteTransactions->execute($transactionIds);
+        }
+
+        $deleteAccounts = $this->pdo->prepare('DELETE FROM ledger_accounts WHERE wallet_id = ? AND user_id = ?');
+        $deleteAccounts->execute([$walletId, $userId]);
+
+        // Zero-balance wallet creation has no transaction_id. Remove its stale replay response as well.
+        $deleteCreateReplay = $this->pdo->prepare(
+            'DELETE FROM idempotency_keys WHERE user_id = ? AND transaction_id IS NULL AND response_json LIKE ?'
+        );
+        $deleteCreateReplay->execute([$userId, '%"id":' . $walletId . ',%']);
+    }
+
+    private function countUsageTransactions(int $walletId): int
+    {
+        if (!$this->tableExists('ledger_accounts') || !$this->tableExists('ledger_entries')) {
+            return 0;
+        }
+        $openingCondition = $this->openingTransactionCondition('t');
+        $stmt = $this->pdo->prepare("SELECT COUNT(DISTINCT t.id)
+            FROM financial_transactions t
+            JOIN ledger_entries e ON e.transaction_id = t.id
+            JOIN ledger_accounts a ON a.id = e.ledger_account_id
+            WHERE a.wallet_id = ? AND NOT ({$openingCondition})");
+        $stmt->execute([$walletId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    private function openingTransactionCondition(string $transactionAlias): string
+    {
+        return "{$transactionAlias}.transaction_type = 'OTHER'
+            AND {$transactionAlias}.description LIKE 'Số dư mở sổ ví:%'
+            AND EXISTS (
+                SELECT 1
+                FROM ledger_entries opening_entry
+                JOIN ledger_accounts opening_account ON opening_account.id = opening_entry.ledger_account_id
+                WHERE opening_entry.transaction_id = {$transactionAlias}.id
+                  AND opening_account.wallet_id IS NULL
+                  AND opening_account.code = 'EQUITY_OPENING_BALANCE'
+            )";
     }
 
     private function tableExists(string $table): bool
