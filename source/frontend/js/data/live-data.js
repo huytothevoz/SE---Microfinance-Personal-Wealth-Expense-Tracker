@@ -56,12 +56,18 @@ function shape(name, row) {
     r.hasBaseAmount = ['amountBase', 'amount_base', 'baseAmount'].some(k => row[k] != null) || String(row.currency ?? 'VND').toUpperCase() === 'VND';
     r.date = String(r.date ?? r.occurredOn ?? r.occurred_on ?? r.createdAt ?? '').slice(0, 10);
     r.category = String(r.categoryName ?? r.category_name ?? r.category?.name ?? r.category ?? 'Chưa phân loại');
-    r.wallet = String(r.walletName ?? r.wallet_name ?? r.wallet?.name ?? r.wallet ?? '—');
+    r.sourceWallet = String(r.sourceWalletName ?? r.source_wallet_name ?? '');
+    r.destinationWallet = String(r.destinationWalletName ?? r.destination_wallet_name ?? '');
+    const singleWallet = r.walletName ?? r.wallet_name ?? r.wallet?.name ?? r.wallet ?? '';
+    r.wallet = r.type === 'transfer' && r.sourceWallet && r.destinationWallet
+      ? `${r.sourceWallet} → ${r.destinationWallet}`
+      : String(singleWallet || r.sourceWallet || r.destinationWallet || '—');
     r.status = String(r.status ?? 'POSTED').toUpperCase();
     r.currency = String(r.currency ?? 'VND');
     r.icon = r.icon ?? (r.type === 'income' ? '↗' : r.type === 'expense' ? '↘' : '⇄');
     r.details = String(r.details ?? r.note ?? '');
-    r.rate = r.rate ?? r.exchangeRate ?? 1;
+    r.rate = r.rate ?? r.exchangeRate ?? r.fx_rate_snapshot ?? 1;
+    r.postedAt = String(r.postedAt ?? r.posted_at ?? '');
   }
   if (name === 'wallets') {
     r.id = String(r.id ?? r.walletId ?? '');

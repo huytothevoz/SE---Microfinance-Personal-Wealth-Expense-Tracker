@@ -1,5 +1,5 @@
 /** WealthFlow live, account-scoped page templates. No static financial figures. */
-import { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers, dataStatus, mutateLiveData, loadLiveData } from '../data/live-data.js';
+import { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers, dataStatus, mutateLiveData, loadLiveData } from '../data/live-data.js?v=transaction-ui-2';
 import { icon } from './ui-core.js';
 import { httpClient } from '../services/http-client.js';
 
@@ -13,6 +13,7 @@ const sum = list => list.reduce((s, row) => s + Math.abs(Number(row.amount || 0)
 const ownMonth = iso => String(iso ?? '').slice(0, 7);
 const month = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}`; };
 const posted = () => transactions.filter(t => t.status === 'POSTED');
+const TRANSACTION_TYPE_LABELS = { income: 'Thu nhập', expense: 'Chi tiêu', transfer: 'Chuyển tiền', other: 'Số dư' };
 const stateOf = key => dataStatus[key]?.state || 'idle';
 const ready = key => stateOf(key) === 'ready';
 const loading = key => stateOf(key) === 'loading' || stateOf(key) === 'idle';
@@ -162,16 +163,76 @@ function notificationsPage(state = {}) {
 }
 
 export function liveTransactionTable(items = transactions) {
-  return table('transactions', [['Tên','name'],['Loại','type'],['Danh mục','category'],['Ngày','date','date'],['Ví','wallet'],['Số tiền','amount','money']], items);
+  const issue = problem('transactions');
+  if (issue) return issue;
+  if (!items.length) return empty('transactions', 'giao dịch');
+  const amount = row => {
+    const currency = ['VND','USD','EUR'].includes(String(row.currency).toUpperCase()) ? String(row.currency).toUpperCase() : 'VND';
+    const formatted = new Intl.NumberFormat('vi-VN', {
+      style: 'currency', currency, maximumFractionDigits: currency === 'VND' ? 0 : 2
+    }).format(Math.abs(Number(row.amount || 0)));
+    const sign = row.type === 'income' ? '+' : row.type === 'expense' ? '−' : '';
+    const tone = row.type === 'income' ? ' positive' : row.type === 'expense' ? ' negative' : '';
+    return `<span class="amount${tone}">${sign}${esc(formatted)}</span>`;
+  };
+  return `<div class="data-table-wrap"><table class="data-table transaction-table"><thead><tr>
+    <th>Giao dịch</th><th>Loại</th><th>Danh mục</th><th>Ngày</th><th>Ví sử dụng</th><th>Số tiền</th><th></th>
+  </tr></thead><tbody>${items.map(row => `<tr>
+    <td><div class="table-name"><span class="table-icon" aria-hidden="true">${esc(row.icon)}</span><span>${esc(row.name)}<small>Mã #${esc(row.id)}</small></span></div></td>
+    <td>${esc(TRANSACTION_TYPE_LABELS[row.type] || row.type || 'Giao dịch')}</td>
+    <td>${esc(row.type === 'transfer' ? 'Chuyển nội bộ' : row.category)}</td>
+    <td>${display(row.date, 'date')}</td>
+    <td class="transaction-wallet">${esc(row.wallet)}</td>
+    <td>${amount(row)}</td>
+    <td class="wf-table-actions"><button type="button" class="text-action" data-action="live:detail:transactions:${encodeURIComponent(String(row.id))}">Chi tiết</button></td>
+  </tr>`).join('')}</tbody></table></div>`;
 }
 
 function transactionList(state) {
-  const filter = String(state.txFilter || 'all');
+  const savedFilters = Array.isArray(state.txFilter) ? state.txFilter : [state.txFilter || 'ALL'];
+  const filters = savedFilters.map(value => String(value).toUpperCase());
+  const selected = filters.filter(value => value !== 'ALL');
   const q = String(state.search || '').trim().toLocaleLowerCase('vi');
-  const list = transactions.filter(t => (filter === 'all' || t.type === filter) && (!q || [t.name,t.category,t.wallet,t.id].join(' ').toLocaleLowerCase('vi').includes(q)));
-  return `<div class="filter-row"><div class="tabs">${[['all','Tất cả'],['income','Thu nhập'],['expense','Chi tiêu'],['transfer','Chuyển ví']].map(([id,label]) => `<button type="button" data-tx-filter="${id}" class="${filter===id?'active':''}">${label}</button>`).join('')}</div>
-  <input id="transaction-search" type="search" placeholder="Tìm giao dịch" value="${esc(state.search||'')}"></div>
+  const list = transactions.filter(t => (!selected.length || selected.includes(String(t.type).toUpperCase()))
+    && (!q || [t.name,t.category,t.wallet,t.id].join(' ').toLocaleLowerCase('vi').includes(q)));
+  const filterLabel = !selected.length ? 'Tất cả'
+    : selected.length === 1 ? (TRANSACTION_TYPE_LABELS[selected[0].toLowerCase()] || selected[0])
+      : `${selected.length} loại`;
+  return `<div class="filter-row"><div class="filter-controls">
+    <button type="button" class="btn btn--outline btn-sm wallet-filter-button transaction-filter-button" data-action="transaction-filter">
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+      <span>Lọc theo loại giao dịch · ${esc(filterLabel)}</span>
+    </button>
+    <input id="transaction-search" class="input-sm" type="search" placeholder="Tìm tên, mã, danh mục hoặc ví" aria-label="Tìm kiếm giao dịch" value="${esc(state.search||'')}">
+  </div></div>
   <div id="transaction-table">${liveTransactionTable(list)}</div>`;
+}
+
+function transactionDetail(item) {
+  const currency = ['VND','USD','EUR'].includes(String(item.currency).toUpperCase()) ? String(item.currency).toUpperCase() : 'VND';
+  const formattedAmount = new Intl.NumberFormat('vi-VN', {
+    style: 'currency', currency, maximumFractionDigits: currency === 'VND' ? 0 : 2
+  }).format(Math.abs(Number(item.amount || 0)));
+  const sign = item.type === 'income' ? '+' : item.type === 'expense' ? '−' : '';
+  const category = item.type === 'transfer' ? 'Chuyển nội bộ' : item.category;
+  const specialStatus = item.status === 'DRAFT' ? '<span class="badge neutral">Bản nháp</span>'
+    : item.status === 'REVERSED' ? '<span class="badge warn">Đã đảo</span>' : '';
+  const rate = currency !== 'VND' && Number(item.rate) > 0
+    ? `<div><small>Tỷ giá lúc ghi nhận</small><strong>1 ${esc(currency)} = ${vnd(item.rate)}</strong></div>` : '';
+  return `<div class="transaction-detail-hero">
+    <span class="transaction-detail-icon" aria-hidden="true">${esc(item.icon)}</span>
+    <div><small>${esc(TRANSACTION_TYPE_LABELS[item.type] || item.type || 'Giao dịch')}</small><strong>${esc(item.name)}</strong></div>
+    <b class="transaction-detail-amount">${sign}${esc(formattedAmount)}</b>
+  </div>
+  <div class="transaction-detail-grid">
+    <div><small>Ví sử dụng</small><strong>${esc(item.wallet)}</strong></div>
+    <div><small>Danh mục</small><strong>${esc(category)}</strong></div>
+    <div><small>Ngày giao dịch</small><strong>${display(item.date, 'date')}</strong></div>
+    <div><small>Mã giao dịch</small><strong>#${esc(item.id)}</strong></div>
+    ${rate}
+  </div>
+  ${specialStatus ? `<div class="transaction-detail-status">${specialStatus}</div>` : ''}
+  <div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Đóng</button></div>`;
 }
 function genericPage(key, cols) {
   return `<div class="wf-grid-actions">${addButton(key)}</div><section class="panel">${table(key,cols)}</section>`;
@@ -233,14 +294,17 @@ const field = (name,label,type='text',extra='') => `<div class="field"><label fo
 const select = (name,label,options,optional=false) => `<div class="field"><label for="live-${esc(name)}">${esc(label)}</label><select id="live-${esc(name)}" name="${esc(name)}" ${optional?'':'required'}>${optional?'<option value="">Không chọn</option>':''}${options.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select></div>`;
 const walletOptions = () => wallets.filter(w => String(w.status||'ACTIVE').toUpperCase()==='ACTIVE').map(w=>[w.id,`${w.name} (${w.currency})`]);
 const categoryOptions = (type='EXPENSE') => categories.filter(c => !type || c.type === type).map(c=>[c.id,c.name]);
-const needReferenceData = name => ['transactions','recurring'].includes(name) ? (!ready('wallets') || !walletOptions().length || !ready('categories'))
+const needReferenceData = name => name === 'transactions' ? (!ready('wallets') || !walletOptions().length)
+ : name === 'recurring' ? (!ready('wallets') || !walletOptions().length || !ready('categories'))
  : name === 'budgets' ? (!ready('categories') || !categoryOptions().length) : false;
 function createForm(name) {
   if (name==='categories') return field('name','Tên danh mục','text','maxlength="120"')+select('type','Loại danh mục',[['EXPENSE','Chi tiêu'],['INCOME','Thu nhập']]);
   if (name==='transactions') return field('description','Mô tả giao dịch','text','maxlength="255"')
-    +select('type','Loại giao dịch',[['EXPENSE','Chi tiêu'],['INCOME','Thu nhập']])
+    +select('type','Loại giao dịch',[['EXPENSE','Chi tiêu'],['INCOME','Thu nhập'],['TRANSFER','Chuyển tiền']])
     +field('amount','Số tiền','number','min="0.01" step="any"')
     +select('walletId','Ví thanh toán',walletOptions())
+    +select('fromWalletId','Ví gửi',walletOptions())
+    +select('toWalletId','Ví nhận',walletOptions())
     +select('categoryId','Danh mục',categories.map(c=>[c.id,`${c.name} · ${c.type}`]))
     +field('occurredOn','Ngày giao dịch','date');
   if (name==='budgets') return select('categoryId','Danh mục chi tiêu',categoryOptions())
@@ -260,6 +324,12 @@ export function liveAction(action, { dialog, toast, reload }) {
   if (verb === 'detail') {
     const item = collection.find(x => String(x.id) === decodeURIComponent(encodedId || ''));
     if (!item) { toast('Không tìm thấy dữ liệu trong tài khoản này.'); return true; }
+    if (name === 'transactions') {
+      document.querySelector('#modal-overline').textContent = '';
+      document.querySelector('#modal-title').textContent = 'Chi tiết giao dịch';
+      document.querySelector('#modal-content').innerHTML = transactionDetail(item);
+      dialog.showModal(); return true;
+    }
     document.querySelector('#modal-overline').textContent = TITLES[name] || name;
     document.querySelector('#modal-title').textContent = String(val(item,'name','title','description','id') || 'Chi tiết');
     const dl = Object.entries(item).filter(([k,v]) => typeof v !== 'object' && !/password|secret|token/i.test(k)).slice(0,20)
@@ -350,24 +420,46 @@ export function liveAction(action, { dialog, toast, reload }) {
   if (verb !== 'create' || !['transactions','categories','budgets','recurring'].includes(name)) { toast('Thao tác chưa có API được xác nhận. Không ghi dữ liệu giả.'); return true; }
   if (!ready(name)) { toast('Chưa có API thật để ghi dữ liệu.'); return true; }
   if (needReferenceData(name)) { toast('Hãy tạo ít nhất một ví và danh mục phù hợp trước; hoặc kiểm tra kết nối API.'); return true; }
-  document.querySelector('#modal-overline').textContent = 'DỮ LIỆU THẬT';
-  document.querySelector('#modal-title').textContent = `Thêm ${TITLES[name]}`;
-  document.querySelector('#modal-content').innerHTML = `<p class="form-hint">Dữ liệu chỉ được ghi khi backend xác nhận thành công. Nếu API thiếu chức năng, hệ thống sẽ báo lỗi.</p>
+  const isTransaction = name === 'transactions';
+  document.querySelector('#modal-overline').textContent = isTransaction ? '' : 'DỮ LIỆU THẬT';
+  document.querySelector('#modal-title').textContent = isTransaction ? 'Thêm Giao dịch' : `Thêm ${TITLES[name]}`;
+  document.querySelector('#modal-content').innerHTML = `${isTransaction ? '' : '<p class="form-hint">Dữ liệu chỉ được ghi khi backend xác nhận thành công. Nếu API thiếu chức năng, hệ thống sẽ báo lỗi.</p>'}
   <form id="live-entry-form"><div class="form-grid">${createForm(name)}</div><p id="live-form-feedback" role="status" aria-live="polite"></p><div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary">Lưu vào hệ thống</button></div></form>`;
   const form = document.querySelector('#live-entry-form');
   if (name==='transactions') {
     const types = form.elements.namedItem('type');
+    const wallet = form.elements.namedItem('walletId');
+    const fromWallet = form.elements.namedItem('fromWalletId');
+    const toWallet = form.elements.namedItem('toWalletId');
     const category = form.elements.namedItem('categoryId');
-    function syncCategories() {
-      const choices = categoryOptions(types.value);
-      category.innerHTML = choices.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');
+    if (toWallet.options.length > 1) toWallet.selectedIndex = 1;
+    function syncTransactionFields() {
+      const isTransfer = types.value === 'TRANSFER';
+      wallet.disabled = isTransfer;
+      category.disabled = isTransfer;
+      fromWallet.disabled = !isTransfer;
+      toWallet.disabled = !isTransfer;
+      wallet.closest('.field').hidden = isTransfer;
+      category.closest('.field').hidden = isTransfer;
+      fromWallet.closest('.field').hidden = !isTransfer;
+      toWallet.closest('.field').hidden = !isTransfer;
+      const choices = isTransfer ? [] : categoryOptions(types.value);
+      if (!isTransfer) category.innerHTML = choices.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');
       const submit = form.querySelector('[type=submit]');
-      submit.disabled = !choices.length;
       const feedback = form.querySelector('#live-form-feedback');
-      feedback.textContent = choices.length ? '' : 'Bạn cần tạo danh mục tương ứng trước khi ghi giao dịch.';
+      const sameWallet = isTransfer && fromWallet.value === toWallet.value;
+      const missingTransferWallets = isTransfer && (!fromWallet.value || !toWallet.value || walletOptions().length < 2);
+      submit.disabled = isTransfer ? (missingTransferWallets || sameWallet) : !choices.length;
+      feedback.textContent = missingTransferWallets
+        ? 'Bạn cần có ít nhất hai ví đang sử dụng để chuyển tiền.'
+        : sameWallet
+          ? 'Ví gửi và ví nhận phải khác nhau.'
+          : (!isTransfer && !choices.length ? 'Bạn cần tạo danh mục tương ứng trước khi ghi giao dịch.' : '');
     }
-    types.addEventListener('change',syncCategories);
-    syncCategories();
+    types.addEventListener('change',syncTransactionFields);
+    fromWallet.addEventListener('change',syncTransactionFields);
+    toWallet.addEventListener('change',syncTransactionFields);
+    syncTransactionFields();
   }
   if (name==='transactions') form.elements.namedItem('occurredOn').value = new Date().toLocaleDateString('en-CA');
   if (name==='budgets') form.elements.namedItem('month').value = new Date().toLocaleDateString('en-CA').slice(0,7);
@@ -376,16 +468,19 @@ export function liveAction(action, { dialog, toast, reload }) {
     const submit = form.querySelector('[type=submit]');
     const feedback = document.querySelector('#live-form-feedback');
     const record = Object.fromEntries(new FormData(form));
-    for (const key of ['amount','limitAmount','walletId','categoryId','dayOfMonth']) if (record[key] !== undefined && record[key] !== '') record[key] = Number(record[key]);
+    for (const key of ['amount','limitAmount','walletId','fromWalletId','toWalletId','categoryId','dayOfMonth']) if (record[key] !== undefined && record[key] !== '') record[key] = Number(record[key]);
     if (record.categoryId === '') delete record.categoryId;
-    if (name==='transactions') {
+    const isTransfer = name === 'transactions' && record.type === 'TRANSFER';
+    if (name==='transactions' && !isTransfer) {
       const selected = wallets.find(w=>String(w.id)===String(record.walletId));
       record.currency = selected?.currency || 'VND';
     }
+    if (isTransfer) delete record.type;
     if (name==='recurring') record.executionMode = 'DRAFT_REMINDER';
     submit.disabled = true; feedback.textContent = 'Đang lưu vào backend…';
     try {
-      await mutateLiveData(name,'POST',record);
+      if (isTransfer) await httpClient('transactions/transfer', { method: 'POST', data: record });
+      else await mutateLiveData(name,'POST',record);
       dialog.close();
       await loadLiveData();
       reload();

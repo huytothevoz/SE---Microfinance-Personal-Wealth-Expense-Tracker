@@ -65,18 +65,16 @@
   <div class="panel-title">
     <div>
       <h2>Lịch sử giao dịch</h2>
-      <p>Theo dõi Posted, Draft và chi tiết bút toán</p>
+      <p>Theo dõi các khoản thu, chi và chuyển ví</p>
     </div>
     <div class="panel-tools"></div>
   </div>
   <div class="filter-row">
-    <div class="tabs" role="tablist">
-      <button class="tab active" data-tx-filter="all" role="tab" aria-selected="true">Tất cả</button>
-      <button class="tab" data-tx-filter="income" role="tab" aria-selected="false">Thu nhập</button>
-      <button class="tab" data-tx-filter="expense" role="tab" aria-selected="false">Chi tiêu</button>
-      <button class="tab" data-tx-filter="transfer" role="tab" aria-selected="false">Chuyển ví</button>
-    </div>
     <div class="filter-controls">
+      <button type="button" class="btn btn--outline btn-sm wallet-filter-button transaction-filter-button" data-action="transaction-filter">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        <span>Lọc theo loại giao dịch · Tất cả</span>
+      </button>
       <input id="transaction-search" class="input-sm" type="search" placeholder="Tìm tên, mã, danh mục..." aria-label="Tìm kiếm giao dịch">
       <button class="btn btn--outline btn-sm" data-action="export">
         <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg>
@@ -90,5 +88,5 @@
 </section>
 
 <div class="hint-box section-gap" style="margin-top:18px">
-  <strong>Nguyên tắc ghi sổ:</strong> bản ghi đã Posted không sửa/xóa vật lý; thao tác điều chỉnh về sau phải tạo bút toán đảo (Reversal) và giao dịch thay thế.
+  <strong>Nguyên tắc ghi sổ:</strong> giao dịch đã ghi nhận không sửa hoặc xóa trực tiếp; thao tác điều chỉnh phải tạo bút toán đảo và giao dịch thay thế.
 </div>

@@ -95,9 +95,20 @@ final class LedgerDAO
     /** @return array<string, mixed>|null */
     public function findByIdAndUser(int $txId, int $userId): ?array
     {
-        $stmt = $this->pdo->prepare('SELECT t.*, c.name as category_name
+        $stmt = $this->pdo->prepare('SELECT t.*, c.name as category_name,
+                   tw.wallet_name, tw.source_wallet_name, tw.destination_wallet_name
             FROM financial_transactions t
             LEFT JOIN categories c ON t.category_id = c.id
+            LEFT JOIN (
+                SELECT e.transaction_id,
+                       MAX(w.name) AS wallet_name,
+                       MAX(CASE WHEN e.entry_side = \'CREDIT\' THEN w.name END) AS source_wallet_name,
+                       MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN w.name END) AS destination_wallet_name
+                FROM ledger_entries e
+                JOIN ledger_accounts a ON a.id = e.ledger_account_id
+                JOIN wallets w ON w.id = a.wallet_id
+                GROUP BY e.transaction_id
+            ) tw ON tw.transaction_id = t.id
             WHERE t.id = ? AND t.user_id = ?');
         $stmt->execute([$txId, $userId]);
         $tx = $stmt->fetch();
@@ -106,9 +117,11 @@ final class LedgerDAO
         }
 
         // Fetch ledger entries
-        $stmt = $this->pdo->prepare('SELECT e.*, a.code as account_code, a.account_type, a.wallet_id
+        $stmt = $this->pdo->prepare('SELECT e.*, a.code as account_code, a.account_type, a.wallet_id,
+                   w.name AS wallet_name
             FROM ledger_entries e
             JOIN ledger_accounts a ON e.ledger_account_id = a.id
+            LEFT JOIN wallets w ON w.id = a.wallet_id
             WHERE e.transaction_id = ? ORDER BY e.id ASC');
         $stmt->execute([$txId]);
         $tx['entries'] = $stmt->fetchAll();
@@ -122,9 +135,20 @@ final class LedgerDAO
      */
     public function listTransactions(int $userId, array $filters = []): array
     {
-        $sql = 'SELECT t.*, c.name as category_name
+        $sql = 'SELECT t.*, c.name as category_name,
+                       tw.wallet_name, tw.source_wallet_name, tw.destination_wallet_name
             FROM financial_transactions t
             LEFT JOIN categories c ON t.category_id = c.id
+            LEFT JOIN (
+                SELECT e.transaction_id,
+                       MAX(w.name) AS wallet_name,
+                       MAX(CASE WHEN e.entry_side = \'CREDIT\' THEN w.name END) AS source_wallet_name,
+                       MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN w.name END) AS destination_wallet_name
+                FROM ledger_entries e
+                JOIN ledger_accounts a ON a.id = e.ledger_account_id
+                JOIN wallets w ON w.id = a.wallet_id
+                GROUP BY e.transaction_id
+            ) tw ON tw.transaction_id = t.id
             WHERE t.user_id = ?';
         $params = [$userId];
 

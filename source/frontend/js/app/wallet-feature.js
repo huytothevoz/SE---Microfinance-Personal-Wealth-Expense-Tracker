@@ -57,7 +57,7 @@ function historyMarkup(wallet, history) {
     const title = created ? 'Đã tạo ví' : (TRANSACTION_LABELS[item.transaction_type] || item.transaction_type || 'Giao dịch');
     const detail = created
       ? `Số dư đầu kỳ: ${formatAmount(item.wallet_amount_original, currency)} · không tính là giao dịch sử dụng`
-      : `${safe(item.description || item.category_name || 'Không có mô tả')} · ${safe(item.status || '')}`;
+      : safe(item.description || item.category_name || 'Không có mô tả');
     return `<article class="wallet-history-item${created ? ' wallet-history-item--created' : ''}">
       <span class="wallet-history-icon">${icon(created ? 'plus' : 'arrows')}</span>
       <div class="wallet-history-copy"><strong>${safe(title)}</strong><small>${detail}</small><time>${safe(formatDate(item.posted_at || item.created_at || item.occurred_on))}</time></div>

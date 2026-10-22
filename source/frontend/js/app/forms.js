@@ -34,7 +34,7 @@ export const FIELDS = {
     title: 'Xóa lịch định kỳ',
     desc: 'Xóa lịch và giữ dấu vết kỳ cũ',
     fields: [],
-    note: 'Xóa chỉ ngừng phát sinh kỳ tiếp theo; các giao dịch đã POSTED vẫn phải giữ nguyên để phục vụ kiểm toán.'
+    note: 'Xóa chỉ ngừng phát sinh kỳ tiếp theo; các giao dịch đã ghi nhận vẫn phải giữ nguyên để phục vụ kiểm toán.'
 
   },
   'goal-complete': {

@@ -1,5 +1,9 @@
 import { authApi, errorMessage } from '../services/auth-api.js';
 
+void authApi('me')
+  .then(() => window.location.replace('app.html#overview'))
+  .catch(() => {});
+
 const dialog = document.querySelector('#auth-dialog');
 const form = document.querySelector('#auth-form');
 const tabs = [...document.querySelectorAll('[data-auth-tab]')];

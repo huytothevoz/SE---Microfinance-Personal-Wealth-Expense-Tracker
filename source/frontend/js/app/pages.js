@@ -1,6 +1,6 @@
 /** Refactor SPA view aggregator: no demo fixtures, never return fabricated account data. */
 import { META } from './ui-core.js';
-import { liveRender, liveTransactionTable } from './live-pages.js';
+import { liveRender, liveTransactionTable } from './live-pages.js?v=transaction-ui-2';
 import { renderWalletPage } from './wallets.js?v=wallet-ui-13';
 
 export function createPages({ state, heading, currentUser }) {

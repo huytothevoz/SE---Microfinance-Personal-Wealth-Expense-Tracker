@@ -1655,6 +1655,93 @@
   box-shadow: 0 2px 6px #15365513;
 }
 
+.transaction-wallet {
+  color: #294f70;
+  font-weight: 700;
+}
+
+.transaction-detail-hero {
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #dbe7ee;
+  border-radius: 12px;
+  background: linear-gradient(135deg,#f7fbfc,#f2f7fb);
+}
+
+.transaction-detail-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: #23788b;
+  background: #e4f3f5;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.transaction-detail-hero small,.transaction-detail-hero strong {
+  display: block;
+}
+
+.transaction-detail-hero small {
+  margin-bottom: 4px;
+  color: #7e91a5;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.transaction-detail-hero strong {
+  color: #203f5b;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.transaction-detail-amount {
+  color: #173e5f;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.transaction-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.transaction-detail-grid > div {
+  min-width: 0;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: #f6f8fb;
+}
+
+.transaction-detail-grid small,.transaction-detail-grid strong {
+  display: block;
+}
+
+.transaction-detail-grid small {
+  margin-bottom: 5px;
+  color: #8a9bad;
+  font-size: 9.5px;
+}
+
+.transaction-detail-grid strong {
+  color: #294761;
+  font-size: 11.5px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.transaction-detail-status {
+  margin-top: 12px;
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

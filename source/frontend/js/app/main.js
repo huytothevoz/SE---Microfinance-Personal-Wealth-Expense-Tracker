@@ -1,8 +1,8 @@
 import { icon, safe, money, USER_NAV, ADMIN_NAV, META } from './ui-core.js?v=settings-ui-1';
-import { createPages } from './pages.js?v=wallet-ui-13';
+import { createPages } from './pages.js?v=transaction-ui-2';
 import { FIELDS } from './forms.js';
-import { transactions, notifications, loadLiveData } from '../data/live-data.js';
-import { liveAction } from './live-pages.js';
+import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=transaction-ui-2';
+import { liveAction } from './live-pages.js?v=transaction-ui-2';
 // WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';
@@ -28,7 +28,7 @@ window.addEventListener('focus', async () => {
 const state = {
   page: 'overview',
   admin: false,
-  txFilter: 'all',
+  txFilter: ['ALL'],
   notifFilter: 'all',
   search: '',
   onlyActiveWallets: true,
@@ -190,17 +190,13 @@ function openAction(action) {
 function showDetails(id) {
   const t = transactions.find(row => row.id === id);
   if (!t) return;
-  document.querySelector('#modal-overline').textContent = 'CHI TIẾT GIAO DỊCH';
-  document.querySelector('#modal-title').textContent = t.name;
+  document.querySelector('#modal-overline').textContent = '';
+  document.querySelector('#modal-title').textContent = 'Chi tiết giao dịch';
   document.querySelector('#modal-content').innerHTML = `
     <dl class="detail-grid">
       <div>
         <dt>Mã giao dịch</dt>
         <dd>${safe(t.id)}</dd>
-      </div>
-      <div>
-        <dt>Trạng thái</dt>
-        <dd>${t.status === 'DRAFT' ? 'Bản nháp (chưa ghi sổ)' : 'Posted (đã ghi sổ)'}</dd>
       </div>
       <div>
         <dt>Danh mục</dt>
@@ -223,18 +219,12 @@ function showDetails(id) {
         <dd>${safe(t.currency)}</dd>
       </div>
       <div>
-        <dt>Tỷ giá snapshot</dt>
+        <dt>Tỷ giá lúc ghi nhận</dt>
         <dd>${safe(t.rate)}</dd>
       </div>
     </dl>
-    <hr class="modal-rule">
-    <p class="description">${safe(t.details)}</p>
-    <div class="hint-box">
-      <strong>Bút toán Nợ/Có:</strong> xem thông tin ghi sổ và các giao dịch điều chỉnh liên quan trong lịch sử.
-    </div>
     <div class="modal-footer">
       <button class="btn btn--outline btn-sm" data-close-modal>Đóng</button>
-      ${t.status === 'POSTED' ? `<button class="btn btn--primary btn-sm" data-action="reversal">Xem quy trình đảo giao dịch</button>` : ''}
     </div>
   `;
   dialog.showModal();
@@ -247,8 +237,7 @@ function exportTransactionsCSV() {
       'Danh mục',
       'Ví',
       'Ngày',
-      'Số tiền VND',
-      'Trạng thái'
+      'Số tiền VND'
 
     ],
     ...transactions.map(t => [
@@ -257,8 +246,7 @@ function exportTransactionsCSV() {
       t.category,
       t.wallet,
       t.date,
-      String(t.amount),
-      t.status
+      String(t.amount)
 
     ])
 
@@ -280,14 +268,45 @@ function exportTransactionsCSV() {
 
 }
 function applyTransactionSearch() {
-  const filtered = transactions.filter(t => (state.txFilter === 'all' || t.type === state.txFilter) && [t.name, t.id, t.category, t.wallet].join(' ').toLocaleLowerCase('vi').includes(state.search.toLocaleLowerCase('vi')));
+  const filters = (Array.isArray(state.txFilter) ? state.txFilter : [state.txFilter || 'ALL'])
+    .map(value => String(value).toUpperCase())
+    .filter(value => value !== 'ALL');
+  const filtered = transactions.filter(t => (!filters.length || filters.includes(String(t.type).toUpperCase()))
+    && [t.name, t.id, t.category, t.wallet].join(' ').toLocaleLowerCase('vi').includes(state.search.toLocaleLowerCase('vi')));
   const target = document.querySelector('#transaction-table');
   if (target) target.innerHTML = txTable(filtered);
 
 }
+function openTransactionFilter() {
+  const options = [['ALL','Tất cả'],['INCOME','Thu nhập'],['EXPENSE','Chi tiêu'],['TRANSFER','Chuyển tiền']];
+  const selected = (Array.isArray(state.txFilter) ? state.txFilter : [state.txFilter || 'ALL'])
+    .map(value => String(value).toUpperCase());
+  const checked = selected.length ? selected : ['ALL'];
+  document.querySelector('#modal-overline').textContent = '';
+  document.querySelector('#modal-title').textContent = 'Lọc theo loại giao dịch';
+  document.querySelector('#modal-content').innerHTML = `<form id="transaction-filter-form">
+    <div class="wallet-filter-options">${options.map(([value,label]) => `<label class="wallet-filter-option">
+      <input type="checkbox" name="transactionTypeFilter" value="${value}" ${checked.includes(value) ? 'checked' : ''}>
+      <span>${label}</span>
+    </label>`).join('')}</div>
+    <div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary">Áp dụng</button></div>
+  </form>`;
+  dialog.showModal();
+}
+function handleTransactionFilterChange(target) {
+  if (target.name !== 'transactionTypeFilter') return;
+  const form = target.closest('#transaction-filter-form');
+  if (!form) return;
+  const all = form.querySelector('input[value="ALL"]');
+  const types = [...form.querySelectorAll('input[name="transactionTypeFilter"]:not([value="ALL"])')];
+  if (target.value === 'ALL' && target.checked) types.forEach(input => { input.checked = false; });
+  else if (target.value !== 'ALL' && target.checked) all.checked = false;
+  if (!types.some(input => input.checked)) all.checked = true;
+}
 function handleAction(action, trigger) {
  if (liveAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
  if (walletFeature.handleAction(action, trigger)) return;
+  if (action === 'transaction-filter') { openTransactionFilter(); return; }
   if (action === 'password') { openPasswordForm(); return; }
   if (action === 'logout') {
     authApi('logout', {}).then(() => location.replace('index.html?auth=login')).catch(error => toast(errorMessage(error)));
@@ -359,6 +378,7 @@ function openPasswordForm() {
 document.addEventListener('click', event => {
   const page = event.target.closest('[data-page]');
   if (page) {
+    if (page.matches('a')) event.preventDefault();
     navigate(page.dataset.page);
     return;
 
@@ -366,13 +386,6 @@ document.addEventListener('click', event => {
   const detail = event.target.closest('[data-detail]');
   if (detail) {
     showDetails(detail.dataset.detail);
-    return;
-
-  }
-  const filter = event.target.closest('[data-tx-filter]');
-  if (filter) {
-    state.txFilter = filter.dataset.txFilter;
-    navigate('transactions');
     return;
 
   }
@@ -402,8 +415,19 @@ document.addEventListener('input', event => {
 });
 document.addEventListener('change', event => {
   walletFeature.handleChange(event.target);
+  handleTransactionFilterChange(event.target);
 });
 document.addEventListener('submit', async event => {
+  if (event.target.id === 'transaction-filter-form') {
+    event.preventDefault();
+    const selected = [...event.target.querySelectorAll('input[name="transactionTypeFilter"]:checked')]
+      .map(input => input.value)
+      .filter(value => value !== 'ALL');
+    state.txFilter = selected.length ? selected : ['ALL'];
+    dialog.close();
+    navigate('transactions');
+    return;
+  }
   if (['wallet-filter-form', 'wallet-create-form', 'wallet-adjust-form', 'wallet-edit-form', 'wallet-archive-form', 'wallet-delete-form'].includes(event.target.id)) {
     event.preventDefault();
     await walletFeature.handleSubmit(event.target);
@@ -445,7 +469,7 @@ const globalSearch = document.querySelector('#global-search'); globalSearch.addE
 
     }
     state.search = globalSearch.value;
-    state.txFilter = 'all';
+    state.txFilter = ['ALL'];
     navigate('transactions');
 
   }

@@ -316,6 +316,18 @@
   .filter-controls {
     width: 100%;
   }
+  .transaction-filter-button {
+    width: 100%;
+  }
+  .transaction-detail-hero {
+    grid-template-columns: 42px minmax(0,1fr);
+  }
+  .transaction-detail-amount {
+    grid-column: 2;
+  }
+  .transaction-detail-grid {
+    grid-template-columns: 1fr;
+  }
   .input-sm {
     flex: 1;
     width: 130px;
