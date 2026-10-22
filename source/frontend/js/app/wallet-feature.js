@@ -1,5 +1,5 @@
 import { walletApi } from '../services/wallet-api.js';
-import { icon, safe } from './ui-core.js';
+import { icon, safe, moneyInputValue } from './ui-core.js?v=goal-ui-4';
 
 const OPENING_BALANCES = [
   ['0', '0 đ'],
@@ -124,12 +124,13 @@ export function createWalletFeature({ state, dialog, toast, render }) {
       custom.disabled = !customSelected;
       custom.required = customSelected;
       custom.inputMode = isVnd ? 'numeric' : 'decimal';
+      custom.dataset.moneyDecimals = String(!isVnd);
       custom.pattern = isVnd
         ? '(?:[0-9]{1,16}|[0-9]{1,3}(?:\\.[0-9]{3})+|[0-9]{1,3}(?:,[0-9]{3})+)'
-        : '[0-9]{1,16}(?:[.,][0-9]{1,2})?';
+        : '(?:[0-9]{1,3}(?:\\.[0-9]{3})*|[0-9]+)(?:,[0-9]{1,2})?';
       custom.title = isVnd
         ? 'Nhập số nguyên, ví dụ 1250000, 1.250.000 hoặc 1,250,000.'
-        : 'Nhập tối đa 2 số thập phân bằng dấu chấm hoặc dấu phẩy; không dùng dấu phân cách hàng nghìn.';
+        : 'Hệ thống tự thêm dấu chấm hàng nghìn; dùng dấu phẩy khi nhập phần thập phân.';
       customLabel.textContent = `Số dư tự nhập (${currency.value}) *`;
     };
     preset.addEventListener('change', sync);
@@ -146,7 +147,7 @@ export function createWalletFeature({ state, dialog, toast, render }) {
       <div class="field"><label for="wallet-type">Loại ví *</label><select id="wallet-type" name="walletType" required><option value="CASH">Tiền mặt</option><option value="BANK">Ngân hàng</option><option value="E_WALLET">Ví điện tử</option><option value="SAVINGS">Tiết kiệm</option><option value="CREDIT">Thẻ tín dụng</option></select></div>
       <div class="field"><label for="wallet-currency">Đơn vị tiền tệ *</label><select id="wallet-currency" name="currency" required><option value="VND">VND</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
       <div class="field" id="wallet-opening-preset-field"><label for="wallet-opening-preset">Số dư đầu kỳ *</label><select id="wallet-opening-preset" name="openingPreset" required>${presets}<option value="CUSTOM">Tự nhập số tiền…</option></select></div>
-      <div class="field form-grid-span" id="wallet-opening-custom-field" hidden><label id="wallet-opening-custom-label" for="wallet-opening-custom">Số dư tự nhập (VND) *</label><input id="wallet-opening-custom" type="text" name="customOpeningBalance" maxlength="24" inputmode="numeric" autocomplete="off" disabled></div>
+      <div class="field form-grid-span" id="wallet-opening-custom-field" hidden><label id="wallet-opening-custom-label" for="wallet-opening-custom">Số dư tự nhập (VND) *</label><input id="wallet-opening-custom" type="text" name="customOpeningBalance" maxlength="24" inputmode="numeric" data-money-input autocomplete="off" disabled></div>
       </div><p id="wallet-form-feedback" role="status" aria-live="polite"></p><div class="modal-footer"><button type="button" data-close-modal class="btn btn--outline">Hủy</button><button type="submit" class="btn btn--primary">Tạo ví</button></div></form>`);
     configureOpeningBalanceForm();
   }
@@ -265,13 +266,13 @@ export function createWalletFeature({ state, dialog, toast, render }) {
       const isVnd = wallet.currency === 'VND';
       const amountPattern = isVnd
         ? '(?:[0-9]{1,16}|[0-9]{1,3}(?:\\.[0-9]{3})+|[0-9]{1,3}(?:,[0-9]{3})+)'
-        : '[0-9]{1,16}(?:[.,][0-9]{1,2})?';
+        : '(?:[0-9]{1,3}(?:\\.[0-9]{3})*|[0-9]+)(?:,[0-9]{1,2})?';
       const amountHelp = isVnd
         ? 'Số nguyên hoặc phân cách hàng nghìn hợp lệ.'
-        : 'Tối đa 2 số thập phân; dùng dấu chấm hoặc dấu phẩy.';
+        : 'Hệ thống tự thêm dấu chấm hàng nghìn; dùng dấu phẩy cho tối đa 2 số thập phân.';
       show('Thêm hoặc bớt tiền', `<form id="wallet-adjust-form" data-wallet-id="${Number(wallet.id)}">
         <div class="form-grid"><div class="field"><label for="wallet-adjust-direction">Thao tác *</label><select id="wallet-adjust-direction" name="direction" required><option value="INCREASE">Thêm tiền</option><option value="DECREASE">Bớt tiền</option></select></div>
-        <div class="field"><label for="wallet-adjust-amount">Số tiền (${currency}) *</label><input id="wallet-adjust-amount" name="amount" type="text" maxlength="24" inputmode="${isVnd ? 'numeric' : 'decimal'}" pattern="${amountPattern}" title="${amountHelp}" autocomplete="off" required></div>
+        <div class="field"><label for="wallet-adjust-amount">Số tiền (${currency}) *</label><input id="wallet-adjust-amount" name="amount" type="text" maxlength="24" inputmode="${isVnd ? 'numeric' : 'decimal'}" data-money-input data-money-decimals="${String(!isVnd)}" pattern="${amountPattern}" title="${amountHelp}" autocomplete="off" required></div>
         <div class="field form-grid-span"><label for="wallet-adjust-note">Nội dung</label><input id="wallet-adjust-note" name="note" maxlength="200" autocomplete="off" placeholder="Ví dụ: Bổ sung tiền mặt đầu tháng"></div></div>
         <p id="wallet-form-feedback" role="status" aria-live="polite"></p><div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary">Ghi nhận</button></div></form>`);
       return true;
@@ -301,6 +302,8 @@ export function createWalletFeature({ state, dialog, toast, render }) {
     info.textContent = 'Đang ghi dữ liệu…';
     try {
       const data = Object.fromEntries(new FormData(form));
+      if (data.customOpeningBalance) data.customOpeningBalance = moneyInputValue(data.customOpeningBalance);
+      if (data.amount) data.amount = moneyInputValue(data.amount);
       let successMessage = 'Đã lưu thay đổi trên máy chủ.';
       if (form.id === 'wallet-create-form') {
         data.initialBalance = data.openingPreset === 'CUSTOM'

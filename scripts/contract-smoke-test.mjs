@@ -2,12 +2,21 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const requests = [];
+const transactionFixtures = [
+  { id: 2, description: 'Gửi xe', transaction_type: 'EXPENSE', amount: 10000, currency: 'VND', occurred_on: '2026-10-18', category_name: 'Đi lại', status: 'POSTED' },
+  ...Array.from({ length: 99 }, (_, index) => ({ id: 100 + index, description: `Giao dịch ${index + 1}`, transaction_type: 'EXPENSE', amount: 1000, currency: 'VND', occurred_on: '2026-10-17', category_name: 'Khác', status: 'POSTED' })),
+  { id: 'goal-9', description: 'Chuyển vào mục tiêu: Mua xe', transaction_type: 'SAVINGS_GOAL', goal_action: 'DEPOSIT', goal_name: 'Mua xe', wallet_name: 'Ví chính', amount: 500000, currency: 'VND', occurred_on: '2026-10-16', category_name: 'Mục tiêu tiết kiệm', status: 'POSTED' }
+];
 globalThis.document = { querySelector: () => null };
 globalThis.fetch = async (path, init = {}) => {
   requests.push({ path, init });
+  const requestUrl = new URL(path, 'https://wealthflow.test');
+  const route = requestUrl.pathname;
+  const offset = Number(requestUrl.searchParams.get('offset') || 0);
+  const limit = Number(requestUrl.searchParams.get('limit') || 100);
   const paths = {
     '/api/wallets': { wallets: [{ id: 1, name: 'Ví kiểm thử', wallet_type: 'CASH', currency: 'VND', cached_balance: '25000' }] },
-    '/api/transactions': { transactions: [{ id: 2, description: 'Gửi xe', transaction_type: 'EXPENSE', amount: 10000, currency: 'VND', occurred_on: '2026-10-18', category_name: 'Đi lại', status: 'POSTED' }] },
+    '/api/transactions': { transactions: transactionFixtures.slice(offset, offset + limit) },
     '/api/budgets': { budgets: [{ id: 3, categoryId: 5, categoryName: 'Đi lại', budgetMonth: '2026-10', limitAmount: 50000, spentAmount: 42000, remainingAmount: 8000, usagePercent: 84, alertLevel: 'YELLOW' }] },
     '/api/recurring': { schedules: [{ id: 4, name: 'Tiền thuê', amount: 3000000, next_due_date: '2026-11-01' }] },
     '/api/categories': { categories: [{ id: 5, name: 'Đi lại', category_type: 'EXPENSE' }] },
@@ -17,14 +26,18 @@ globalThis.fetch = async (path, init = {}) => {
     assert.equal(init.headers['X-WealthFlow'], '1');
     return { status: 201, ok: true, headers: new Map([['content-type', 'application/json']]), json: async () => ({ success: true, data: { message: 'ok' } }) };
   }
-  if (paths[path]) return { status: 200, ok: true, headers: new Map([['content-type', 'application/json']]), json: async () => ({ success: true, data: paths[path] }) };
+  if (paths[route]) return { status: 200, ok: true, headers: new Map([['content-type', 'application/json']]), json: async () => ({ success: true, data: paths[route] }) };
   return { status: 404, ok: false, headers: new Map([['content-type', 'application/json']]), json: async () => ({ success: false }) };
 };
-const data = await import('../source/frontend/js/data/live-data.js?v=transaction-ui-2');
+const data = await import('../source/frontend/js/data/live-data.js?v=goal-ui-5');
 const { liveRender } = await import('../source/frontend/js/app/live-pages.js');
 await data.loadLiveData();
 assert.equal(data.wallets[0].balance, 25000, 'FR02: wallet cached_balance mapping');
 assert.equal(data.transactions[0].date, '2026-10-18', 'FR03: transaction occurred_on mapping');
+assert.equal(data.transactions.length, 101, 'Transaction loader automatically retrieves pages after the first 100 rows');
+const goalTransaction = data.transactions.find(item => item.type === 'savings_goal');
+assert.equal(goalTransaction?.wallet, 'Ví chính', 'Goal transaction keeps the selected wallet');
+assert.equal(goalTransaction?.goalName, 'Mua xe', 'Goal transaction keeps the selected goal');
 assert.equal(data.budgets[0].spent, 42000, 'FR05: spentAmount mapping');
 assert.equal(data.budgets[0].alertLevel, 'YELLOW', 'FR05: alertLevel mapping');
 assert.equal(data.notifications[0].isRead, false, 'FR05: notification isRead mapping');
@@ -32,6 +45,7 @@ assert.equal(data.recurring.length, 1, 'FR06: schedules collection mapping');
 assert.equal(data.categories[0].type, 'EXPENSE', 'FR03/FR05 category type mapping');
 assert.equal(data.dataStatus.loans.state, 'unavailable', 'Missing API must not be shown as empty list');
 const render = (name, extraState = {}) => liveRender(name, { state: { search: '', txFilter: 'all', notifFilter: 'all', ...extraState }, heading: () => '<h1>test</h1>', currentUser: { fullName: 'Test', email: 'test@example.com', baseCurrency: 'VND', role: 'USER' } });
+assert.match(render('transactions'), /Chuyển vào mục tiêu: Mua xe/, 'All-transactions view includes savings-goal history');
 assert.match(render('wallets'), /25\.000/, 'Wallet value displayed from server only');
 assert.match(render('budgets'), /Cảnh báo Vàng/, 'PLAN-03/04: Budget YELLOW threshold badge displayed');
 assert.match(render('budgets'), /live:edit:budgets:3/, 'PLAN-03: Budget edit action rendered');
@@ -58,10 +72,12 @@ const appCssSource = await readFile(new URL('../source/frontend/css/app.css', im
 const uiCoreSource = await readFile(new URL('../source/frontend/js/app/ui-core.js', import.meta.url), 'utf8');
 const mainSource = await readFile(new URL('../source/frontend/js/app/main.js', import.meta.url), 'utf8');
 const routesSource = await readFile(new URL('../source/backend/public/index.php', import.meta.url), 'utf8');
+const ledgerDaoSource = await readFile(new URL('../source/backend/src/Modules/Transactions/LedgerDAO.php', import.meta.url), 'utf8');
 assert.match(uiCoreSource, /\['settings', 'Cài đặt & bảo mật', 'gear'\][\s\S]+settings: \['Cài đặt & bảo mật'/, 'Settings navigation and page title use one consistent label');
 assert.match(mainSource, /#user-menu'[\s\S]+navigate\(state\.admin \? 'admin-settings' : 'settings'\)/, 'Account button opens Settings & Security');
 assert.match(mainSource, /authApi\('change-password'/, 'Password form calls the real change-password API');
 assert.ok(/authApi\('logout'/.test(mainSource) && /post\('\/auth\/logout'/.test(routesSource), 'Logout control is connected to the backend route');
+assert.match(ledgerDaoSource, /listGoalTransactions[\s\S]+SAVINGS_GOAL[\s\S]+goal_allocations/, 'Transaction history includes goal allocations without extra ledger writes');
 assert.match(walletFeatureSource, /50000[\s\S]+CUSTOM/, 'Opening balance offers 50,000 VND presets and custom input');
 assert.match(walletFeatureSource, /if \(!isVnd\) preset\.value = 'CUSTOM'/, 'USD/EUR opening balance always uses manual input');
 assert.doesNotMatch(walletFeatureSource, /VND có các mức gợi ý/, 'Wallet creation omits redundant explanatory note');
@@ -82,4 +98,4 @@ const feature = createWalletFeature({
   render: () => {}
 });
 assert.equal(feature.handleAction('wallet-toggle', { dataset: {} }), false, 'Wallet feature leaves archive visibility toggle to the page controller');
-console.log('OK: 37 offline API/frontend contract checks passed. Does NOT verify MySQL or SMTP.');
+console.log('OK: 43 offline API/frontend contract checks passed. Does NOT verify MySQL or SMTP.');

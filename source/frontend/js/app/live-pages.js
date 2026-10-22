@@ -1,7 +1,8 @@
 /** WealthFlow live, account-scoped page templates. No static financial figures. */
-import { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers, dataStatus, mutateLiveData, loadLiveData } from '../data/live-data.js?v=transaction-ui-2';
-import { icon } from './ui-core.js';
+import { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers, dataStatus, mutateLiveData, loadLiveData } from '../data/live-data.js?v=goal-ui-5';
+import { icon, formatMoneyInput, moneyInputValue } from './ui-core.js?v=goal-ui-5';
 import { httpClient } from '../services/http-client.js';
+import { GoalApi } from '../services/goal-api.js';
 
 const ITEMS = { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers };
 const TITLES = { wallets: 'Ví', transactions: 'Giao dịch', categories: 'Danh mục', budgets: 'Ngân sách', recurring: 'Giao dịch định kỳ', goals: 'Mục tiêu tiết kiệm', loans: 'Vay và cho vay', gold: 'Tài sản vàng', notifications: 'Thông báo', adminUsers: 'Người dùng' };
@@ -13,7 +14,7 @@ const sum = list => list.reduce((s, row) => s + Math.abs(Number(row.amount || 0)
 const ownMonth = iso => String(iso ?? '').slice(0, 7);
 const month = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}`; };
 const posted = () => transactions.filter(t => t.status === 'POSTED');
-const TRANSACTION_TYPE_LABELS = { income: 'Thu nhập', expense: 'Chi tiêu', transfer: 'Chuyển tiền', other: 'Số dư' };
+const TRANSACTION_TYPE_LABELS = { income: 'Thu nhập', expense: 'Chi tiêu', transfer: 'Chuyển tiền', savings_goal: 'Mục tiêu tiết kiệm', other: 'Số dư' };
 const stateOf = key => dataStatus[key]?.state || 'idle';
 const ready = key => stateOf(key) === 'ready';
 const loading = key => stateOf(key) === 'loading' || stateOf(key) === 'idle';
@@ -171,7 +172,7 @@ export function liveTransactionTable(items = transactions) {
     const formatted = new Intl.NumberFormat('vi-VN', {
       style: 'currency', currency, maximumFractionDigits: currency === 'VND' ? 0 : 2
     }).format(Math.abs(Number(row.amount || 0)));
-    const sign = row.type === 'income' ? '+' : row.type === 'expense' ? '−' : '';
+    const sign = row.type === 'income' ? '+' : row.type === 'expense' ? '−' : row.type === 'savings_goal' ? (row.goalAction === 'WITHDRAWAL' ? '← ' : '→ ') : '';
     const tone = row.type === 'income' ? ' positive' : row.type === 'expense' ? ' negative' : '';
     return `<span class="amount${tone}">${sign}${esc(formatted)}</span>`;
   };
@@ -180,7 +181,7 @@ export function liveTransactionTable(items = transactions) {
   </tr></thead><tbody>${items.map(row => `<tr>
     <td><div class="table-name"><span class="table-icon" aria-hidden="true">${esc(row.icon)}</span><span>${esc(row.name)}<small>Mã #${esc(row.id)}</small></span></div></td>
     <td>${esc(TRANSACTION_TYPE_LABELS[row.type] || row.type || 'Giao dịch')}</td>
-    <td>${esc(row.type === 'transfer' ? 'Chuyển nội bộ' : row.category)}</td>
+    <td>${esc(row.type === 'transfer' ? 'Chuyển nội bộ' : row.type === 'savings_goal' ? (row.goalName || 'Mục tiêu tiết kiệm') : row.category)}</td>
     <td>${display(row.date, 'date')}</td>
     <td class="transaction-wallet">${esc(row.wallet)}</td>
     <td>${amount(row)}</td>
@@ -213,8 +214,8 @@ function transactionDetail(item) {
   const formattedAmount = new Intl.NumberFormat('vi-VN', {
     style: 'currency', currency, maximumFractionDigits: currency === 'VND' ? 0 : 2
   }).format(Math.abs(Number(item.amount || 0)));
-  const sign = item.type === 'income' ? '+' : item.type === 'expense' ? '−' : '';
-  const category = item.type === 'transfer' ? 'Chuyển nội bộ' : item.category;
+  const sign = item.type === 'income' ? '+' : item.type === 'expense' ? '−' : item.type === 'savings_goal' ? (item.goalAction === 'WITHDRAWAL' ? '← ' : '→ ') : '';
+  const category = item.type === 'transfer' ? 'Chuyển nội bộ' : item.type === 'savings_goal' ? (item.goalName || 'Mục tiêu tiết kiệm') : item.category;
   const specialStatus = item.status === 'DRAFT' ? '<span class="badge neutral">Bản nháp</span>'
     : item.status === 'REVERSED' ? '<span class="badge warn">Đã đảo</span>' : '';
   const rate = currency !== 'VND' && Number(item.rate) > 0
@@ -291,26 +292,31 @@ export function liveRender(page, { state, heading, currentUser }) {
 
 // Live forms mirror the actual Controller/Service DTOs, never demo-data fields.
 const field = (name,label,type='text',extra='') => `<div class="field"><label for="live-${esc(name)}">${esc(label)}</label><input id="live-${esc(name)}" name="${esc(name)}" type="${type}" ${extra} required></div>`;
+const moneyField = (name,label,extra='') => field(name,label,'text',`inputmode="numeric" data-money-input maxlength="24" ${extra}`);
 const select = (name,label,options,optional=false) => `<div class="field"><label for="live-${esc(name)}">${esc(label)}</label><select id="live-${esc(name)}" name="${esc(name)}" ${optional?'':'required'}>${optional?'<option value="">Không chọn</option>':''}${options.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select></div>`;
 const walletOptions = () => wallets.filter(w => String(w.status||'ACTIVE').toUpperCase()==='ACTIVE').map(w=>[w.id,`${w.name} (${w.currency})`]);
 const categoryOptions = (type='EXPENSE') => categories.filter(c => !type || c.type === type).map(c=>[c.id,c.name]);
+const goalWalletOptions = () => walletOptions().filter(([id]) => String(wallets.find(w => String(w.id) === String(id))?.currency).toUpperCase() === 'VND');
+const goalOptions = (action='DEPOSIT') => goals.filter(g => action === 'WITHDRAWAL' ? ['ACTIVE','COMPLETED'].includes(String(g.status).toUpperCase()) && Number(g.current) > 0 : String(g.status).toUpperCase() === 'ACTIVE').map(g=>[g.id,`${g.name} · ${vnd(g.current)} / ${vnd(g.target)}`]);
 const needReferenceData = name => name === 'transactions' ? (!ready('wallets') || !walletOptions().length)
  : name === 'recurring' ? (!ready('wallets') || !walletOptions().length || !ready('categories'))
  : name === 'budgets' ? (!ready('categories') || !categoryOptions().length) : false;
 function createForm(name) {
   if (name==='categories') return field('name','Tên danh mục','text','maxlength="120"')+select('type','Loại danh mục',[['EXPENSE','Chi tiêu'],['INCOME','Thu nhập']]);
   if (name==='transactions') return field('description','Mô tả giao dịch','text','maxlength="255"')
-    +select('type','Loại giao dịch',[['EXPENSE','Chi tiêu'],['INCOME','Thu nhập'],['TRANSFER','Chuyển tiền']])
-    +field('amount','Số tiền','number','min="0.01" step="any"')
-    +select('walletId','Ví thanh toán',walletOptions())
+    +select('type','Loại giao dịch',[['EXPENSE','Chi tiêu'],['INCOME','Thu nhập'],['TRANSFER','Chuyển tiền'],['SAVINGS_GOAL','Chuyển vào mục tiêu tiết kiệm']])
+    +select('goalAction','Thao tác với mục tiêu',[['DEPOSIT','Chuyển vào mục tiêu'],['WITHDRAWAL','Lấy khỏi mục tiêu']])
+    +moneyField('amount','Số tiền')
+    +select('walletId','Ví sử dụng',walletOptions())
+    +select('goalId','Mục tiêu tiết kiệm',goalOptions('DEPOSIT'))
     +select('fromWalletId','Ví gửi',walletOptions())
     +select('toWalletId','Ví nhận',walletOptions())
     +select('categoryId','Danh mục',categories.map(c=>[c.id,`${c.name} · ${c.type}`]))
     +field('occurredOn','Ngày giao dịch','date');
   if (name==='budgets') return select('categoryId','Danh mục chi tiêu',categoryOptions())
-    +field('month','Kỳ ngân sách','month')+field('limitAmount','Hạn mức','number','min="0.01" step="any"');
+    +field('month','Kỳ ngân sách','month')+moneyField('limitAmount','Hạn mức');
   if (name==='recurring') return field('name','Tên khoản định kỳ','text','maxlength="120"')
-    +field('amount','Số tiền','number','min="0.01" step="any"')
+    +moneyField('amount','Số tiền')
     +select('walletId','Ví thanh toán',walletOptions())
     +select('categoryId','Danh mục chi tiêu (nếu có)',categoryOptions(),true)
     +field('dayOfMonth','Ngày lặp lại hằng tháng (1–31)','number','min="1" max="31" step="1"');
@@ -358,13 +364,13 @@ export function liveAction(action, { dialog, toast, reload }) {
     document.querySelector('#modal-overline').textContent = 'CẬP NHẬT HẠN MỨC';
     document.querySelector('#modal-title').textContent = `Sửa ngân sách: ${item.name}`;
     document.querySelector('#modal-content').innerHTML = `<p class="form-hint">Điều chỉnh hạn mức ngân sách cho danh mục <strong>${esc(item.name)}</strong> (${esc(item.month || month())}). Đã chi ròng: <strong>${vnd(item.spent)}</strong>.</p>
-    <form id="live-budget-edit-form"><div class="form-grid">${field('limitAmount', 'Hạn mức mới (VND)', 'number', `min="0.01" step="any" value="${esc(item.limit)}"`)}</div><p id="live-form-feedback" role="status" aria-live="polite"></p><div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary">Cập nhật hạn mức</button></div></form>`;
+    <form id="live-budget-edit-form"><div class="form-grid">${moneyField('limitAmount', 'Hạn mức mới (VND)', `value="${esc(formatMoneyInput(item.limit))}"`)}</div><p id="live-form-feedback" role="status" aria-live="polite"></p><div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary">Cập nhật hạn mức</button></div></form>`;
     const form = document.querySelector('#live-budget-edit-form');
     form.addEventListener('submit', async e => {
       e.preventDefault(); if (!form.reportValidity()) return;
       const submit = form.querySelector('[type=submit]');
       const feedback = form.querySelector('#live-form-feedback');
-      const limitAmount = Number(form.elements.namedItem('limitAmount').value);
+      const limitAmount = Number(moneyInputValue(form.elements.namedItem('limitAmount').value));
       submit.disabled = true; feedback.textContent = 'Đang cập nhật hạn mức…';
       try {
         await mutateLiveData('budgets', 'PUT', { limitAmount }, id);
@@ -432,31 +438,48 @@ export function liveAction(action, { dialog, toast, reload }) {
     const fromWallet = form.elements.namedItem('fromWalletId');
     const toWallet = form.elements.namedItem('toWalletId');
     const category = form.elements.namedItem('categoryId');
+    const goalAction = form.elements.namedItem('goalAction');
+    const goal = form.elements.namedItem('goalId');
     if (toWallet.options.length > 1) toWallet.selectedIndex = 1;
     function syncTransactionFields() {
       const isTransfer = types.value === 'TRANSFER';
+      const isGoal = types.value === 'SAVINGS_GOAL';
       wallet.disabled = isTransfer;
-      category.disabled = isTransfer;
+      category.disabled = isTransfer || isGoal;
+      goalAction.disabled = !isGoal;
+      goal.disabled = !isGoal;
       fromWallet.disabled = !isTransfer;
       toWallet.disabled = !isTransfer;
       wallet.closest('.field').hidden = isTransfer;
-      category.closest('.field').hidden = isTransfer;
+      category.closest('.field').hidden = isTransfer || isGoal;
+      goalAction.closest('.field').hidden = !isGoal;
+      goal.closest('.field').hidden = !isGoal;
       fromWallet.closest('.field').hidden = !isTransfer;
       toWallet.closest('.field').hidden = !isTransfer;
-      const choices = isTransfer ? [] : categoryOptions(types.value);
-      if (!isTransfer) category.innerHTML = choices.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');
+      wallet.closest('.field').querySelector('label').textContent = isGoal && goalAction.value === 'DEPOSIT' ? 'Ví chuyển' : isGoal ? 'Ví nhận' : 'Ví sử dụng';
+      const walletChoices = isGoal ? goalWalletOptions() : walletOptions();
+      const previousWallet = wallet.value;
+      wallet.innerHTML = walletChoices.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');
+      if (walletChoices.some(([v]) => String(v) === String(previousWallet))) wallet.value = previousWallet;
+      const availableGoals = isGoal ? goalOptions(goalAction.value) : [];
+      const previousGoal = goal.value;
+      if (isGoal) goal.innerHTML = availableGoals.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');
+      if (availableGoals.some(([v]) => String(v) === String(previousGoal))) goal.value = previousGoal;
+      const choices = (isTransfer || isGoal) ? [] : categoryOptions(types.value);
+      if (!isTransfer && !isGoal) category.innerHTML = choices.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');
       const submit = form.querySelector('[type=submit]');
       const feedback = form.querySelector('#live-form-feedback');
       const sameWallet = isTransfer && fromWallet.value === toWallet.value;
       const missingTransferWallets = isTransfer && (!fromWallet.value || !toWallet.value || walletOptions().length < 2);
-      submit.disabled = isTransfer ? (missingTransferWallets || sameWallet) : !choices.length;
-      feedback.textContent = missingTransferWallets
-        ? 'Bạn cần có ít nhất hai ví đang sử dụng để chuyển tiền.'
-        : sameWallet
-          ? 'Ví gửi và ví nhận phải khác nhau.'
-          : (!isTransfer && !choices.length ? 'Bạn cần tạo danh mục tương ứng trước khi ghi giao dịch.' : '');
+      const missingGoalData = isGoal && (!wallet.value || !goal.value || !availableGoals.length);
+      submit.disabled = isTransfer ? (missingTransferWallets || sameWallet) : isGoal ? missingGoalData : !choices.length;
+      feedback.textContent = missingTransferWallets ? 'Bạn cần có ít nhất hai ví đang sử dụng để chuyển tiền.'
+        : sameWallet ? 'Ví gửi và ví nhận phải khác nhau.'
+          : missingGoalData ? 'Bạn cần có ví VND và một mục tiêu đang hoạt động.'
+            : (!isTransfer && !isGoal && !choices.length ? 'Bạn cần tạo danh mục tương ứng trước khi ghi giao dịch.' : '');
     }
     types.addEventListener('change',syncTransactionFields);
+    goalAction.addEventListener('change',syncTransactionFields);
     fromWallet.addEventListener('change',syncTransactionFields);
     toWallet.addEventListener('change',syncTransactionFields);
     syncTransactionFields();
@@ -468,10 +491,12 @@ export function liveAction(action, { dialog, toast, reload }) {
     const submit = form.querySelector('[type=submit]');
     const feedback = document.querySelector('#live-form-feedback');
     const record = Object.fromEntries(new FormData(form));
-    for (const key of ['amount','limitAmount','walletId','fromWalletId','toWalletId','categoryId','dayOfMonth']) if (record[key] !== undefined && record[key] !== '') record[key] = Number(record[key]);
+    for (const key of ['amount','limitAmount']) if (record[key] !== undefined && record[key] !== '') record[key] = Number(moneyInputValue(record[key]));
+    for (const key of ['walletId','goalId','fromWalletId','toWalletId','categoryId','dayOfMonth']) if (record[key] !== undefined && record[key] !== '') record[key] = Number(record[key]);
     if (record.categoryId === '') delete record.categoryId;
     const isTransfer = name === 'transactions' && record.type === 'TRANSFER';
-    if (name==='transactions' && !isTransfer) {
+    const isGoal = name === 'transactions' && record.type === 'SAVINGS_GOAL';
+    if (name==='transactions' && !isTransfer && !isGoal) {
       const selected = wallets.find(w=>String(w.id)===String(record.walletId));
       record.currency = selected?.currency || 'VND';
     }
@@ -480,7 +505,11 @@ export function liveAction(action, { dialog, toast, reload }) {
     submit.disabled = true; feedback.textContent = 'Đang lưu vào backend…';
     try {
       if (isTransfer) await httpClient('transactions/transfer', { method: 'POST', data: record });
-      else await mutateLiveData(name,'POST',record);
+      else if (isGoal) {
+        const payload = { walletId: record.walletId, amount: record.amount, allocatedOn: record.occurredOn, note: record.description };
+        if (record.goalAction === 'WITHDRAWAL') await GoalApi.withdrawFunds(record.goalId, payload);
+        else await GoalApi.allocateFunds(record.goalId, payload);
+      } else await mutateLiveData(name,'POST',record);
       dialog.close();
       await loadLiveData();
       reload();

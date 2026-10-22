@@ -33,6 +33,7 @@ const candidates = {
 };
 export const dataStatus = Object.fromEntries(Object.keys(collections).map(k => [k, { state: 'idle', message: '', endpoint: '' }]));
 let generation = 0;
+const TRANSACTION_PAGE_SIZE = 100;
 const keyVariants = k => [k, k === 'recurring' ? 'schedules' : k, k === 'adminUsers' ? 'users' : k, 'items', 'rows', 'results'];
 function extractCollection(json, name) {
   if (Array.isArray(json)) return json;
@@ -64,7 +65,9 @@ function shape(name, row) {
       : String(singleWallet || r.sourceWallet || r.destinationWallet || '—');
     r.status = String(r.status ?? 'POSTED').toUpperCase();
     r.currency = String(r.currency ?? 'VND');
-    r.icon = r.icon ?? (r.type === 'income' ? '↗' : r.type === 'expense' ? '↘' : '⇄');
+    r.goalAction = String(r.goalAction ?? r.goal_action ?? '').toUpperCase();
+    r.goalName = String(r.goalName ?? r.goal_name ?? '');
+    r.icon = r.icon ?? (r.type === 'income' ? '↗' : r.type === 'expense' ? '↘' : r.type === 'savings_goal' ? '◎' : '⇄');
     r.details = String(r.details ?? r.note ?? '');
     r.rate = r.rate ?? r.exchangeRate ?? r.fx_rate_snapshot ?? 1;
     r.postedAt = String(r.postedAt ?? r.posted_at ?? '');
@@ -96,9 +99,20 @@ function shape(name, row) {
     r.frequency = r.frequency ?? 'Hằng tháng';
   }
   if (name === 'goals') {
+    r.id = String(r.id ?? r.goalId ?? '');
     r.name = String(r.name ?? r.title ?? 'Mục tiêu');
-    r.target = Number(r.target ?? r.targetAmount ?? 0);
-    r.current = Number(r.current ?? r.savedAmount ?? r.saved ?? 0);
+    r.target = Number(r.target ?? r.targetAmount ?? r.target_amount ?? 0);
+    r.current = Number(r.current ?? r.currentAmount ?? r.current_amount ?? r.savedAmount ?? r.saved ?? 0);
+    r.remaining = Number(r.remaining ?? r.remainingAmount ?? Math.max(0, r.target - r.current));
+    r.monthly = Number(r.monthly ?? r.monthlySavingTarget ?? 0);
+    r.deadline = String(r.deadline ?? r.deadlineDate ?? '').slice(0, 10);
+    r.priority = String(r.priority ?? 'MEDIUM').toUpperCase();
+    r.status = String(r.status ?? 'ACTIVE').toUpperCase();
+    r.walletId = String(r.walletId ?? r.wallet_id ?? '');
+    r.walletName = String(r.walletName ?? r.wallet_name ?? 'Chưa chọn ví');
+    r.currency = String(r.currency ?? r.walletCurrency ?? 'VND').toUpperCase();
+    r.progress = Number(r.progress ?? r.progressPercent ?? (r.target > 0 ? r.current / r.target * 100 : 0));
+    r.icon = r.icon ?? '◎';
   }
   if (name === 'notifications') {
     r.id = String(r.id ?? '');
@@ -127,7 +141,8 @@ async function getOne(name, requestGeneration) {
   let unsupported = true;
   for (const path of candidates[name]) {
     let response;
-    try { response = await fetch(path, { method: 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' }, cache: 'no-store' }); }
+    const firstUrl = name === 'transactions' ? `${path}?limit=${TRANSACTION_PAGE_SIZE}&offset=0` : path;
+    try { response = await fetch(firstUrl, { method: 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' }, cache: 'no-store' }); }
     catch (error) {
       if (requestGeneration === generation) dataStatus[name] = { state: 'error', endpoint: path, message: `Không thể kết nối máy chủ: ${error.message}` };
       return;
@@ -147,7 +162,23 @@ async function getOne(name, requestGeneration) {
       if (!(response.headers.get('content-type') || '').includes('json')) throw new Error('API không trả JSON (có thể bị chuyển hướng sang trang HTML).');
       json = await response.json();
       if (json?.success === false) throw new Error(String(json.message ?? 'API không thành công.'));
-      const rows = extractCollection(json, name).map(r => shape(name, r)).filter(Boolean);
+      let pageRows = extractCollection(json, name);
+      const allRows = [...pageRows];
+      if (name === 'transactions') {
+        let offset = pageRows.length;
+        while (pageRows.length === TRANSACTION_PAGE_SIZE) {
+          const pageResponse = await fetch(`${path}?limit=${TRANSACTION_PAGE_SIZE}&offset=${offset}`, { method: 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' }, cache: 'no-store' });
+          if (!pageResponse.ok || !(pageResponse.headers.get('content-type') || '').includes('json')) {
+            throw new Error(`Không thể tải tiếp lịch sử giao dịch (HTTP ${pageResponse.status}).`);
+          }
+          const pageJson = await pageResponse.json();
+          if (pageJson?.success === false) throw new Error(String(pageJson?.error?.message ?? pageJson?.message ?? 'Không thể tải tiếp lịch sử giao dịch.'));
+          pageRows = extractCollection(pageJson, name);
+          allRows.push(...pageRows);
+          offset += pageRows.length;
+        }
+      }
+      const rows = allRows.map(r => shape(name, r)).filter(Boolean);
       if (requestGeneration !== generation) return;
       collections[name].splice(0, collections[name].length, ...rows);
       dataStatus[name] = { state: 'ready', message: '', endpoint: path };

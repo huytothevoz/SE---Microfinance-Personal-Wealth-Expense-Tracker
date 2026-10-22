@@ -313,6 +313,9 @@
   .form-grid {
     grid-template-columns: 1fr;
   }
+  .goal-detail-summary {
+    grid-template-columns: 1fr;
+  }
   .filter-controls {
     width: 100%;
   }

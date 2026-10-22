@@ -10,6 +10,7 @@ use WealthFlow\Core\Request;
 use WealthFlow\Core\Router;
 use WealthFlow\Modules\Auth\AuthController;
 use WealthFlow\Modules\Budgets\BudgetController;
+use WealthFlow\Modules\Goals\GoalController;
 use WealthFlow\Modules\Notifications\NotificationController;
 use WealthFlow\Modules\Recurring\RecurringController;
 use WealthFlow\Modules\Transactions\TransactionController;
@@ -46,7 +47,7 @@ try {
     });
     $router->get('/features', static function (): void {
         JsonResponse::success([
-            'integrated' => ['FR01', 'FR02', 'FR03', 'FR04', 'FR05', 'FR06'],
+            'integrated' => ['FR01', 'FR02', 'FR03', 'FR04', 'FR05', 'FR06', 'FR07'],
             'integrationVerifiedWithMysql' => false,
             'note' => 'Đã nối giao diện và backend nhưng cần kiểm thử nghiệm thu MySQL/SMTP thực tế trước khi sử dụng dữ liệu tài chính.',
         ]);
@@ -110,6 +111,17 @@ try {
     $router->get('/notifications', [$notifController, 'list']);
     $router->post('/notifications/{id}/read', [$notifController, 'markRead']);
     $router->post('/notifications/read-all', [$notifController, 'markAllRead']);
+
+    // 8. Savings goals
+    $goalController = new GoalController();
+    $router->get('/goals', [$goalController, 'list']);
+    $router->post('/goals', [$goalController, 'create']);
+    $router->get('/goals/{id}', [$goalController, 'show']);
+    $router->put('/goals/{id}', [$goalController, 'update']);
+    $router->post('/goals/{id}/deposit', [$goalController, 'deposit']);
+    $router->post('/goals/{id}/withdraw', [$goalController, 'withdraw']);
+    $router->post('/goals/{id}/complete', [$goalController, 'complete']);
+    $router->delete('/goals/{id}', [$goalController, 'delete']);
 
     $router->dispatch($request);
 } catch (ApiException $error) {

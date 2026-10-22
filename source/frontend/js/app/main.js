@@ -1,12 +1,13 @@
-import { icon, safe, money, USER_NAV, ADMIN_NAV, META } from './ui-core.js?v=settings-ui-1';
-import { createPages } from './pages.js?v=transaction-ui-2';
+import { icon, safe, money, USER_NAV, ADMIN_NAV, META, formatMoneyInput } from './ui-core.js?v=goal-ui-5';
+import { createPages } from './pages.js?v=goal-ui-5';
 import { FIELDS } from './forms.js';
-import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=transaction-ui-2';
-import { liveAction } from './live-pages.js?v=transaction-ui-2';
+import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=goal-ui-5';
+import { liveAction } from './live-pages.js?v=goal-ui-5';
 // WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';
 import { createWalletFeature } from './wallet-feature.js?v=wallet-ui-13';
+import { handleGoalAction } from './goals.js?v=goal-ui-5';
 
 let currentUser;
 try {
@@ -278,7 +279,7 @@ function applyTransactionSearch() {
 
 }
 function openTransactionFilter() {
-  const options = [['ALL','Tất cả'],['INCOME','Thu nhập'],['EXPENSE','Chi tiêu'],['TRANSFER','Chuyển tiền']];
+  const options = [['ALL','Tất cả'],['INCOME','Thu nhập'],['EXPENSE','Chi tiêu'],['TRANSFER','Chuyển tiền'],['SAVINGS_GOAL','Mục tiêu tiết kiệm']];
   const selected = (Array.isArray(state.txFilter) ? state.txFilter : [state.txFilter || 'ALL'])
     .map(value => String(value).toUpperCase());
   const checked = selected.length ? selected : ['ALL'];
@@ -306,6 +307,7 @@ function handleTransactionFilterChange(target) {
 function handleAction(action, trigger) {
  if (liveAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
  if (walletFeature.handleAction(action, trigger)) return;
+  if (handleGoalAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (action === 'transaction-filter') { openTransactionFilter(); return; }
   if (action === 'password') { openPasswordForm(); return; }
   if (action === 'logout') {
@@ -406,6 +408,9 @@ document.addEventListener('click', event => {
 
 });
 document.addEventListener('input', event => {
+  if (event.target.matches('[data-money-input]')) {
+    event.target.value = formatMoneyInput(event.target.value, event.target.dataset.moneyDecimals === 'true');
+  }
   if (event.target.id === 'transaction-search') {
     state.search = event.target.value;
     applyTransactionSearch();

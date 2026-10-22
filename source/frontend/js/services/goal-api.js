@@ -9,9 +9,20 @@ export const GoalApi = {
     return httpClient('goals');
   },
 
+  getGoal(id) {
+    return httpClient(`goals/${id}`);
+  },
+
   createGoal(data) {
     return httpClient('goals', {
       method: 'POST',
+      data
+    });
+  },
+
+  updateGoal(goalId, data) {
+    return httpClient(`goals/${goalId}`, {
+      method: 'PUT',
       data
     });
   },
@@ -32,7 +43,8 @@ export const GoalApi = {
 
   completeGoal(goalId) {
     return httpClient(`goals/${goalId}/complete`, {
-      method: 'POST'
+      method: 'POST',
+      data: {}
     });
   },
 

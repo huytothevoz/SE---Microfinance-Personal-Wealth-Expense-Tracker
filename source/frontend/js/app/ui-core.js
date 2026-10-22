@@ -49,6 +49,24 @@ export function safe(value) {
   }[x]));
 
 }
+export function formatMoneyInput(value, allowDecimals = false) {
+  let raw = String(value ?? '').replace(/\s/g, '');
+  if (allowDecimals) {
+    raw = raw.replace(/[^0-9,]/g, '');
+    const comma = raw.indexOf(',');
+    const wholeRaw = comma < 0 ? raw : raw.slice(0, comma);
+    const fraction = comma < 0 ? '' : raw.slice(comma + 1).replace(/,/g, '').slice(0, 2);
+    const whole = (wholeRaw.replace(/^0+(?=\d)/, '') || '0').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return comma < 0 ? whole : `${whole},${fraction}`;
+  }
+  const digits = raw.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+export function moneyInputValue(value) {
+  return String(value ?? '').replace(/\./g, '').replace(',', '.');
+}
+
 export const money = value => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(value) + ' đ';
 export const shortMoney = value => Math.abs(value) >= 1e6 ? (value / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + ' triệu' : money(value);
 export const percent = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
@@ -71,7 +89,7 @@ export const USER_NAV = [
     items: [
       ['loans', 'Khoản vay & nợ', 'coin'],
       ['gold', 'Tài sản vàng', 'diamond'],
-      ['goals', 'Mục tiêu tài chính', 'target']
+      ['goals', 'Mục tiêu tiết kiệm', 'target']
 
     ]
 
@@ -113,7 +131,7 @@ export const META = {
   recurring: ['Giao dịch định kỳ', 'Không bỏ lỡ khoản thanh toán hoặc thu nhập thường xuyên'],
   loans: ['Khoản vay & nợ', 'Theo dõi gốc, lãi/phí và lịch trả nợ'],
   gold: ['Tài sản vàng', 'Đánh giá tài sản tích lũy ngoài ví'],
-  goals: ['Mục tiêu tài chính', 'Chuyển kế hoạch tích lũy thành hành động'],
+  goals: ['Mục tiêu tiết kiệm', 'Theo dõi những khoản bạn đang để dành'],
   reports: ['Báo cáo tài chính', 'Hiểu dòng tiền và tỷ lệ tiết kiệm'],
   reconciliation: ['Đối soát & xuất CSV', 'Kiểm tra tính nhất quán và lưu trữ báo cáo'],
   notifications: ['Trung tâm thông báo', 'Theo dõi các cảnh báo và nhắc nhở quan trọng'],

@@ -175,10 +175,78 @@ final class LedgerDAO
 
         $sql .= ' ORDER BY t.occurred_on DESC, t.id DESC';
 
-        $limit = isset($filters['limit']) ? max(1, min(100, (int) $filters['limit'])) : 50;
+        $limit = isset($filters['limit']) ? max(1, min(100, (int) $filters['limit'])) : 100;
         $offset = isset($filters['offset']) ? max(0, (int) $filters['offset']) : 0;
-        $sql .= " LIMIT {$limit} OFFSET {$offset}";
+        $window = max(1, $offset + $limit);
+        $sql .= " LIMIT {$window}";
 
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = array_merge($stmt->fetchAll(), $this->listGoalTransactions($userId, $filters, $window));
+        usort($rows, static function (array $left, array $right): int {
+            $dateOrder = strcmp((string) ($right['occurred_on'] ?? ''), (string) ($left['occurred_on'] ?? ''));
+            if ($dateOrder !== 0) return $dateOrder;
+            $sourceOrder = ((int) ($right['_source_priority'] ?? 0)) <=> ((int) ($left['_source_priority'] ?? 0));
+            if ($sourceOrder !== 0) return $sourceOrder;
+            return ((int) ($right['_sort_id'] ?? $right['id'] ?? 0)) <=> ((int) ($left['_sort_id'] ?? $left['id'] ?? 0));
+        });
+        $rows = array_slice($rows, $offset, $limit);
+        foreach ($rows as &$row) unset($row['_sort_id'], $row['_source_priority']);
+        unset($row);
+        return $rows;
+    }
+
+    /**
+     * Goal allocations are read-only transaction-history items. They do not create
+     * ledger entries because earmarking does not change the wallet's actual balance.
+     * @param array<string, mixed> $filters
+     * @return array<int, array<string, mixed>>
+     */
+    private function listGoalTransactions(int $userId, array $filters, int $limit): array
+    {
+        $type = strtoupper(trim((string) ($filters['type'] ?? '')));
+        $status = strtoupper(trim((string) ($filters['status'] ?? '')));
+        if (($type !== '' && $type !== 'SAVINGS_GOAL')
+            || ($status !== '' && $status !== 'POSTED')
+            || !empty($filters['categoryId'])) {
+            return [];
+        }
+
+        $sql = "SELECT CONCAT('goal-', a.id) AS id,
+                       a.id AS _sort_id,
+                       1 AS _source_priority,
+                       'SAVINGS_GOAL' AS transaction_type,
+                       'POSTED' AS status,
+                       CASE WHEN a.allocation_type = 'DEPOSIT'
+                            THEN CONCAT('Chuyển vào mục tiêu: ', g.name)
+                            ELSE CONCAT('Lấy khỏi mục tiêu: ', g.name)
+                       END AS description,
+                       'VND' AS currency,
+                       a.amount,
+                       1 AS fx_rate_snapshot,
+                       a.allocated_on AS occurred_on,
+                       NULL AS posted_at,
+                       'Mục tiêu tiết kiệm' AS category_name,
+                       w.name AS wallet_name,
+                       NULL AS source_wallet_name,
+                       NULL AS destination_wallet_name,
+                       a.allocation_type AS goal_action,
+                       g.name AS goal_name,
+                       a.note
+                FROM goal_allocations a
+                JOIN financial_goals g ON g.id = a.goal_id
+                LEFT JOIN wallets w ON w.id = a.wallet_id
+                WHERE g.user_id = ?";
+        $params = [$userId];
+        if (!empty($filters['startDate'])) {
+            $sql .= ' AND a.allocated_on >= ?';
+            $params[] = $filters['startDate'];
+        }
+        if (!empty($filters['endDate'])) {
+            $sql .= ' AND a.allocated_on <= ?';
+            $params[] = $filters['endDate'];
+        }
+        $sql .= " ORDER BY a.allocated_on DESC, a.id DESC LIMIT {$limit}";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
