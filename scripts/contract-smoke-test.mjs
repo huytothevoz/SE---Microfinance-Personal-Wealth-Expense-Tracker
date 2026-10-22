@@ -20,7 +20,7 @@ globalThis.fetch = async (path, init = {}) => {
   if (paths[path]) return { status: 200, ok: true, headers: new Map([['content-type', 'application/json']]), json: async () => ({ success: true, data: paths[path] }) };
   return { status: 404, ok: false, headers: new Map([['content-type', 'application/json']]), json: async () => ({ success: false }) };
 };
-const data = await import('../source/frontend/js/data/live-data.js');
+const data = await import('../source/frontend/js/data/live-data.js?v=transaction-ui-2');
 const { liveRender } = await import('../source/frontend/js/app/live-pages.js');
 await data.loadLiveData();
 assert.equal(data.wallets[0].balance, 25000, 'FR02: wallet cached_balance mapping');
@@ -71,7 +71,7 @@ assert.ok(
   'Wallet amount fields apply locale-aware strict patterns'
 );
 assert.match(walletFeatureSource, /Thêm hoặc bớt tiền[\s\S]+Lưu trữ ví/, 'Wallet edit menu groups adjustment and archive actions');
-assert.match(walletViewSource, /Chỉnh sửa<\/button>/, 'Wallet card exposes one concise edit action');
+assert.match(walletViewSource, /wallet-manage-button[\s\S]+Chi tiết<\/button>/, 'Wallet card exposes one concise manage action');
 assert.match(walletViewSource, /wallet-delete[\s\S]+Xóa vĩnh viễn/, 'Archived wallet exposes permanent deletion');
 assert.match(appCssSource, /\.wallet-card \{[\s\S]*?background: linear-gradient\(145deg,#fff 55%,var\(--wallet-soft\)\)/, 'Wallet cards keep the owner-selected type color palette');
 const { createWalletFeature } = await import('../source/frontend/js/app/wallet-feature.js');
