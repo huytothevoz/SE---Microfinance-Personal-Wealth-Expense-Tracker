@@ -170,9 +170,9 @@ final class FinancialGoalDAO
     {
         $stmt = $this->pdo->prepare(
             "UPDATE wallets
-             SET earmarked_balance = earmarked_balance + ?
+             SET earmarked_balance = earmarked_balance + CAST(? AS DECIMAL(24,8))
              WHERE id = ? AND user_id = ? AND status = 'ACTIVE'
-               AND cached_balance - earmarked_balance >= ?"
+               AND cached_balance - earmarked_balance >= CAST(? AS DECIMAL(24,8))"
         );
         $stmt->execute([$amount, $walletId, $userId, $amount]);
         return $stmt->rowCount() === 1;
@@ -182,8 +182,8 @@ final class FinancialGoalDAO
     {
         $stmt = $this->pdo->prepare(
             'UPDATE wallets
-             SET earmarked_balance = earmarked_balance - ?
-             WHERE id = ? AND user_id = ? AND earmarked_balance >= ?'
+             SET earmarked_balance = earmarked_balance - CAST(? AS DECIMAL(24,8))
+             WHERE id = ? AND user_id = ? AND earmarked_balance >= CAST(? AS DECIMAL(24,8))'
         );
         $stmt->execute([$amount, $walletId, $userId, $amount]);
         return $stmt->rowCount() === 1;

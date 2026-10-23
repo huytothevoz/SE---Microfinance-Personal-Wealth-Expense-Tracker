@@ -3,6 +3,7 @@ import { META } from './ui-core.js?v=goal-ui-5';
 import { liveRender, liveTransactionTable } from './live-pages.js?v=goal-ui-5';
 import { renderWalletPage } from './wallets.js?v=wallet-ui-13';
 import { renderGoalsPage } from './goals.js?v=goal-ui-5';
+import { renderGoldPage } from './gold.js?v=wealth-ui-1';
 
 export function createPages({ state, heading, currentUser }) {
   const ctx = { state, heading, currentUser };
@@ -11,6 +12,7 @@ export function createPages({ state, heading, currentUser }) {
     PAGES[name] = name === 'wallets'
       ? () => renderWalletPage({ state })
       : name === 'goals' ? () => renderGoalsPage()
+      : name === 'gold' ? () => renderGoldPage()
       : () => liveRender(name, ctx);
   }
   return { PAGES, txTable: liveTransactionTable };

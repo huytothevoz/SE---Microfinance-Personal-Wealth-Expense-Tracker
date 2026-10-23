@@ -56,9 +56,10 @@ Email trong chế độ log nằm ở `source/backend/storage/`, không đưa l�
 node scripts/contract-smoke-test.mjs
 php source/backend/tests/mail_smoke_test.php
 php source/backend/tests/run_tests.php
+php source/backend/tests/wealth_goals_test.php
 ```
 
-Test FR02–FR06 cần PHP `pdo_sqlite` và BCMath. Máy không có `pdo_sqlite` sẽ báo `SKIP` (không phải PASS). Phải chạy thêm kiểm thử E2E trên MySQL 3307 và SMTP thật trên máy nhóm mới có thể chốt nghiệm thu.
+Test FR02–FR10 cần PHP `pdo_sqlite` và BCMath. Máy không có `pdo_sqlite` sẽ báo `SKIP` (không phải PASS). Phải chạy thêm kiểm thử E2E trên MySQL 3307 và SMTP thật trên máy nhóm mới có thể chốt nghiệm thu.
 
 ## Không đưa dữ liệu giả vào tài khoản mới
 

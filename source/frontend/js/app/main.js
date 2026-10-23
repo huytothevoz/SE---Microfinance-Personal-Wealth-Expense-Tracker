@@ -8,6 +8,7 @@ import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';
 import { createWalletFeature } from './wallet-feature.js?v=wallet-ui-13';
 import { handleGoalAction } from './goals.js?v=goal-ui-5';
+import { handleGoldAction } from './gold.js?v=wealth-ui-1';
 
 let currentUser;
 try {
@@ -308,6 +309,7 @@ function handleAction(action, trigger) {
  if (liveAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
  if (walletFeature.handleAction(action, trigger)) return;
   if (handleGoalAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
+  if (handleGoldAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (action === 'transaction-filter') { openTransactionFilter(); return; }
   if (action === 'password') { openPasswordForm(); return; }
   if (action === 'logout') {

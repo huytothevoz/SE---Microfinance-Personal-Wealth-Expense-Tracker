@@ -11,10 +11,13 @@ use WealthFlow\Core\Router;
 use WealthFlow\Modules\Auth\AuthController;
 use WealthFlow\Modules\Budgets\BudgetController;
 use WealthFlow\Modules\Goals\GoalController;
+use WealthFlow\Modules\Loans\LoanController;
 use WealthFlow\Modules\Notifications\NotificationController;
 use WealthFlow\Modules\Recurring\RecurringController;
 use WealthFlow\Modules\Transactions\TransactionController;
 use WealthFlow\Modules\Wallets\WalletController;
+use WealthFlow\Modules\Wealth\AnalyticsDashboardController;
+use WealthFlow\Modules\Wealth\GoldController;
 
 try {
     /** @var Config $config */
@@ -47,7 +50,7 @@ try {
     });
     $router->get('/features', static function (): void {
         JsonResponse::success([
-            'integrated' => ['FR01', 'FR02', 'FR03', 'FR04', 'FR05', 'FR06', 'FR07'],
+            'integrated' => ['FR01', 'FR02', 'FR03', 'FR04', 'FR05', 'FR06', 'FR07', 'FR08', 'FR10'],
             'integrationVerifiedWithMysql' => false,
             'note' => 'Đã nối giao diện và backend nhưng cần kiểm thử nghiệm thu MySQL/SMTP thực tế trước khi sử dụng dữ liệu tài chính.',
         ]);
@@ -122,6 +125,22 @@ try {
     $router->post('/goals/{id}/withdraw', [$goalController, 'withdraw']);
     $router->post('/goals/{id}/complete', [$goalController, 'complete']);
     $router->delete('/goals/{id}', [$goalController, 'delete']);
+
+    // 9. Assets, liabilities and net-worth dashboard
+    $loanController = new LoanController();
+    $router->get('/loans', [$loanController, 'list']);
+    $router->get('/loans/{id}', [$loanController, 'show']);
+
+    $goldController = new GoldController();
+    $router->get('/gold', [$goldController, 'list']);
+    $router->post('/gold/transactions', [$goldController, 'transact']);
+    $router->get('/gold/{id}', [$goldController, 'show']);
+    $router->post('/gold/{id}/revalue', [$goldController, 'revalue']);
+    $router->post('/gold/{id}/liquidate', [$goldController, 'liquidate']);
+
+    $analyticsController = new AnalyticsDashboardController();
+    $router->get('/analytics/net-worth', [$analyticsController, 'netWorth']);
+    $router->get('/analytics/net-worth/history', [$analyticsController, 'history']);
 
     $router->dispatch($request);
 } catch (ApiException $error) {

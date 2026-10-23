@@ -17,6 +17,7 @@ export const adminUsers = [];
 export const trend = [];
 export const incomeTrend = [];
 export const expenseTrend = [];
+export const analytics = {};
 
 const collections = { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers };
 const candidates = {
@@ -31,7 +32,7 @@ const candidates = {
   categories: ['/api/categories', '/api/finance/categories'],
   adminUsers: ['/api/admin/users']
 };
-export const dataStatus = Object.fromEntries(Object.keys(collections).map(k => [k, { state: 'idle', message: '', endpoint: '' }]));
+export const dataStatus = Object.fromEntries([...Object.keys(collections), 'analytics'].map(k => [k, { state: 'idle', message: '', endpoint: '' }]));
 let generation = 0;
 const TRANSACTION_PAGE_SIZE = 100;
 const keyVariants = k => [k, k === 'recurring' ? 'schedules' : k, k === 'adminUsers' ? 'users' : k, 'items', 'rows', 'results'];
@@ -114,6 +115,29 @@ function shape(name, row) {
     r.progress = Number(r.progress ?? r.progressPercent ?? (r.target > 0 ? r.current / r.target * 100 : 0));
     r.icon = r.icon ?? '◎';
   }
+  if (name === 'gold') {
+    r.id = String(r.id ?? r.assetId ?? '');
+    r.name = String(r.name ?? 'Tài sản vàng');
+    r.goldType = String(r.goldType ?? r.gold_type ?? '');
+    r.quantityChi = String(r.quantityChi ?? r.quantity_chi ?? '0');
+    r.totalCostBasis = String(r.totalCostBasis ?? r.total_cost_basis ?? '0');
+    r.weightedAverageCost = String(r.weightedAverageCost ?? r.weighted_avg_cost ?? '0');
+    r.valuationPerChi = String(r.valuationPerChi ?? r.valuation_per_chi ?? '0');
+    r.currentValue = String(r.currentValue ?? r.current_value ?? '0');
+    r.valuationDate = String(r.valuationDate ?? r.valuation_date ?? '').slice(0, 10);
+    r.status = String(r.status ?? 'HELD').toUpperCase();
+    r.currency = String(r.currency ?? 'VND').toUpperCase();
+  }
+  if (name === 'loans') {
+    r.id = String(r.id ?? r.loanId ?? '');
+    r.name = String(r.name ?? r.title ?? 'Khoản vay');
+    r.direction = String(r.direction ?? r.loanDirection ?? r.loan_direction ?? 'BORROWED').toUpperCase();
+    r.type = r.direction;
+    r.remainingPrincipal = String(r.remainingPrincipal ?? r.principal_remaining ?? '0');
+    r.outstanding = r.remainingPrincipal;
+    r.nextDueDate = String(r.nextDueDate ?? r.next_due_date ?? '').slice(0, 10);
+    r.currency = String(r.currency ?? 'VND').toUpperCase();
+  }
   if (name === 'notifications') {
     r.id = String(r.id ?? '');
     r.title = String(r.title ?? r.message ?? 'Thông báo');
@@ -127,6 +151,36 @@ function shape(name, row) {
     r.createdAt = String(r.createdAt ?? r.created_at ?? '');
   }
   return r;
+}
+async function getAnalytics(requestGeneration) {
+  analytics && Object.keys(analytics).forEach(key => delete analytics[key]);
+  dataStatus.analytics = { state: 'loading', message: '', endpoint: '/api/analytics/net-worth' };
+  let response;
+  try {
+    response = await fetch('/api/analytics/net-worth', {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+      cache: 'no-store'
+    });
+  } catch (error) {
+    if (requestGeneration === generation) dataStatus.analytics = { state: 'error', endpoint: '/api/analytics/net-worth', message: `Không thể kết nối máy chủ: ${error.message}` };
+    return;
+  }
+  if (!response.ok) {
+    if (requestGeneration === generation) dataStatus.analytics = { state: response.status === 401 ? 'unauthorized' : 'error', endpoint: '/api/analytics/net-worth', message: errorText(response.status) };
+    return;
+  }
+  try {
+    const payload = await response.json();
+    const dashboard = payload?.data?.dashboard;
+    if (!payload?.success || !dashboard || typeof dashboard !== 'object') throw new Error('API Dashboard trả về dữ liệu không hợp lệ.');
+    if (requestGeneration !== generation) return;
+    Object.assign(analytics, dashboard);
+    dataStatus.analytics = { state: 'ready', message: '', endpoint: '/api/analytics/net-worth' };
+  } catch (error) {
+    if (requestGeneration === generation) dataStatus.analytics = { state: 'error', endpoint: '/api/analytics/net-worth', message: error.message };
+  }
 }
 function errorText(code, responseText = '') {
   if (code === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
@@ -193,7 +247,7 @@ async function getOne(name, requestGeneration) {
 export async function loadLiveData({ admin = false } = {}) {
   const thisGeneration = ++generation;
   const keys = Object.keys(collections).filter(k => k !== 'adminUsers' || admin);
-  await Promise.all(keys.map(k => getOne(k, thisGeneration)));
+  await Promise.all([...keys.map(k => getOne(k, thisGeneration)), getAnalytics(thisGeneration)]);
   return dataStatus;
 }
 export function getEndpoint(name) { return dataStatus[name]?.state === 'ready' ? dataStatus[name].endpoint : ''; }

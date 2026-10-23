@@ -9,12 +9,19 @@ export const GoldApi = {
     return httpClient('gold');
   },
 
-  getGoldPrices() {
-    return httpClient('gold/prices');
+  getGoldAsset(id) {
+    return httpClient(`gold/${id}`);
   },
 
   createGoldTransaction(data) {
     return httpClient('gold/transactions', {
+      method: 'POST',
+      data
+    });
+  },
+
+  revalueGoldAsset(id, data) {
+    return httpClient(`gold/${id}/revalue`, {
       method: 'POST',
       data
     });

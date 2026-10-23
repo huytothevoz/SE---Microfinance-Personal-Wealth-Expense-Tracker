@@ -751,6 +751,8 @@ Bảng dưới đây xác nhận tính toàn vẹn và mức độ bao phủ 100
 
 ## 5. Kết Luận & Hướng Dẫn Chuyển Giao Triển Khai (Implementation Readiness)
 
+> **Ghi chú construction 23/10/2026:** Phần cài đặt hiện có đã cung cấp các route đọc Loans (`GET /api/loans`, `GET /api/loans/{id}`), đầy đủ route Vàng (`GET /api/gold`, `GET /api/gold/{id}`, `POST /api/gold/transactions`, `POST /api/gold/{id}/revalue`, `POST /api/gold/{id}/liquidate`) và Dashboard (`GET /api/analytics/net-worth`, `GET /api/analytics/net-worth/history`). Các route ghi Loans và `financial-health` trong thiết kế vẫn là phạm vi dự kiến, chưa được công bố là đã triển khai.
+
 Tài liệu **Đặc tả RESTful API (`api_design.md`)** đã định hình trọn vẹn hợp đồng giao tiếp giữa các thành phần phần mềm của WealthFlow:
 1. **Tính Nhất Quán & Bảo Mật Tuyệt Đối:** Chuẩn hóa toàn diện cơ chế xác thực JWT, bảo vệ CSRF Same-origin, mã băm Argon2id, chống trùng lặp Idempotency-Key và kiểm soát ranh giới phân quyền `USER` / `ADMIN`.
 2. **Kế Thừa Hoàn Chỉnh Thiết Kế UML & Database:** Mọi Endpoint đều được đối chiếu chặt chẽ với các phương thức Controller trong [class_diagram.md](./uml_modeling/class_diagram.md), các tương tác động trong [sequence_diagram.md](./uml_modeling/sequence_diagram.md), và cấu trúc 22 bảng trong [database_design.md](./database_design.md).

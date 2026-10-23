@@ -58,6 +58,7 @@ final class EmailService
     public function send(string $recipient, string $name, string $subject, string $html, string $text): void
     {
         $this->assertConfigured();
+        $transport = strtolower(trim($this->config->get('MAIL_TRANSPORT')));
         $mail = new PHPMailer(true);
         $mail->CharSet = PHPMailer::CHARSET_UTF8;
         $mail->setFrom($this->config->get('MAIL_FROM_ADDRESS'), $this->config->get('MAIL_FROM_NAME'));
@@ -67,7 +68,7 @@ final class EmailService
         $mail->Body = $html;
         $mail->AltBody = $text;
 
-        if ($this->config->get('MAIL_TRANSPORT') === 'log' && $this->config->get('APP_ENV') === 'local') {
+        if ($transport === 'log' && $this->config->get('APP_ENV') === 'local') {
             $mail->preSend();
             $path = $this->config->directory . '/storage/mail-' . bin2hex(random_bytes(8)) . '.eml';
             if (file_put_contents($path, $mail->getSentMIMEMessage(), LOCK_EX) === false) {
@@ -76,10 +77,10 @@ final class EmailService
             chmod($path, 0600);
             return;
         }
-        if ($this->config->get('MAIL_TRANSPORT') !== 'smtp') {
+        if ($transport !== 'smtp') {
             throw new RuntimeException('Invalid mail transport.');
         }
-        $encryption = $this->config->get('MAIL_ENCRYPTION');
+        $encryption = strtolower(trim($this->config->get('MAIL_ENCRYPTION')));
         if (!in_array($encryption, ['tls', 'ssl', 'none'], true)
             || ($encryption === 'none' && !in_array($this->config->get('MAIL_HOST'), ['localhost', '127.0.0.1', '::1'], true))) {
             throw new RuntimeException('SMTP requires TLS outside a local test server.');

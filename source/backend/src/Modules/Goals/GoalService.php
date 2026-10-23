@@ -8,17 +8,24 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use Throwable;
 use WealthFlow\Core\ApiException;
+use WealthFlow\Modules\Transactions\LedgerDAO;
 use WealthFlow\Modules\Wallets\WalletDAO;
 
 final class GoalService
 {
     private FinancialGoalDAO $goalDao;
     private WalletDAO $walletDao;
+    private LedgerDAO $ledgerDao;
 
-    public function __construct(?FinancialGoalDAO $goalDao = null, ?WalletDAO $walletDao = null)
+    public function __construct(
+        ?FinancialGoalDAO $goalDao = null,
+        ?WalletDAO $walletDao = null,
+        ?LedgerDAO $ledgerDao = null
+    )
     {
         $this->goalDao = $goalDao ?? new FinancialGoalDAO();
         $this->walletDao = $walletDao ?? new WalletDAO($this->goalDao->getPdo());
+        $this->ledgerDao = $ledgerDao ?? new LedgerDAO($this->goalDao->getPdo());
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -39,7 +46,7 @@ final class GoalService
         $result['allocations'] = array_map(static fn(array $row): array => [
             'id' => (int) $row['id'],
             'type' => (string) $row['allocation_type'],
-            'amount' => (float) $row['amount'],
+            'amount' => (string) $row['amount'],
             'allocatedOn' => (string) $row['allocated_on'],
             'note' => (string) ($row['note'] ?? ''),
             'walletId' => $row['wallet_id'] !== null ? (int) $row['wallet_id'] : null,
@@ -77,7 +84,13 @@ final class GoalService
     }
 
     /** @param array<string, mixed> $data */
-    public function allocate(int $id, int $userId, string $type, array $data): array
+    public function allocate(
+        int $id,
+        int $userId,
+        string $type,
+        array $data,
+        ?string $idempotencyKey = null
+    ): array
     {
         $type = strtoupper($type);
         if (!in_array($type, ['DEPOSIT', 'WITHDRAWAL'], true)) {
@@ -89,11 +102,31 @@ final class GoalService
         if (mb_strlen($note) > 250) {
             throw new InvalidArgumentException('Ghi chú không được dài quá 250 ký tự.');
         }
+        $key = $this->idempotencyKey($idempotencyKey);
+        $walletId = (int) ($data['walletId'] ?? 0);
+        $payload = [
+            'goalId' => $id,
+            'type' => $type,
+            'walletId' => $walletId,
+            'amount' => $amount,
+            'allocatedOn' => $allocatedOn,
+            'note' => $note,
+        ];
+        $hash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
 
         $pdo = $this->goalDao->getPdo();
         $ownsTransaction = !$pdo->inTransaction();
         if ($ownsTransaction) $pdo->beginTransaction();
         try {
+            $record = $this->ledgerDao->findIdempotency($userId, $key);
+            if ($record !== null) {
+                if (!hash_equals((string) $record['request_hash'], $hash)) {
+                    throw new ApiException('IDEMPOTENCY_CONFLICT', 'Khóa chống trùng đã được dùng cho yêu cầu khác.', 409);
+                }
+                $cached = json_decode((string) $record['response_json'], true, 512, JSON_THROW_ON_ERROR);
+                if ($ownsTransaction) $pdo->commit();
+                return is_array($cached) ? $cached : [];
+            }
             $goal = $this->goalDao->findByIdAndUser($id, $userId, true);
             if ($goal === null) throw new ApiException('NOT_FOUND', 'Không tìm thấy mục tiêu này.', 404);
             if ((string) $goal['status'] === 'CANCELLED') {
@@ -102,7 +135,6 @@ final class GoalService
             if ($type === 'DEPOSIT' && (string) $goal['status'] !== 'ACTIVE') {
                 throw new InvalidArgumentException('Mục tiêu này đã hoàn thành. Hãy chỉnh lại kế hoạch nếu muốn tiếp tục để dành.');
             }
-            $walletId = (int) ($data['walletId'] ?? 0);
             $this->requireVndWallet($walletId, $userId);
             $current = (string) $goal['current_amount'];
 
@@ -128,8 +160,17 @@ final class GoalService
             $status = bccomp($newAmount, (string) $goal['target_amount'], 8) >= 0 ? 'COMPLETED' : 'ACTIVE';
             $this->goalDao->addAllocation($id, $walletId, $type, $amount, $allocatedOn, $note !== '' ? $note : null);
             $this->goalDao->updateAmountAndStatus($id, $userId, $newAmount, $status);
+            $response = $this->getGoal($id, $userId);
+            $this->ledgerDao->saveIdempotency(
+                $userId,
+                $key,
+                $hash,
+                null,
+                200,
+                json_encode($response, JSON_THROW_ON_ERROR)
+            );
             if ($ownsTransaction) $pdo->commit();
-            return $this->getGoal($id, $userId);
+            return $response;
         } catch (Throwable $error) {
             if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
             throw $error;
@@ -258,12 +299,25 @@ final class GoalService
         return $priority;
     }
 
+    private function idempotencyKey(?string $key): string
+    {
+        $key = strtolower(trim((string) $key));
+        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D', $key)) {
+            throw new ApiException(
+                $key === '' ? 'IDEMPOTENCY_KEY_REQUIRED' : 'INVALID_IDEMPOTENCY_KEY',
+                $key === '' ? 'Phân bổ mục tiêu cần Idempotency-Key.' : 'Idempotency-Key phải là UUID v4 hợp lệ.',
+                400
+            );
+        }
+        return $key;
+    }
+
     /** @param array<string, mixed> $goal @return array<string, mixed> */
     private function present(array $goal): array
     {
-        $target = (float) $goal['target_amount'];
-        $current = (float) $goal['current_amount'];
-        $remaining = max(0.0, $target - $current);
+        $target = (string) $goal['target_amount'];
+        $current = (string) $goal['current_amount'];
+        $remaining = bccomp($current, $target, 8) >= 0 ? '0.00000000' : bcsub($target, $current, 8);
         $today = new DateTimeImmutable('today');
         $deadline = new DateTimeImmutable((string) $goal['deadline']);
         $days = max(0, (int) $today->diff($deadline)->format('%r%a'));
@@ -274,8 +328,12 @@ final class GoalService
             'targetAmount' => $target,
             'currentAmount' => $current,
             'remainingAmount' => $remaining,
-            'progressPercent' => $target > 0 ? round(($current / $target) * 100, 1) : 0.0,
-            'monthlySavingTarget' => $remaining > 0 ? round($remaining / $months, 2) : 0.0,
+            'progressPercent' => bccomp($target, '0', 8) > 0
+                ? (bccomp($current, $target, 8) >= 0 ? '100.0' : bcmul(bcdiv($current, $target, 8), '100', 1))
+                : '0.0',
+            'monthlySavingTarget' => bccomp($remaining, '0', 8) > 0
+                ? bcdiv($remaining, (string) $months, 2)
+                : '0.00',
             'deadline' => (string) $goal['deadline'],
             'priority' => (string) $goal['priority'],
             'status' => (string) $goal['status'],

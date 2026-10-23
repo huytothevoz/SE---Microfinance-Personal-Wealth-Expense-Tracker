@@ -96,7 +96,13 @@ final class GoalController
     {
         $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         try {
-            JsonResponse::success(['goal' => $this->goalService->allocate($id, $userId, $type, $request->getBody())]);
+            JsonResponse::success(['goal' => $this->goalService->allocate(
+                $id,
+                $userId,
+                $type,
+                $request->getBody(),
+                $request->getIdempotencyKey()
+            )]);
         } catch (Throwable $error) {
             $this->error($error, $type === 'DEPOSIT' ? 'Không thể thêm tiền để dành.' : 'Không thể lấy tiền khỏi mục tiêu.');
         }

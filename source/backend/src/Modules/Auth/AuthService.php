@@ -227,6 +227,13 @@ final class AuthService
             try {
                 $mailer->sendPasswordResetOtp($user['email'], $user['full_name'], $otp);
             } catch (\Throwable $error) {
+                // An undelivered OTP must not remain valid in the database.
+                try {
+                    $this->query('DELETE FROM password_reset_tokens WHERE user_id = ?', [$user['id']]);
+                } catch (\Throwable $cleanupError) {
+                    error_log('WealthFlow OTP cleanup failed; user_id=' . (int) $user['id']
+                        . '; category=' . get_class($cleanupError));
+                }
                 // Keep the HTTP response generic to avoid revealing registered emails.
                 // Record the failure for server administrators; never log the OTP.
                 error_log('WealthFlow OTP delivery failed; user_id=' . (int) $user['id']

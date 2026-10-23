@@ -85,6 +85,7 @@ final class Database
             wallet_type TEXT NOT NULL,
             currency TEXT NOT NULL DEFAULT 'VND',
             cached_balance REAL NOT NULL DEFAULT 0,
+            earmarked_balance REAL NOT NULL DEFAULT 0,
             status TEXT NOT NULL DEFAULT 'ACTIVE',
             icon_key TEXT NULL,
             color_key TEXT NULL,
@@ -223,6 +224,102 @@ final class Database
             FOREIGN KEY (recurring_schedule_id) REFERENCES recurring_schedules(id),
             FOREIGN KEY (transaction_id) REFERENCES financial_transactions(id),
             UNIQUE (recurring_schedule_id, due_date)
+        );
+
+        CREATE TABLE IF NOT EXISTS micro_loans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            wallet_id INTEGER NULL,
+            title TEXT NOT NULL,
+            partner_name TEXT NOT NULL,
+            loan_direction TEXT NOT NULL,
+            currency TEXT NOT NULL DEFAULT 'VND',
+            principal_original REAL NOT NULL,
+            principal_remaining REAL NOT NULL,
+            interest_rate_year REAL NOT NULL DEFAULT 0,
+            term_months INTEGER NOT NULL DEFAULT 0,
+            start_date DATE NOT NULL,
+            next_due_date DATE NULL,
+            status TEXT NOT NULL DEFAULT 'ACTIVE',
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS loan_payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            loan_id INTEGER NOT NULL,
+            transaction_id INTEGER NULL,
+            principal_amount REAL NOT NULL,
+            interest_fee_amount REAL NOT NULL DEFAULT 0,
+            paid_on DATE NOT NULL,
+            FOREIGN KEY (loan_id) REFERENCES micro_loans(id),
+            FOREIGN KEY (transaction_id) REFERENCES financial_transactions(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS gold_assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            gold_type TEXT NOT NULL,
+            quantity_chi REAL NOT NULL,
+            total_cost_basis REAL NOT NULL DEFAULT 0,
+            weighted_avg_cost REAL NOT NULL DEFAULT 0,
+            valuation_per_chi REAL NOT NULL,
+            valuation_date DATE NOT NULL,
+            status TEXT NOT NULL DEFAULT 'HELD',
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS gold_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            gold_asset_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            transaction_type TEXT NOT NULL,
+            quantity_chi REAL NOT NULL,
+            unit_price REAL NOT NULL,
+            total_amount REAL NOT NULL,
+            wallet_id INTEGER NULL,
+            occurred_on DATE NOT NULL,
+            FOREIGN KEY (gold_asset_id) REFERENCES gold_assets(id),
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS financial_goals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            wallet_id INTEGER NULL,
+            name TEXT NOT NULL,
+            target_amount REAL NOT NULL,
+            current_amount REAL NOT NULL DEFAULT 0,
+            deadline DATE NOT NULL,
+            priority TEXT NOT NULL DEFAULT 'MEDIUM',
+            status TEXT NOT NULL DEFAULT 'ACTIVE',
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS goal_allocations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            goal_id INTEGER NOT NULL,
+            wallet_id INTEGER NULL,
+            allocation_type TEXT NOT NULL DEFAULT 'DEPOSIT',
+            amount REAL NOT NULL,
+            allocated_on DATE NOT NULL,
+            note TEXT NULL,
+            FOREIGN KEY (goal_id) REFERENCES financial_goals(id),
+            FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS net_worth_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            snapshot_date DATE NOT NULL,
+            total_assets REAL NOT NULL,
+            total_liabilities REAL NOT NULL,
+            net_worth REAL NOT NULL,
+            breakdown_json TEXT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE (user_id, snapshot_date)
         );
 
         CREATE TABLE IF NOT EXISTS notifications (

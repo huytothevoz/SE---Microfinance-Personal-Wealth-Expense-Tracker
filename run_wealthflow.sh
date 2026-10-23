@@ -155,8 +155,10 @@ apply_migrations() {
     init_env
     if "$PHP_BIN" "$MIGRATOR_PHP"; then
         echo -e "  \033[0;32m[OK] Áp dụng Migrations thành công!\033[0m"
+        return 0
     else
         echo -e "  \033[0;31m[LỖI] Có lỗi khi chạy migrations.\033[0m"
+        return 1
     fi
 }
 
@@ -195,7 +197,7 @@ check_health() {
         echo -n "  • Kiểm tra /api/health: "
         local res
         res="$(curl -s --max-time 3 "http://127.0.0.1:$WEB_PORT/api/health" || echo "")"
-        if echo "$res" | grep -q '"success":true'; then
+        if echo "$res" | grep -q '"success":true' && echo "$res" | grep -q '"databaseConnected":true'; then
             echo -e "\033[0;32mHOẠT ĐỘNG TỐT (OK)\033[0m"
             echo "    Response: $res"
         else
@@ -208,11 +210,14 @@ check_health() {
 run_tests() {
     echo ""
     echo -e "\033[0;36m---------------- BỘ KIỂM THỬ TỰ ĐỘNG (TEST SUITE) -------------\033[0m"
-    echo -e "  [*] 1. Chạy 36 ca kiểm thử backend FR03-FR06..."
+    echo -e "  [*] 1. Chạy bộ kiểm thử backend FR03-FR06..."
     "$PHP_BIN" "$BACKEND_DIR/tests/run_tests.php"
     echo ""
     echo -e "  [*] 2. Chạy 7 ca kiểm thử Email Service SMTP..."
     "$PHP_BIN" "$BACKEND_DIR/tests/mail_smoke_test.php"
+    echo ""
+    echo -e "  [*] 3. Chạy kiểm thử Tài sản, Mục tiêu và Dashboard..."
+    "$PHP_BIN" "$BACKEND_DIR/tests/wealth_goals_test.php"
     echo -e "\033[0;36m---------------------------------------------------------------\033[0m"
 }
 
@@ -255,7 +260,7 @@ while true; do
     echo "  [3] Kiểm tra trạng thái chi tiết (Health Check & API status)"
     echo "  [4] Chạy cập nhật CSDL Migrations (28 SQL files)"
     echo -e "  \033[0;33m[5] Reset CSDL & Dữ liệu mẫu (Reset & Seed sạch)\033[0m"
-    echo "  [6] Chạy bộ kiểm thử tự động (36 unit tests + 7 mail checks)"
+    echo "  [6] Chạy bộ kiểm thử tự động (backend + 7 mail checks + Wealth/Goals)"
     echo "  [7] Xem nhật ký lỗi & email OTP gần nhất"
     echo "  [8] Mở trình duyệt Web (http://localhost:$WEB_PORT/)"
     echo -e "  \033[0;31m[0] Thoát (Exit)\033[0m"
@@ -265,9 +270,18 @@ while true; do
     case "$choice" in
         1)
             echo ""
-            start_db || true
-            apply_migrations
-            start_web
+            if ! start_db; then
+                echo -e "  \033[0;31m[LỖI] MySQL chưa sẵn sàng; không khởi động web để tránh màn hình 503 gây hiểu nhầm.\033[0m"
+                echo "  Hãy bật MySQL/XAMPP bằng quyền quản trị, rồi chọn [1] lại."
+                continue
+            fi
+            if ! apply_migrations; then
+                echo -e "  \033[0;31m[LỖI] CSDL chưa sẵn sàng; web chưa được khởi động. Kiểm tra cấu hình DB và log phía trên.\033[0m"
+                continue
+            fi
+            if ! start_web; then
+                continue
+            fi
             echo ""
             echo -e "  \033[0;32m===========================================================\033[0m"
             echo -e "  \033[1;32m     WEALTHFLOW ĐÃ KHỞI ĐỘNG VÀ SẴN SÀNG SỬ DỤNG!          \033[0m"

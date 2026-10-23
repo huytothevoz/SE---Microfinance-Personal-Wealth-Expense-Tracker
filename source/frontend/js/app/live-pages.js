@@ -1,5 +1,5 @@
 /** WealthFlow live, account-scoped page templates. No static financial figures. */
-import { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers, dataStatus, mutateLiveData, loadLiveData } from '../data/live-data.js?v=goal-ui-5';
+import { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers, analytics, dataStatus, mutateLiveData, loadLiveData } from '../data/live-data.js?v=wealth-ui-1';
 import { icon, formatMoneyInput, moneyInputValue } from './ui-core.js?v=goal-ui-5';
 import { httpClient } from '../services/http-client.js';
 import { GoalApi } from '../services/goal-api.js';
@@ -63,31 +63,38 @@ function reports() {
   return `<div class="kpi-grid">${card('Thu nhập tháng',vnd(stats.income),'Không tính chuyển ví')}${card('Chi tiêu tháng',vnd(stats.expense),'Không tính chuyển ví')}${card('Dòng tiền thuần',vnd(stats.net),'Thu nhập trừ chi tiêu')}${card('Tỷ lệ tiết kiệm',stats.rate === null ? '—' : stats.rate.toFixed(1) + '%',stats.rate === null ? 'Chưa có thu nhập để tính' : 'Tính từ giao dịch đã ghi sổ')}</div>
   <section class="panel"><div class="panel-title"><h2>Thu nhập và chi tiêu · 6 tháng</h2></div><div class="wf-graph">${months.map(m => `<div class="wf-bar-group"><i class="wf-bar" style="height:${Math.max(0, m.income / ceiling * 100)}%" title="${esc(m.key)}: Thu ${vnd(m.income)}"></i><i class="wf-bar out" style="height:${Math.max(0, m.expense / ceiling * 100)}%" title="${esc(m.key)}: Chi ${vnd(m.expense)}"></i><small>${esc(m.key.slice(5))}</small></div>`).join('')}</div><p class="wf-stat-note">Xanh: thu nhập · Cam: chi tiêu. Dữ liệu lấy từ tài khoản đăng nhập, không phải dữ liệu mẫu.</p></section>`;
 }
-function overview(currentUser) {
-  const stat = monthStats();
-  const baseCurrency = String(currentUser.baseCurrency || 'VND').toUpperCase();
-  // Balances across currencies MUST NOT be summed without converted base amounts.
-  const walletConvertible = wallets.every(w => w.balanceBase != null || String(w.currency || baseCurrency).toUpperCase() === baseCurrency);
-  const walletTotal = walletConvertible ? wallets.reduce((s,w) => s + Number(w.balanceBase ?? w.balance ?? 0), 0) : null;
-  const goldConvertible = gold.every(g => val(g,'valueBase','currentValueBase','value','currentValue','valuation','marketValue') != null &&
-    (val(g,'valueBase','currentValueBase') != null || String(g.currency || baseCurrency).toUpperCase() === baseCurrency));
-  const goldTotal = goldConvertible ? gold.reduce((s,g) => s + Number(val(g,'valueBase','currentValueBase','value','currentValue','valuation','marketValue') || 0),0) : null;
-  const loansConvertible = loans.every(l => val(l,'outstandingBase','outstanding','remainingPrincipal','balance') != null &&
-    (l.outstandingBase != null || String(l.currency || baseCurrency).toUpperCase() === baseCurrency));
-  const borrows = loans.filter(l => !['lend','lending','receivable'].includes(String(val(l,'type','direction') || 'borrow').toLowerCase()));
-  const lends = loans.filter(l => ['lend','lending','receivable'].includes(String(val(l,'type','direction') || '').toLowerCase()));
-  const loanAmount = l => Number(val(l,'outstandingBase','outstanding','remainingPrincipal','balance') || 0);
-  const liabilities = loansConvertible ? borrows.reduce((s,l) => s + loanAmount(l),0) : null;
-  const receivables = loansConvertible ? lends.reduce((s,l) => s + loanAmount(l),0) : null;
-  const assetsReady = ready('wallets') && ready('gold') && ready('loans') && walletConvertible && goldConvertible && loansConvertible && baseCurrency === 'VND';
-  const totalAssets = (walletTotal ?? 0) + (goldTotal ?? 0) + (receivables ?? 0);
-  return `<div class="kpi-grid">${card('Tài sản ròng', assetsReady ? vnd(totalAssets-liabilities) : '—',assetsReady ? 'Ví + tài sản vàng + phải thu − phải trả' : 'Cần số liệu tài sản quy đổi và API đầy đủ')}
-    ${card('Số dư ví',ready('wallets') && walletTotal !== null && baseCurrency === 'VND'?vnd(walletTotal):'—','Chỉ cộng số dư cùng tiền cơ sở')}
-    ${card('Tổng nợ phải trả', ready('loans') && liabilities !== null && baseCurrency === 'VND'?vnd(liabilities):'—','Dư nợ gốc còn lại')}
-    ${card('Dòng tiền thuần tháng',stat?vnd(stat.net):'—','Thu nhập trừ chi tiêu đã ghi sổ')}</div>
-    <div class="panel-grid"><section class="panel"><div class="panel-title"><h2>Giao dịch gần đây</h2></div>${table('transactions', [['Giao dịch','name'],['Loại','type'],['Ngày','date','date'],['Giá trị','amount','money']],transactions.slice(0,5))}</section>
-    <section class="panel"><div class="panel-title"><h2>Ngân sách</h2></div>${budgetCards(3)}</section></div>
-    <section class="panel"><div class="panel-title"><h2>Tình hình thu–chi</h2></div>${reports()}</section>`;
+function overview() {
+  const issue = problem('analytics');
+  if (issue) return `<section class="panel">${issue}<div class="wf-grid-actions"><button type="button" class="btn btn--outline btn-sm" data-page="overview">Thử tải lại</button></div></section>`;
+  const assets = analytics.assets || {};
+  const liabilities = analytics.liabilities || {};
+  const cashFlow = analytics.cashFlow || {};
+  const goalSummary = analytics.goals || {};
+  const breakdown = assets.breakdown || {};
+  const goalItems = Array.isArray(goalSummary.items) ? goalSummary.items : [];
+  const goalHtml = goalItems.length ? goalItems.map(goal => {
+    const progress = Math.max(0, Math.min(100, Number(goal.progressPercent || 0)));
+    return `<div class="budget-row"><div class="budget-info"><strong>${esc(goal.name)}</strong><span>${vnd(goal.currentAmount)} / ${vnd(goal.targetAmount)}</span></div><div class="wf-progress"><i style="width:${progress}%"></i></div><div class="budget-foot">${progress.toLocaleString('vi-VN')}% · hạn ${display(goal.deadline, 'date')}</div></div>`;
+  }).join('') : empty('goals', 'mục tiêu đang thực hiện');
+  const allocationRows = [
+    ['Tiền mặt', breakdown.cash],
+    ['Ngân hàng', breakdown.bank],
+    ['Ví điện tử', breakdown.eWallet],
+    ['Tiết kiệm', breakdown.savings],
+    ['Vàng', breakdown.gold],
+    ['Khoản cho vay', breakdown.receivableLoans]
+  ].filter(([, amount]) => Number(amount || 0) !== 0);
+  const allocationHtml = allocationRows.length
+    ? `<div class="goal-history">${allocationRows.map(([label, amount]) => `<div class="goal-history-row"><span><strong>${esc(label)}</strong></span><b>${vnd(amount)}</b></div>`).join('')}</div>`
+    : message('Chưa có tài sản', 'Các nguồn tài sản hợp lệ của tài khoản hiện có giá trị bằng 0.');
+  return `<div class="kpi-grid">
+    ${card('Tài sản ròng', vnd(analytics.netWorth), 'Tổng tài sản − Tổng nợ phải trả')}
+    ${card('Tổng tài sản', vnd(assets.totalAssets), 'Ví + vàng + khoản cho vay, không tính tiền mục tiêu lần hai')}
+    ${card('Tổng nợ phải trả', vnd(liabilities.totalLiabilities), 'Ví tín dụng + dư nợ gốc đi vay')}
+    ${card('Đang tích lũy', vnd(goalSummary.currentAmount), `${Number(goalSummary.activeCount || 0)} mục tiêu đang thực hiện`)}</div>
+    <div class="kpi-grid">${card('Thu nhập tháng', vnd(cashFlow.income), 'Chỉ giao dịch thu nhập đã ghi sổ')}${card('Chi phí tháng', vnd(cashFlow.expense), 'Chỉ giao dịch chi phí đã ghi sổ')}${card('Dòng tiền thuần', vnd(cashFlow.net), 'Thu nhập − Chi phí')}${card('Tỷ lệ tiết kiệm', cashFlow.savingRate === null ? 'N/A' : `${esc(cashFlow.savingRate)}%`, cashFlow.savingRate === null ? 'Chưa có thu nhập để tính' : `Tháng ${esc(cashFlow.month)}`)}</div>
+    <div class="panel-grid"><section class="panel"><div class="panel-title"><div><h2>Cơ cấu tài sản</h2><p>Nguồn số liệu do backend tổng hợp</p></div></div>${allocationHtml}</section><section class="panel"><div class="panel-title"><div><h2>Mục tiêu đang thực hiện</h2><p>Tiền phân bổ vẫn nằm trong ví, không cộng lại vào tài sản</p></div></div>${goalHtml}</section></div>
+    <section class="panel"><div class="panel-title"><h2>Giao dịch gần đây</h2></div>${table('transactions', [['Giao dịch','name'],['Loại','type'],['Ngày','date','date'],['Giá trị','amount','money']],transactions.slice(0,5))}</section>`;
 }
 function budgetCards(limit = Infinity, showActions = false) {
   const issue = problem('budgets'); if (issue) return issue;
@@ -236,7 +243,8 @@ function transactionDetail(item) {
   <div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Đóng</button></div>`;
 }
 function genericPage(key, cols) {
-  return `<div class="wf-grid-actions">${addButton(key)}</div><section class="panel">${table(key,cols)}</section>`;
+  const canCreate = ['transactions', 'categories', 'budgets', 'recurring'].includes(key);
+  return `${canCreate ? `<div class="wf-grid-actions">${addButton(key)}</div>` : ''}<section class="panel">${table(key,cols)}</section>`;
 }
 const tableColumns = {
   wallets:[['Tên ví','name'],['Loại','type'],['Tiền tệ','currency'],['Số dư','balance','money']],

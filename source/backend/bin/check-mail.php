@@ -36,8 +36,14 @@ try {
     $mailer = new EmailService($config);
     $mailer->assertConfigured();
     echo "[OK] Mail settings have all required fields.\n";
+    $transport = strtolower(trim($config->get('MAIL_TRANSPORT')));
+    echo "[INFO] Active mail transport: {$transport}.\n";
     if ($recipient === null) {
-        echo "[INFO] SMTP delivery not tested. Add --to=your-email@example.com to send a test.\n";
+        if ($transport === 'log') {
+            echo "[INFO] Local preview mode: messages are saved in backend/storage/ and are NOT sent to an inbox.\n";
+        } else {
+            echo "[INFO] SMTP delivery not tested. Add --to=your-email@example.com to send a test.\n";
+        }
         exit(0);
     }
 
@@ -48,7 +54,7 @@ try {
         '<p>Mail WealthFlow da gui thanh cong den hop thu nay.</p>',
         'Mail WealthFlow da gui thanh cong den hop thu nay.'
     );
-    if ($config->get('MAIL_TRANSPORT') === 'log') {
+    if ($transport === 'log') {
         echo "[OK] Saved a local email preview in backend/storage/ (not sent via SMTP).\n";
     } else {
         echo "[OK] SMTP server accepted the test email. Check Inbox and Spam/Junk.\n";
