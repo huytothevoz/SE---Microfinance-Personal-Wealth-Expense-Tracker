@@ -3,7 +3,7 @@
  * Manages overview KPI metrics, Net Worth SVG trend chart, and asset distribution.
  */
 import { loadView } from './view-loader.js';
-import { trend, goals, transactions } from '../data/live-data.js';
+import { trend, goals, transactions } from '../data/live-data.js?v=wealth-ui-2';
 import { money, percent } from './ui-core.js';
 import { budgetsUI } from './budgets.js';
 import { txTable } from './transactions.js';

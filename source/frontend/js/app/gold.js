@@ -1,8 +1,8 @@
 /** WealthFlow gold holdings backed only by authenticated PHP APIs. */
 import { loadView } from './view-loader.js';
-import { gold, wallets, dataStatus } from '../data/live-data.js?v=wealth-ui-1';
+import { gold, wallets, dataStatus } from '../data/live-data.js?v=wealth-ui-2';
 import { GoldApi } from '../services/gold-api.js';
-import { money, safe, formatMoneyInput, moneyInputValue } from './ui-core.js?v=wealth-ui-1';
+import { money, safe, formatMoneyInput, moneyInputValue } from './ui-core.js?v=wealth-ui-2';
 
 const byId = id => gold.find(asset => String(asset.id) === String(id));
 const localDate = () => new Date().toLocaleDateString('en-CA');

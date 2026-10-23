@@ -3,7 +3,7 @@
  * Manages admin dashboard, user locks, default categories, broadcasts, notifications, and profile settings.
  */
 import { loadView } from './view-loader.js';
-import { adminUsers, categories, notifications } from '../data/live-data.js';
+import { adminUsers, categories, notifications } from '../data/live-data.js?v=wealth-ui-2';
 import { icon, safe } from './ui-core.js';
 import { reportBarChart } from './reports.js';
 

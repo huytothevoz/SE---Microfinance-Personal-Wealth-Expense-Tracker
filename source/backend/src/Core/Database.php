@@ -245,6 +245,19 @@ final class Database
             FOREIGN KEY (wallet_id) REFERENCES wallets(id)
         );
 
+        CREATE TABLE IF NOT EXISTS loan_repayment_schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            loan_id INTEGER NOT NULL,
+            period_number INTEGER NOT NULL,
+            due_date DATE NOT NULL,
+            principal_due REAL NOT NULL DEFAULT 0,
+            interest_due REAL NOT NULL DEFAULT 0,
+            principal_paid REAL NOT NULL DEFAULT 0,
+            interest_paid REAL NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            FOREIGN KEY (loan_id) REFERENCES micro_loans(id)
+        );
+
         CREATE TABLE IF NOT EXISTS loan_payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             loan_id INTEGER NOT NULL,

@@ -1,14 +1,15 @@
-import { icon, safe, money, USER_NAV, ADMIN_NAV, META, formatMoneyInput } from './ui-core.js?v=goal-ui-5';
-import { createPages } from './pages.js?v=goal-ui-5';
+import { icon, safe, money, USER_NAV, ADMIN_NAV, META, formatMoneyInput } from './ui-core.js?v=wealth-ui-2';
+import { createPages } from './pages.js?v=wealth-ui-2';
 import { FIELDS } from './forms.js';
-import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=goal-ui-5';
-import { liveAction } from './live-pages.js?v=goal-ui-5';
+import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=wealth-ui-2';
+import { liveAction } from './live-pages.js?v=wealth-ui-2';
 // WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';
 import { createWalletFeature } from './wallet-feature.js?v=wallet-ui-13';
-import { handleGoalAction } from './goals.js?v=goal-ui-5';
-import { handleGoldAction } from './gold.js?v=wealth-ui-1';
+import { handleGoalAction } from './goals.js?v=wealth-ui-2';
+import { handleGoldAction } from './gold.js?v=wealth-ui-2';
+import { handleLoanAction } from './loans.js?v=wealth-ui-2';
 
 let currentUser;
 try {
@@ -310,6 +311,7 @@ function handleAction(action, trigger) {
  if (walletFeature.handleAction(action, trigger)) return;
   if (handleGoalAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (handleGoldAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
+  if (handleLoanAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (action === 'transaction-filter') { openTransactionFilter(); return; }
   if (action === 'password') { openPasswordForm(); return; }
   if (action === 'logout') {

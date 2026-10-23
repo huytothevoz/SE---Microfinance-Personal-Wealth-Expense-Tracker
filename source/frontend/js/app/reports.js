@@ -3,7 +3,7 @@
  * Handles 6-month cash flow charts, saving rates, ledger reconciliation, and CSV exports.
  */
 import { loadView } from './view-loader.js';
-import { incomeTrend, expenseTrend, wallets } from '../data/live-data.js';
+import { incomeTrend, expenseTrend, wallets } from '../data/live-data.js?v=wealth-ui-2';
 import { money } from './ui-core.js';
 import { lineChart } from './analytics.js';
 

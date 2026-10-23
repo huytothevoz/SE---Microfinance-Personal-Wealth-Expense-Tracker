@@ -33,7 +33,7 @@ globalThis.fetch = async (path, init = {}) => {
   if (paths[route]) return { status: 200, ok: true, headers: new Map([['content-type', 'application/json']]), json: async () => ({ success: true, data: paths[route] }) };
   return { status: 404, ok: false, headers: new Map([['content-type', 'application/json']]), json: async () => ({ success: false }) };
 };
-const data = await import('../source/frontend/js/data/live-data.js?v=wealth-ui-1');
+const data = await import('../source/frontend/js/data/live-data.js?v=wealth-ui-2');
 const { liveRender } = await import('../source/frontend/js/app/live-pages.js');
 await data.loadLiveData();
 assert.equal(data.wallets[0].balance, 25000, 'FR02: wallet cached_balance mapping');

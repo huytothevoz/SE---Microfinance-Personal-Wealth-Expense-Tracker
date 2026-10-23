@@ -9,9 +9,9 @@ export const AnalyticsApi = {
     return httpClient('analytics/net-worth');
   },
 
-  getNetWorthHistory(period = '7m') {
+  getNetWorthHistory(days = 90) {
     return httpClient('analytics/net-worth/history', {
-      params: { period }
+      params: { days }
     });
   },
 

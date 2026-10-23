@@ -1,9 +1,10 @@
 /** Refactor SPA view aggregator: no demo fixtures, never return fabricated account data. */
-import { META } from './ui-core.js?v=goal-ui-5';
-import { liveRender, liveTransactionTable } from './live-pages.js?v=goal-ui-5';
+import { META } from './ui-core.js?v=wealth-ui-2';
+import { liveRender, liveTransactionTable } from './live-pages.js?v=wealth-ui-2';
 import { renderWalletPage } from './wallets.js?v=wallet-ui-13';
-import { renderGoalsPage } from './goals.js?v=goal-ui-5';
-import { renderGoldPage } from './gold.js?v=wealth-ui-1';
+import { renderGoalsPage } from './goals.js?v=wealth-ui-2';
+import { renderGoldPage } from './gold.js?v=wealth-ui-2';
+import { renderLoansPage } from './loans.js?v=wealth-ui-2';
 
 export function createPages({ state, heading, currentUser }) {
   const ctx = { state, heading, currentUser };
@@ -13,6 +14,7 @@ export function createPages({ state, heading, currentUser }) {
       ? () => renderWalletPage({ state })
       : name === 'goals' ? () => renderGoalsPage()
       : name === 'gold' ? () => renderGoldPage()
+      : name === 'loans' ? () => renderLoansPage()
       : () => liveRender(name, ctx);
   }
   return { PAGES, txTable: liveTransactionTable };

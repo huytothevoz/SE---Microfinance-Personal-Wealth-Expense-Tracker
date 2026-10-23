@@ -1,6 +1,6 @@
 /** WealthFlow live, account-scoped page templates. No static financial figures. */
-import { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers, analytics, dataStatus, mutateLiveData, loadLiveData } from '../data/live-data.js?v=wealth-ui-1';
-import { icon, formatMoneyInput, moneyInputValue } from './ui-core.js?v=goal-ui-5';
+import { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers, analytics, dataStatus, mutateLiveData, loadLiveData } from '../data/live-data.js?v=wealth-ui-2';
+import { icon, formatMoneyInput, moneyInputValue } from './ui-core.js?v=wealth-ui-2';
 import { httpClient } from '../services/http-client.js';
 import { GoalApi } from '../services/goal-api.js';
 

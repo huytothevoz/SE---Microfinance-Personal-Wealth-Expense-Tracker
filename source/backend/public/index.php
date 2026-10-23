@@ -129,7 +129,9 @@ try {
     // 9. Assets, liabilities and net-worth dashboard
     $loanController = new LoanController();
     $router->get('/loans', [$loanController, 'list']);
+    $router->post('/loans', [$loanController, 'create']);
     $router->get('/loans/{id}', [$loanController, 'show']);
+    $router->post('/loans/{id}/payments', [$loanController, 'payment']);
 
     $goldController = new GoldController();
     $router->get('/gold', [$goldController, 'list']);

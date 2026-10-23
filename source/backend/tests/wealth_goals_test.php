@@ -9,6 +9,7 @@ use WealthFlow\Core\Database;
 use WealthFlow\Modules\Goals\FinancialGoalDAO;
 use WealthFlow\Modules\Goals\GoalService;
 use WealthFlow\Modules\Loans\LoanDAO;
+use WealthFlow\Modules\Loans\LoanService;
 use WealthFlow\Modules\Transactions\ExchangeRateService;
 use WealthFlow\Modules\Transactions\LedgerDAO;
 use WealthFlow\Modules\Wallets\WalletDAO;
@@ -59,6 +60,7 @@ final class WealthGoalsTest
         $goalDao = new FinancialGoalDAO($pdo);
         $goldService = new GoldAssetService($goldDao, $walletDao, $ledgerDao);
         $goalService = new GoalService($goalDao, $walletDao, $ledgerDao);
+        $loanService = new LoanService($loanDao, $walletDao, $ledgerDao);
         $analytics = new NetWorthAnalyticsService(
             new NetWorthSnapshotDAO($pdo),
             $walletDao,
@@ -137,6 +139,61 @@ final class WealthGoalsTest
             $goalIsolated = $error->status === 404;
         }
         $this->assert('TC-GOAL-05 Other user cannot read goal', $goalIsolated);
+
+        echo "--- FR08: Loan and Debt Management ---\n";
+        $beforeLoan = $analytics->summary(3);
+        $createdLoan = $loanService->createLoan(3, [
+            'title' => 'Vay vốn kiểm thử',
+            'partnerName' => 'Quỹ tín dụng',
+            'direction' => 'BORROWED',
+            'principalAmount' => '2000000',
+            'interestRateYear' => '12',
+            'termMonths' => 12,
+            'startDate' => date('Y-m-d'),
+            'walletId' => 30,
+        ], '55555555-5555-4555-8555-555555555555');
+        $loanId = (int) $createdLoan['loan']['id'];
+        $afterLoan = $analytics->summary(3);
+        $this->assert('TC-LOAN-01 Borrowing increases the selected wallet',
+            bccomp((string) $walletDao->findByIdAndUser(30, 3)['cached_balance'], '7000000', 8) === 0);
+        $this->assert('TC-LOAN-02 Borrowing increases assets and liabilities equally',
+            bccomp((string) $beforeLoan['netWorth'], (string) $afterLoan['netWorth'], 8) === 0);
+        $this->assert('TC-LOAN-03 Repayment schedule is generated for the term',
+            count($createdLoan['loan']['schedules']) === 12);
+        $replayedLoan = $loanService->createLoan(3, [
+            'title' => 'Vay vốn kiểm thử', 'partnerName' => 'Quỹ tín dụng', 'direction' => 'BORROWED',
+            'principalAmount' => '2000000', 'interestRateYear' => '12', 'termMonths' => 12,
+            'startDate' => date('Y-m-d'), 'walletId' => 30,
+        ], '55555555-5555-4555-8555-555555555555');
+        $this->assert('TC-LOAN-04 Retried disbursement is not duplicated',
+            (int) $replayedLoan['loan']['id'] === $loanId
+            && bccomp((string) $walletDao->findByIdAndUser(30, 3)['cached_balance'], '7000000', 8) === 0);
+        $payment = $loanService->recordPayment($loanId, 3, [
+            'principalAmount' => '500000',
+            'interestFeeAmount' => '50000',
+            'paidOn' => date('Y-m-d'),
+            'walletId' => 30,
+        ], '66666666-6666-4666-8666-666666666666');
+        $this->assert('TC-LOAN-05 Principal and interest reduce the wallet exactly once',
+            bccomp((string) $walletDao->findByIdAndUser(30, 3)['cached_balance'], '6450000', 8) === 0);
+        $this->assert('TC-LOAN-06 Principal payment reduces remaining debt',
+            bccomp((string) $payment['loan']['remainingPrincipal'], '1500000', 8) === 0);
+        $interestExpense = $pdo->query("SELECT COALESCE(SUM(amount), 0) FROM financial_transactions WHERE user_id = 3 AND transaction_type = 'EXPENSE'")->fetchColumn();
+        $this->assert('TC-LOAN-07 Borrowing interest is an expense but principal is not',
+            bccomp((string) $interestExpense, '50000', 8) === 0);
+        $unbalanced = (int) $pdo->query("SELECT COUNT(*) FROM (
+            SELECT t.id FROM financial_transactions t JOIN ledger_entries e ON e.transaction_id = t.id
+            WHERE t.user_id = 3 GROUP BY t.id
+            HAVING ABS(SUM(CASE WHEN e.entry_side = 'DEBIT' THEN e.amount_base ELSE -e.amount_base END)) > 0.000001
+        ) invalid")->fetchColumn();
+        $this->assert('TC-LOAN-08 Every loan transaction keeps double-entry balanced', $unbalanced === 0);
+        try {
+            $loanService->getLoan($loanId, 2);
+            $loanIsolated = false;
+        } catch (ApiException $error) {
+            $loanIsolated = $error->status === 404;
+        }
+        $this->assert('TC-LOAN-09 Other user cannot read the loan', $loanIsolated);
 
         echo "--- FR10: Liabilities and Dashboard source consistency ---\n";
         $pdo->exec("UPDATE wallets SET cached_balance = cached_balance + 10000000 WHERE id = 20");

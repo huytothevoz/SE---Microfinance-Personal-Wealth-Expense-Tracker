@@ -42,6 +42,36 @@ final class LoanController
         }
     }
 
+    public function create(Request $request): void
+    {
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        try {
+            JsonResponse::success(
+                $this->loanService()->createLoan($userId, $request->getBody(), $request->getIdempotencyKey()),
+                201
+            );
+        } catch (Throwable $error) {
+            $this->error($error);
+        }
+    }
+
+    public function payment(Request $request, int $id): void
+    {
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        try {
+            JsonResponse::success(
+                $this->loanService()->recordPayment(
+                    $id,
+                    $userId,
+                    $request->getBody(),
+                    $request->getIdempotencyKey()
+                )
+            );
+        } catch (Throwable $error) {
+            $this->error($error);
+        }
+    }
+
     private function loanService(): LoanService
     {
         return $this->service ?? new LoanService();
@@ -57,7 +87,7 @@ final class LoanController
             JsonResponse::error('VALIDATION_ERROR', $error->getMessage(), 422);
             return;
         }
-        error_log('Loan read failed; type=' . get_class($error));
-        JsonResponse::error('INTERNAL_ERROR', 'Không thể tải dữ liệu khoản vay.', 500);
+        error_log('Loan operation failed; type=' . get_class($error));
+        JsonResponse::error('INTERNAL_ERROR', 'Không thể xử lý dữ liệu khoản vay.', 500);
     }
 }

@@ -1,12 +1,15 @@
 <div class="page-heading">
   <div>
     <h1>Khoản vay &amp; nợ vi mô</h1>
-    <p>Danh sách đi vay và cho vay được đọc từ phân hệ Loans của tài khoản đang đăng nhập.</p>
+    <p>Theo dõi đi vay, cho vay, dư gốc, lãi/phí và lịch thanh toán.</p>
   </div>
+  <div class="page-actions"><button type="button" class="btn btn--primary btn-sm" data-action="loan:create">+ Thêm khoản vay</button></div>
 </div>
+<section class="summary-grid">
+  <article class="summary-card"><span>Tổng dư nợ đi vay</span><strong id="loan-borrowed-total">—</strong></article>
+  <article class="summary-card"><span>Tổng phải thu cho vay</span><strong id="loan-lent-total">—</strong></article>
+  <article class="summary-card"><span>Khoản đang hoạt động</span><strong id="loan-active-count">—</strong></article>
+</section>
 <section class="panel">
-  <div class="empty-state">
-    <strong>Đang tải khoản vay…</strong>
-    <p>Không hiển thị số dư, kỳ hạn hoặc thao tác ghi dữ liệu khi API chưa xác nhận.</p>
-  </div>
+  <div id="loan-card-list"><div class="empty-state"><strong>Đang tải khoản vay…</strong></div></div>
 </section>
