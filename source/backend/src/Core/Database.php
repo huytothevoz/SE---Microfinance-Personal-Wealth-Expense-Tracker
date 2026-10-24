@@ -64,6 +64,14 @@ final class Database
 
     public static function initSqliteSchema(PDO $pdo): void
     {
+        if (method_exists($pdo, 'sqliteCreateFunction')) {
+            $pdo->sqliteCreateFunction(
+                'LOWER',
+                static fn(?string $val): string => mb_strtolower((string) $val, 'UTF-8'),
+                1
+            );
+        }
+
         $schema = <<<SQL
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,6 +83,29 @@ final class Database
             base_currency TEXT NOT NULL DEFAULT 'VND',
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS auth_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            refresh_token_hash TEXT NOT NULL,
+            device_info TEXT NULL,
+            ip_address TEXT NULL,
+            expires_at DATETIME NOT NULL,
+            revoked_at DATETIME NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS security_audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NULL,
+            event_type TEXT NOT NULL,
+            ip_address TEXT NULL,
+            user_agent TEXT NULL,
+            metadata_json TEXT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         );
 
         CREATE TABLE IF NOT EXISTS wallets (
@@ -348,6 +379,34 @@ final class Database
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE (user_id, dedup_key)
         );
+
+        CREATE TABLE IF NOT EXISTS system_config (
+            config_key TEXT PRIMARY KEY,
+            config_value TEXT NOT NULL,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS admin_audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            admin_user_id INTEGER NOT NULL,
+            target_user_id INTEGER NULL,
+            action TEXT NOT NULL,
+            reason TEXT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (admin_user_id) REFERENCES users(id),
+            FOREIGN KEY (target_user_id) REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS export_audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            export_type TEXT NOT NULL,
+            row_count INTEGER NOT NULL DEFAULT 0,
+            file_hash TEXT NOT NULL,
+            ip_address TEXT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
 SQL;
 
         $pdo->exec($schema);
@@ -377,15 +436,37 @@ SQL;
         // Seed default ledger accounts for user 1
         $stmt = $pdo->query('SELECT COUNT(*) FROM ledger_accounts WHERE user_id = 1');
         if ((int) $stmt->fetchColumn() === 0) {
-            $pdo->exec("INSERT INTO ledger_accounts (user_id, wallet_id, code, account_type) VALUES
-                (1, 1, 'ASSET_WALLET_1', 'ASSET'),
-                (1, 2, 'ASSET_WALLET_2', 'ASSET'),
-                (1, 3, 'ASSET_WALLET_3', 'ASSET'),
-                (1, 4, 'ASSET_WALLET_4', 'ASSET'),
-                (1, null, 'EQUITY_OPENING', 'EQUITY'),
-                (1, null, 'INCOME_DEFAULT', 'INCOME'),
-                (1, null, 'EXPENSE_DEFAULT', 'EXPENSE'),
-                (1, null, 'FX_GAIN_LOSS', 'EXPENSE')");
+            $pdo->exec("INSERT INTO ledger_accounts (id, user_id, wallet_id, code, account_type) VALUES
+                (1, 1, 1, 'ASSET_WALLET_1', 'ASSET'),
+                (2, 1, 2, 'ASSET_WALLET_2', 'ASSET'),
+                (3, 1, 3, 'ASSET_WALLET_3', 'ASSET'),
+                (4, 1, 4, 'ASSET_WALLET_4', 'ASSET'),
+                (5, 1, null, 'EQUITY_OPENING_BALANCE', 'EQUITY'),
+                (6, 1, null, 'INCOME_DEFAULT', 'INCOME'),
+                (7, 1, null, 'EXPENSE_DEFAULT', 'EXPENSE'),
+                (8, 1, null, 'FX_GAIN_LOSS', 'EXPENSE')");
+        }
+
+        // Seed opening ledger transactions for user 1's default wallets if empty
+        $stmt = $pdo->query('SELECT COUNT(*) FROM financial_transactions WHERE user_id = 1');
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("INSERT INTO financial_transactions
+                (id, user_id, category_id, transaction_type, status, description, currency, amount, fx_rate_snapshot, occurred_on, posted_at) VALUES
+                (1, 1, null, 'OTHER', 'POSTED', 'Số dư mở sổ ví: Ví tiền mặt', 'VND', 2500000, 1.0, '2026-01-01', '2026-01-01 00:00:00'),
+                (2, 1, null, 'OTHER', 'POSTED', 'Số dư mở sổ ví: Tài khoản Vietcombank', 'VND', 18450000, 1.0, '2026-01-01', '2026-01-01 00:00:00'),
+                (3, 1, null, 'OTHER', 'POSTED', 'Số dư mở sổ ví: Ví MoMo', 'VND', 1200000, 1.0, '2026-01-01', '2026-01-01 00:00:00'),
+                (4, 1, null, 'OTHER', 'POSTED', 'Số dư mở sổ ví: Ví ngoại tệ USD', 'USD', 200, 25400.0, '2026-01-01', '2026-01-01 00:00:00')");
+
+            $pdo->exec("INSERT INTO ledger_entries
+                (transaction_id, ledger_account_id, entry_side, amount_original, currency, amount_base, fx_rate_snapshot) VALUES
+                (1, 1, 'DEBIT', 2500000, 'VND', 2500000, 1.0),
+                (1, 5, 'CREDIT', 2500000, 'VND', 2500000, 1.0),
+                (2, 2, 'DEBIT', 18450000, 'VND', 18450000, 1.0),
+                (2, 5, 'CREDIT', 18450000, 'VND', 18450000, 1.0),
+                (3, 3, 'DEBIT', 1200000, 'VND', 1200000, 1.0),
+                (3, 5, 'CREDIT', 1200000, 'VND', 1200000, 1.0),
+                (4, 4, 'DEBIT', 200, 'USD', 5080000, 25400.0),
+                (4, 5, 'CREDIT', 200, 'USD', 5080000, 25400.0)");
         }
 
         // Seed categories for user 1
@@ -400,6 +481,40 @@ SQL;
                 (6, 1, 'Lương cố định', 'INCOME'),
                 (7, 1, 'Thu nhập Freelance', 'INCOME'),
                 (8, 1, 'Thưởng & Thu nhập khác', 'INCOME')");
+        }
+
+        // Seed default_categories
+        $stmt = $pdo->query('SELECT COUNT(*) FROM default_categories');
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("INSERT INTO default_categories (id, name, category_type, is_active) VALUES
+                (1, 'Lương', 'INCOME', 1),
+                (2, 'Thưởng', 'INCOME', 1),
+                (3, 'Thu nhập phụ', 'INCOME', 1),
+                (4, 'Lãi tiết kiệm', 'INCOME', 1),
+                (5, 'Ăn uống', 'EXPENSE', 1),
+                (6, 'Di chuyển', 'EXPENSE', 1),
+                (7, 'Nhà ở & Điện nước', 'EXPENSE', 1),
+                (8, 'Mua sắm', 'EXPENSE', 1),
+                (9, 'Y tế & Sức khỏe', 'EXPENSE', 1),
+                (10, 'Giáo dục', 'EXPENSE', 1),
+                (11, 'Giải trí', 'EXPENSE', 1),
+                (12, 'Trả lãi vay', 'EXPENSE', 1)");
+        }
+
+        // Seed system_config
+        $stmt = $pdo->query('SELECT COUNT(*) FROM system_config');
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("INSERT INTO system_config (config_key, config_value) VALUES
+                ('MAX_FAILED_LOGINS', '5'),
+                ('OTP_EXPIRY_MINUTES', '10'),
+                ('SESSION_EXPIRY_DAYS', '7'),
+                ('ACCESS_TOKEN_TTL_MINUTES', '15'),
+                ('BUDGET_WARNING_THRESHOLD', '80'),
+                ('BUDGET_CRITICAL_THRESHOLD', '100'),
+                ('CSV_EXPORT_MAX_ROWS', '10000'),
+                ('LOAN_REMINDER_DAYS', '3'),
+                ('DEFAULT_BASE_CURRENCY', 'VND'),
+                ('ALLOW_REGISTRATION', 'true')");
         }
 
         // Seed exchange rates

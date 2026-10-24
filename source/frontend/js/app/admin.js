@@ -1,10 +1,10 @@
 /**
- * WealthFlow Admin & System Settings Controller
+ * WealthFlow Admin & System Settings Controller (FR13, FR14, UC12, UC13).
  * Manages admin dashboard, user locks, default categories, broadcasts, notifications, and profile settings.
  */
 import { loadView } from './view-loader.js';
-import { adminUsers, categories, notifications } from '../data/live-data.js?v=wealth-ui-2';
-import { icon, safe } from './ui-core.js';
+import { adminUsers, adminCategories, notifications } from '../data/live-data.js?v=wealth-ui-2';
+import { icon, safe } from './ui-core.js?v=wealth-ui-2';
 import { reportBarChart } from './reports.js';
 
 export async function renderAdminOverviewPage() {
@@ -27,26 +27,30 @@ export async function renderAdminUsersPage() {
 
   const tbody = temp.querySelector('#admin-users-table-body');
   if (tbody) {
-    tbody.innerHTML = adminUsers.map(u => `
+    tbody.innerHTML = adminUsers.map(u => {
+      const isLocked = String(u.status).toUpperCase() === 'LOCKED';
+      const idEnc = encodeURIComponent(String(u.id));
+      return `
       <tr>
         <td>
           <div class="table-name">
             <span class="table-icon">${icon('user')}</span>
-            <span>${u.name}<small>${u.email} · ${u.id}</small></span>
+            <span>${safe(u.fullName || u.name)}<small>${safe(u.email)} · #${safe(u.id)}</small></span>
           </div>
         </td>
-        <td>${u.created}</td>
-        <td>${u.currency}</td>
+        <td>${safe(String(u.createdAt || '').slice(0, 10))}</td>
+        <td>${safe(u.baseCurrency || 'VND')}</td>
         <td>
-          <span class="badge ${u.status === 'Active' ? '' : 'danger'}">${u.status}</span>
+          <span class="badge ${isLocked ? 'danger' : 'success'}">${safe(u.status)}</span>
         </td>
         <td>
-          <button class="text-action" data-action="admin-user-${u.status === 'Active' ? 'lock' : 'unlock'}">
-            ${u.status === 'Active' ? 'Khóa tài khoản' : 'Mở khóa'}
+          <button class="text-action" data-action="live:${isLocked ? 'unlock' : 'lock'}:adminUsers:${idEnc}">
+            ${isLocked ? 'Mở khóa' : 'Khóa tài khoản'}
           </button>
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   }
 
   return temp.innerHTML;
@@ -59,18 +63,22 @@ export async function renderAdminCategoriesPage() {
 
   const cardList = temp.querySelector('#admin-category-card-list');
   if (cardList) {
-    cardList.innerHTML = categories.map(c => `
+    cardList.innerHTML = adminCategories.map(c => {
+      const idEnc = encodeURIComponent(String(c.id));
+      return `
       <div class="mini-panel">
         <div class="status-row">
-          <h3>${c.name}</h3>
-          <span class="badge ${c.type === 'Thu nhập' ? 'blue' : 'neutral'}">${c.type}</span>
+          <h3>${safe(c.name)}</h3>
+          <span class="badge ${c.type === 'INCOME' ? 'blue' : 'neutral'}">${safe(c.type)}</span>
         </div>
-        <p>Danh mục gốc của hệ thống</p>
-        <div style="margin-top:15px">
-          <button class="text-action" data-action="admin-category-edit">Điều chỉnh →</button>
+        <p>${c.isActive ? 'Đang kích hoạt cho người dùng mới' : 'Đang tạm ngưng'}</p>
+        <div style="margin-top:15px;display:flex;gap:12px">
+          <button class="text-action" data-action="live:edit:adminCategories:${idEnc}">Điều chỉnh →</button>
+          <button class="text-action" data-action="live:toggle:adminCategories:${idEnc}">${c.isActive ? 'Tạm ngưng' : 'Kích hoạt'}</button>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   return temp.innerHTML;
@@ -95,9 +103,9 @@ export async function renderNotificationsPage() {
       <div class="notification-item">
         <span class="notification-icon">${n.type === 'danger' ? '!' : n.type === 'warn' ? '◷' : '✧'}</span>
         <div class="notification-copy">
-          <strong>${n.title}</strong>
-          <p>${n.content}</p>
-          <small>${n.time}</small>
+          <strong>${safe(n.title)}</strong>
+          <p>${safe(n.body || n.content || '')}</p>
+          <small>${safe(n.createdAt || n.time || '')}</small>
         </div>
         <span class="badge ${n.type === 'danger' ? 'danger' : n.type === 'warn' ? 'warn' : 'blue'}">
           ${n.type === 'danger' ? 'Khẩn' : n.type === 'warn' ? 'Cần chú ý' : 'Thông tin'}

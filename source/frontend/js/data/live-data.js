@@ -14,12 +14,34 @@ export const gold = [];
 export const notifications = [];
 export const categories = [];
 export const adminUsers = [];
+export const adminCategories = [];
+export const adminBroadcasts = [];
+export const adminAuditLogs = [];
+export const adminConfig = [];
 export const trend = [];
 export const incomeTrend = [];
 export const expenseTrend = [];
 export const analytics = {};
+export const reconciliation = {};
+export const adminOverview = {};
 
-const collections = { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers };
+const collections = {
+  wallets,
+  transactions,
+  budgets,
+  recurring,
+  goals,
+  loans,
+  gold,
+  notifications,
+  categories,
+  adminUsers,
+  adminCategories,
+  adminBroadcasts,
+  adminAuditLogs,
+  adminConfig
+};
+const ADMIN_KEYS = new Set(['adminUsers', 'adminCategories', 'adminBroadcasts', 'adminAuditLogs', 'adminConfig']);
 const candidates = {
   wallets: ['/api/wallets', '/api/finance/wallets'],
   transactions: ['/api/transactions', '/api/finance/transactions'],
@@ -30,12 +52,33 @@ const candidates = {
   gold: ['/api/gold', '/api/finance/gold'],
   notifications: ['/api/notifications', '/api/finance/notifications'],
   categories: ['/api/categories', '/api/finance/categories'],
-  adminUsers: ['/api/admin/users']
+  adminUsers: ['/api/admin/users'],
+  adminCategories: ['/api/admin/categories', '/api/admin/default-categories'],
+  adminBroadcasts: ['/api/admin/announcements'],
+  adminAuditLogs: ['/api/admin/audit-logs'],
+  adminConfig: ['/api/admin/system-config']
 };
-export const dataStatus = Object.fromEntries([...Object.keys(collections), 'analytics'].map(k => [k, { state: 'idle', message: '', endpoint: '' }]));
+export const dataStatus = Object.fromEntries(
+  [...Object.keys(collections), 'analytics', 'reconciliation', 'adminOverview'].map(k => [
+    k,
+    { state: 'idle', message: '', endpoint: '' }
+  ])
+);
 let generation = 0;
 const TRANSACTION_PAGE_SIZE = 100;
-const keyVariants = k => [k, k === 'recurring' ? 'schedules' : k, k === 'adminUsers' ? 'users' : k, 'items', 'rows', 'results'];
+const keyVariants = k => [
+  k,
+  k === 'recurring' ? 'schedules' : k,
+  k === 'adminUsers' ? 'users' : k,
+  k === 'adminCategories' ? 'categories' : k,
+  k === 'adminCategories' ? 'defaultCategories' : k,
+  k === 'adminBroadcasts' ? 'announcements' : k,
+  k === 'adminAuditLogs' ? 'auditLogs' : k,
+  k === 'adminConfig' ? 'configs' : k,
+  'items',
+  'rows',
+  'results'
+];
 function extractCollection(json, name) {
   if (Array.isArray(json)) return json;
   for (const obj of [json, json?.data, json?.result, json?.payload]) {
@@ -58,6 +101,8 @@ function shape(name, row) {
     r.hasBaseAmount = ['amountBase', 'amount_base', 'baseAmount'].some(k => row[k] != null) || String(row.currency ?? 'VND').toUpperCase() === 'VND';
     r.date = String(r.date ?? r.occurredOn ?? r.occurred_on ?? r.createdAt ?? '').slice(0, 10);
     r.category = String(r.categoryName ?? r.category_name ?? r.category?.name ?? r.category ?? 'Chưa phân loại');
+    r.categoryId = r.categoryId ?? r.category_id ?? null;
+    r.walletId = r.walletId ?? r.wallet_id ?? null;
     r.sourceWallet = String(r.sourceWalletName ?? r.source_wallet_name ?? '');
     r.destinationWallet = String(r.destinationWalletName ?? r.destination_wallet_name ?? '');
     const singleWallet = r.walletName ?? r.wallet_name ?? r.wallet?.name ?? r.wallet ?? '';
@@ -72,6 +117,8 @@ function shape(name, row) {
     r.details = String(r.details ?? r.note ?? '');
     r.rate = r.rate ?? r.exchangeRate ?? r.fx_rate_snapshot ?? 1;
     r.postedAt = String(r.postedAt ?? r.posted_at ?? '');
+    r.originalTransactionId = r.originalTransactionId ?? r.original_transaction_id ?? null;
+    r.entries = Array.isArray(r.entries) ? r.entries : [];
   }
   if (name === 'wallets') {
     r.id = String(r.id ?? r.walletId ?? '');
@@ -92,8 +139,50 @@ function shape(name, row) {
     r.usagePercent = Number(r.usagePercent ?? (r.limit > 0 ? Math.round((r.spent / r.limit) * 1000) / 10 : 0));
     r.alertLevel = String(r.alertLevel ?? r.alert_level ?? (r.usagePercent >= 100 ? 'RED' : r.usagePercent >= 80 ? 'YELLOW' : 'GREEN')).toUpperCase();
   }
-  if (name === 'categories') {
-    r.type = String(r.type ?? r.category_type ?? '').toUpperCase();
+  if (name === 'categories' || name === 'adminCategories') {
+    r.id = String(r.id ?? '');
+    r.name = String(r.name ?? 'Danh mục');
+    r.type = String(r.type ?? r.categoryType ?? r.category_type ?? '').toUpperCase();
+    r.isActive = r.isActive !== undefined ? Boolean(r.isActive) : Number(r.is_active ?? 1) === 1;
+  }
+  if (name === 'adminUsers') {
+    r.id = String(r.id ?? '');
+    r.fullName = String(r.fullName ?? r.full_name ?? r.name ?? '');
+    r.name = r.fullName;
+    r.email = String(r.email ?? '');
+    r.role = String(r.role ?? 'USER').toUpperCase();
+    r.status = String(r.status ?? 'ACTIVE').toUpperCase();
+    r.baseCurrency = String(r.baseCurrency ?? r.base_currency ?? 'VND').toUpperCase();
+    r.createdAt = String(r.createdAt ?? r.created_at ?? '');
+  }
+  if (name === 'adminBroadcasts') {
+    r.id = String(r.id ?? '');
+    r.title = String(r.title ?? 'Thông báo hệ thống');
+    r.body = String(r.body ?? r.content ?? '');
+    r.priority = String(r.priority ?? 'INFO').toUpperCase();
+    r.recipientCount = Number(r.recipientCount ?? r.recipient_count ?? 0);
+    r.adminName = String(r.adminName ?? r.admin_name ?? 'Admin');
+    r.createdAt = String(r.createdAt ?? r.created_at ?? '');
+  }
+  if (name === 'adminAuditLogs') {
+    r.id = String(r.id ?? '');
+    r.action = String(r.action ?? '');
+    r.adminName = String(r.adminName ?? r.admin_name ?? 'Admin');
+    r.targetName = r.targetName ?? r.target_name ?? null;
+    r.targetUserId = r.targetUserId ?? r.target_user_id ?? null;
+    r.reason = String(r.reason ?? '');
+    r.createdAt = String(r.createdAt ?? r.created_at ?? '');
+  }
+  if (name === 'adminConfig') {
+    r.key = String(r.key ?? r.config_key ?? '');
+    r.value = String(r.value ?? r.config_value ?? '');
+    r.label = String(r.label ?? r.key);
+    r.description = String(r.description ?? '');
+    r.type = String(r.type ?? 'string');
+    r.min = r.min ?? null;
+    r.max = r.max ?? null;
+    r.allowed = Array.isArray(r.allowed) ? r.allowed : null;
+    r.updatedAt = String(r.updatedAt ?? r.updated_at ?? '');
   }
   if (name === 'recurring') {
     r.nextRun = r.nextRun ?? r.next_due_date ?? r.nextDueDate ?? '';
@@ -182,6 +271,70 @@ async function getAnalytics(requestGeneration) {
     if (requestGeneration === generation) dataStatus.analytics = { state: 'error', endpoint: '/api/analytics/net-worth', message: error.message };
   }
 }
+async function getReconciliation(requestGeneration) {
+  reconciliation && Object.keys(reconciliation).forEach(key => delete reconciliation[key]);
+  dataStatus.reconciliation = { state: 'loading', message: '', endpoint: '/api/reports/reconcile' };
+  let response;
+  try {
+    response = await fetch('/api/reports/reconcile', {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+      cache: 'no-store'
+    });
+  } catch (error) {
+    if (requestGeneration === generation) dataStatus.reconciliation = { state: 'error', endpoint: '/api/reports/reconcile', message: `Không thể kết nối máy chủ: ${error.message}` };
+    return;
+  }
+  if (response.status === 404) {
+    if (requestGeneration === generation) dataStatus.reconciliation = { state: 'unavailable', endpoint: '/api/reports/reconcile', message: errorText(404) };
+    return;
+  }
+  if (!response.ok) {
+    if (requestGeneration === generation) dataStatus.reconciliation = { state: response.status === 401 ? 'unauthorized' : 'error', endpoint: '/api/reports/reconcile', message: errorText(response.status) };
+    return;
+  }
+  try {
+    const payload = await response.json();
+    const reconData = payload?.data;
+    if (!payload?.success || !reconData || typeof reconData !== 'object') throw new Error('API Đối soát trả về dữ liệu không hợp lệ.');
+    if (requestGeneration !== generation) return;
+    Object.assign(reconciliation, reconData);
+    dataStatus.reconciliation = { state: 'ready', message: '', endpoint: '/api/reports/reconcile' };
+  } catch (error) {
+    if (requestGeneration === generation) dataStatus.reconciliation = { state: 'error', endpoint: '/api/reports/reconcile', message: error.message };
+  }
+}
+async function getAdminOverview(requestGeneration) {
+  adminOverview && Object.keys(adminOverview).forEach(key => delete adminOverview[key]);
+  dataStatus.adminOverview = { state: 'loading', message: '', endpoint: '/api/admin/overview' };
+  let response;
+  try {
+    response = await fetch('/api/admin/overview', {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+      cache: 'no-store'
+    });
+  } catch (error) {
+    if (requestGeneration === generation) dataStatus.adminOverview = { state: 'error', endpoint: '/api/admin/overview', message: `Không thể kết nối máy chủ: ${error.message}` };
+    return;
+  }
+  if (!response.ok) {
+    if (requestGeneration === generation) dataStatus.adminOverview = { state: response.status === 401 ? 'unauthorized' : 'error', endpoint: '/api/admin/overview', message: errorText(response.status) };
+    return;
+  }
+  try {
+    const payload = await response.json();
+    const data = payload?.data;
+    if (!payload?.success || !data || typeof data !== 'object') throw new Error('API Tổng quan quản trị trả về dữ liệu không hợp lệ.');
+    if (requestGeneration !== generation) return;
+    Object.assign(adminOverview, data);
+    dataStatus.adminOverview = { state: 'ready', message: '', endpoint: '/api/admin/overview' };
+  } catch (error) {
+    if (requestGeneration === generation) dataStatus.adminOverview = { state: 'error', endpoint: '/api/admin/overview', message: error.message };
+  }
+}
 function errorText(code, responseText = '') {
   if (code === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
   if (code === 403) return 'Tài khoản không có quyền truy cập dữ liệu này.';
@@ -246,8 +399,16 @@ async function getOne(name, requestGeneration) {
 }
 export async function loadLiveData({ admin = false } = {}) {
   const thisGeneration = ++generation;
-  const keys = Object.keys(collections).filter(k => k !== 'adminUsers' || admin);
-  await Promise.all([...keys.map(k => getOne(k, thisGeneration)), getAnalytics(thisGeneration)]);
+  const keys = Object.keys(collections).filter(k => !ADMIN_KEYS.has(k) || admin);
+  const tasks = [
+    ...keys.map(k => getOne(k, thisGeneration)),
+    getAnalytics(thisGeneration),
+    getReconciliation(thisGeneration)
+  ];
+  if (admin) {
+    tasks.push(getAdminOverview(thisGeneration));
+  }
+  await Promise.all(tasks);
   return dataStatus;
 }
 export function getEndpoint(name) { return dataStatus[name]?.state === 'ready' ? dataStatus[name].endpoint : ''; }

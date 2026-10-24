@@ -37,18 +37,38 @@ final class TransactionController
     public function list(Request $request): void
     {
         $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        $page = max(1, (int) $request->getQuery('page', 1));
+        $pageSize = max(1, min(200, (int) ($request->getQuery('pageSize') ?? $request->getQuery('limit', 50))));
+        $offset = $request->getQuery('offset') !== null
+            ? max(0, (int) $request->getQuery('offset'))
+            : ($page - 1) * $pageSize;
+
         $filters = [
-            'type' => $request->getQuery('type'),
+            'type' => $request->getQuery('type') ?? $request->getQuery('transactionType'),
             'status' => $request->getQuery('status'),
             'categoryId' => $request->getQuery('categoryId'),
-            'startDate' => $request->getQuery('startDate'),
-            'endDate' => $request->getQuery('endDate'),
-            'limit' => $request->getQuery('limit', 50),
-            'offset' => $request->getQuery('offset', 0),
+            'walletId' => $request->getQuery('walletId'),
+            'startDate' => $request->getQuery('startDate') ?? $request->getQuery('from'),
+            'endDate' => $request->getQuery('endDate') ?? $request->getQuery('to'),
+            'search' => $request->getQuery('search') ?? $request->getQuery('q'),
+            'limit' => $pageSize,
+            'offset' => $offset,
         ];
 
         $transactions = $this->txRepo->listTransactions($userId, $filters);
-        JsonResponse::success(['transactions' => $transactions, 'count' => count($transactions)]);
+        $totalRecords = $this->txRepo->countTransactions($userId, $filters);
+        $totalPages = max(1, (int) ceil($totalRecords / $pageSize));
+
+        JsonResponse::success([
+            'transactions' => $transactions,
+            'count' => count($transactions),
+            'pagination' => [
+                'page' => $page,
+                'pageSize' => $pageSize,
+                'totalRecords' => $totalRecords,
+                'totalPages' => $totalPages,
+            ],
+        ]);
     }
 
     public function show(Request $request, int $id): void

@@ -96,11 +96,12 @@ final class LedgerDAO
     public function findByIdAndUser(int $txId, int $userId): ?array
     {
         $stmt = $this->pdo->prepare('SELECT t.*, c.name as category_name,
-                   tw.wallet_name, tw.source_wallet_name, tw.destination_wallet_name
+                   tw.wallet_id, tw.wallet_name, tw.source_wallet_name, tw.destination_wallet_name
             FROM financial_transactions t
             LEFT JOIN categories c ON t.category_id = c.id
             LEFT JOIN (
                 SELECT e.transaction_id,
+                       MAX(w.id) AS wallet_id,
                        MAX(w.name) AS wallet_name,
                        MAX(CASE WHEN e.entry_side = \'CREDIT\' THEN w.name END) AS source_wallet_name,
                        MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN w.name END) AS destination_wallet_name
@@ -135,12 +136,18 @@ final class LedgerDAO
      */
     public function listTransactions(int $userId, array $filters = []): array
     {
+        $type = $filters['type'] ?? $filters['transactionType'] ?? null;
+        $startDate = $filters['startDate'] ?? $filters['from'] ?? null;
+        $endDate = $filters['endDate'] ?? $filters['to'] ?? null;
+        $search = trim((string) ($filters['search'] ?? $filters['q'] ?? ''));
+
         $sql = 'SELECT t.*, c.name as category_name,
-                       tw.wallet_name, tw.source_wallet_name, tw.destination_wallet_name
+                       tw.wallet_id, tw.wallet_name, tw.source_wallet_name, tw.destination_wallet_name
             FROM financial_transactions t
             LEFT JOIN categories c ON t.category_id = c.id
             LEFT JOIN (
                 SELECT e.transaction_id,
+                       MAX(w.id) AS wallet_id,
                        MAX(w.name) AS wallet_name,
                        MAX(CASE WHEN e.entry_side = \'CREDIT\' THEN w.name END) AS source_wallet_name,
                        MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN w.name END) AS destination_wallet_name
@@ -152,9 +159,9 @@ final class LedgerDAO
             WHERE t.user_id = ?';
         $params = [$userId];
 
-        if (!empty($filters['type'])) {
+        if (!empty($type)) {
             $sql .= ' AND t.transaction_type = ?';
-            $params[] = strtoupper((string) $filters['type']);
+            $params[] = strtoupper((string) $type);
         }
         if (!empty($filters['status'])) {
             $sql .= ' AND t.status = ?';
@@ -164,18 +171,33 @@ final class LedgerDAO
             $sql .= ' AND t.category_id = ?';
             $params[] = (int) $filters['categoryId'];
         }
-        if (!empty($filters['startDate'])) {
-            $sql .= ' AND t.occurred_on >= ?';
-            $params[] = $filters['startDate'];
+        if (!empty($filters['walletId'])) {
+            $sql .= ' AND EXISTS (
+                SELECT 1 FROM ledger_entries we
+                JOIN ledger_accounts wa ON wa.id = we.ledger_account_id
+                WHERE we.transaction_id = t.id AND wa.wallet_id = ?
+            )';
+            $params[] = (int) $filters['walletId'];
         }
-        if (!empty($filters['endDate'])) {
+        if (!empty($startDate)) {
+            $sql .= ' AND t.occurred_on >= ?';
+            $params[] = $startDate;
+        }
+        if (!empty($endDate)) {
             $sql .= ' AND t.occurred_on <= ?';
-            $params[] = $filters['endDate'];
+            $params[] = $endDate;
+        }
+        if ($search !== '') {
+            $sql .= ' AND (LOWER(t.description) LIKE ? OR LOWER(COALESCE(c.name, \'\')) LIKE ? OR LOWER(COALESCE(tw.wallet_name, \'\')) LIKE ?)';
+            $kw = '%' . mb_strtolower($search, 'UTF-8') . '%';
+            $params[] = $kw;
+            $params[] = $kw;
+            $params[] = $kw;
         }
 
         $sql .= ' ORDER BY t.occurred_on DESC, t.id DESC';
 
-        $limit = isset($filters['limit']) ? max(1, min(100, (int) $filters['limit'])) : 100;
+        $limit = isset($filters['limit']) ? max(1, min(200, (int) $filters['limit'])) : 100;
         $offset = isset($filters['offset']) ? max(0, (int) $filters['offset']) : 0;
         $window = max(1, $offset + $limit);
         $sql .= " LIMIT {$window}";
@@ -197,6 +219,73 @@ final class LedgerDAO
     }
 
     /**
+     * Count matching transactions for pagination metadata (FR12.01).
+     * @param array<string, mixed> $filters
+     */
+    public function countTransactions(int $userId, array $filters = []): int
+    {
+        $type = $filters['type'] ?? $filters['transactionType'] ?? null;
+        $startDate = $filters['startDate'] ?? $filters['from'] ?? null;
+        $endDate = $filters['endDate'] ?? $filters['to'] ?? null;
+        $search = trim((string) ($filters['search'] ?? $filters['q'] ?? ''));
+
+        $sql = 'SELECT COUNT(*)
+            FROM financial_transactions t
+            LEFT JOIN categories c ON t.category_id = c.id
+            LEFT JOIN (
+                SELECT e.transaction_id, MAX(w.name) AS wallet_name
+                FROM ledger_entries e
+                JOIN ledger_accounts a ON a.id = e.ledger_account_id
+                JOIN wallets w ON w.id = a.wallet_id
+                GROUP BY e.transaction_id
+            ) tw ON tw.transaction_id = t.id
+            WHERE t.user_id = ?';
+        $params = [$userId];
+
+        if (!empty($type)) {
+            $sql .= ' AND t.transaction_type = ?';
+            $params[] = strtoupper((string) $type);
+        }
+        if (!empty($filters['status'])) {
+            $sql .= ' AND t.status = ?';
+            $params[] = strtoupper((string) $filters['status']);
+        }
+        if (!empty($filters['categoryId'])) {
+            $sql .= ' AND t.category_id = ?';
+            $params[] = (int) $filters['categoryId'];
+        }
+        if (!empty($filters['walletId'])) {
+            $sql .= ' AND EXISTS (
+                SELECT 1 FROM ledger_entries we
+                JOIN ledger_accounts wa ON wa.id = we.ledger_account_id
+                WHERE we.transaction_id = t.id AND wa.wallet_id = ?
+            )';
+            $params[] = (int) $filters['walletId'];
+        }
+        if (!empty($startDate)) {
+            $sql .= ' AND t.occurred_on >= ?';
+            $params[] = $startDate;
+        }
+        if (!empty($endDate)) {
+            $sql .= ' AND t.occurred_on <= ?';
+            $params[] = $endDate;
+        }
+        if ($search !== '') {
+            $sql .= ' AND (LOWER(t.description) LIKE ? OR LOWER(COALESCE(c.name, \'\')) LIKE ? OR LOWER(COALESCE(tw.wallet_name, \'\')) LIKE ?)';
+            $kw = '%' . mb_strtolower($search, 'UTF-8') . '%';
+            $params[] = $kw;
+            $params[] = $kw;
+            $params[] = $kw;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $txCount = (int) $stmt->fetchColumn();
+        $goalCount = count($this->listGoalTransactions($userId, $filters, 1000));
+        return $txCount + $goalCount;
+    }
+
+    /**
      * Goal allocations are read-only transaction-history items. They do not create
      * ledger entries because earmarking does not change the wallet's actual balance.
      * @param array<string, mixed> $filters
@@ -204,22 +293,26 @@ final class LedgerDAO
      */
     private function listGoalTransactions(int $userId, array $filters, int $limit): array
     {
-        $type = strtoupper(trim((string) ($filters['type'] ?? '')));
+        $type = strtoupper(trim((string) ($filters['type'] ?? $filters['transactionType'] ?? '')));
         $status = strtoupper(trim((string) ($filters['status'] ?? '')));
+        $startDate = $filters['startDate'] ?? $filters['from'] ?? null;
+        $endDate = $filters['endDate'] ?? $filters['to'] ?? null;
+        $search = trim((string) ($filters['search'] ?? $filters['q'] ?? ''));
+
         if (($type !== '' && $type !== 'SAVINGS_GOAL')
             || ($status !== '' && $status !== 'POSTED')
             || !empty($filters['categoryId'])) {
             return [];
         }
 
-        $sql = "SELECT CONCAT('goal-', a.id) AS id,
+        $sql = "SELECT ('goal-' || a.id) AS id,
                        a.id AS _sort_id,
                        1 AS _source_priority,
                        'SAVINGS_GOAL' AS transaction_type,
                        'POSTED' AS status,
                        CASE WHEN a.allocation_type = 'DEPOSIT'
-                            THEN CONCAT('Chuyển vào mục tiêu: ', g.name)
-                            ELSE CONCAT('Lấy khỏi mục tiêu: ', g.name)
+                            THEN ('Chuyển vào mục tiêu: ' || g.name)
+                            ELSE ('Lấy khỏi mục tiêu: ' || g.name)
                        END AS description,
                        'VND' AS currency,
                        a.amount,
@@ -227,6 +320,7 @@ final class LedgerDAO
                        a.allocated_on AS occurred_on,
                        NULL AS posted_at,
                        'Mục tiêu tiết kiệm' AS category_name,
+                       w.id AS wallet_id,
                        w.name AS wallet_name,
                        NULL AS source_wallet_name,
                        NULL AS destination_wallet_name,
@@ -237,14 +331,52 @@ final class LedgerDAO
                 JOIN financial_goals g ON g.id = a.goal_id
                 LEFT JOIN wallets w ON w.id = a.wallet_id
                 WHERE g.user_id = ?";
-        $params = [$userId];
-        if (!empty($filters['startDate'])) {
-            $sql .= ' AND a.allocated_on >= ?';
-            $params[] = $filters['startDate'];
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== 'sqlite') {
+            $sql = "SELECT CONCAT('goal-', a.id) AS id,
+                           a.id AS _sort_id,
+                           1 AS _source_priority,
+                           'SAVINGS_GOAL' AS transaction_type,
+                           'POSTED' AS status,
+                           CASE WHEN a.allocation_type = 'DEPOSIT'
+                                THEN CONCAT('Chuyển vào mục tiêu: ', g.name)
+                                ELSE CONCAT('Lấy khỏi mục tiêu: ', g.name)
+                           END AS description,
+                           'VND' AS currency,
+                           a.amount,
+                           1 AS fx_rate_snapshot,
+                           a.allocated_on AS occurred_on,
+                           NULL AS posted_at,
+                           'Mục tiêu tiết kiệm' AS category_name,
+                           w.id AS wallet_id,
+                           w.name AS wallet_name,
+                           NULL AS source_wallet_name,
+                           NULL AS destination_wallet_name,
+                           a.allocation_type AS goal_action,
+                           g.name AS goal_name,
+                           a.note
+                    FROM goal_allocations a
+                    JOIN financial_goals g ON g.id = a.goal_id
+                    LEFT JOIN wallets w ON w.id = a.wallet_id
+                    WHERE g.user_id = ?";
         }
-        if (!empty($filters['endDate'])) {
+        $params = [$userId];
+        if (!empty($filters['walletId'])) {
+            $sql .= ' AND a.wallet_id = ?';
+            $params[] = (int) $filters['walletId'];
+        }
+        if (!empty($startDate)) {
+            $sql .= ' AND a.allocated_on >= ?';
+            $params[] = $startDate;
+        }
+        if (!empty($endDate)) {
             $sql .= ' AND a.allocated_on <= ?';
-            $params[] = $filters['endDate'];
+            $params[] = $endDate;
+        }
+        if ($search !== '') {
+            $sql .= ' AND (LOWER(g.name) LIKE ? OR LOWER(COALESCE(a.note, \'\')) LIKE ?)';
+            $kw = '%' . mb_strtolower($search, 'UTF-8') . '%';
+            $params[] = $kw;
+            $params[] = $kw;
         }
         $sql .= " ORDER BY a.allocated_on DESC, a.id DESC LIMIT {$limit}";
         $stmt = $this->pdo->prepare($sql);

@@ -233,42 +233,7 @@ function showDetails(id) {
   dialog.showModal();
 }
 function exportTransactionsCSV() {
-  const rows = [
-    [
-      'Mã giao dịch',
-      'Tên giao dịch',
-      'Danh mục',
-      'Ví',
-      'Ngày',
-      'Số tiền VND'
-
-    ],
-    ...transactions.map(t => [
-      t.id,
-      t.name,
-      t.category,
-      t.wallet,
-      t.date,
-      String(t.amount)
-
-    ])
-
-  ];
-  const neutralize = v => {
-    const text = String(v).replace(/^[\s\u0000-\u001f]+/, '');
-    return /^[=+\-@]/.test(text) ? "'" + String(v) : String(v);
-
-  };
-  const csv = rows.map(row => row.map(col => '"' + neutralize(col).replaceAll('"', '""') + '"').join(',')).join('\r\n');
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = 'wealthflow_giao_dich.csv';
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-  toast('Đã xuất danh sách giao dịch hiện hiển thị.');
-
+  if (liveAction('live:export-csv:reports', { dialog, toast, reload: () => navigate(state.page) })) return;
 }
 function applyTransactionSearch() {
   const filters = (Array.isArray(state.txFilter) ? state.txFilter : [state.txFilter || 'ALL'])
@@ -307,8 +272,8 @@ function handleTransactionFilterChange(target) {
   if (!types.some(input => input.checked)) all.checked = true;
 }
 function handleAction(action, trigger) {
- if (liveAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
- if (walletFeature.handleAction(action, trigger)) return;
+  if (liveAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
+  if (walletFeature.handleAction(action, trigger)) return;
   if (handleGoalAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (handleGoldAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (handleLoanAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
@@ -338,13 +303,13 @@ function handleAction(action, trigger) {
 
   }
   if (action === 'reconcile') {
-    toast('Tính năng đối soát đang được phát triển. Chưa có kết quả đối soát được xác nhận.');
+    liveAction('live:reconcile:reports', { dialog, toast, reload: () => navigate(state.page) });
     return;
 
   }
   if (action === 'reversal') {
     dialog.close();
-    toast('Chức năng đảo giao dịch đang được phát triển. Giao dịch gốc không bị thay đổi.');
+    toast('Vui lòng chọn nút "Đảo bút toán" tại giao dịch muốn đảo.');
     return;
 
   }
@@ -496,4 +461,8 @@ window.addEventListener('hashchange', () => {
 
 });
 preloadViews(Object.keys(META));
-const initial = decodeURIComponent(location.hash.slice(1)); if (initial.startsWith('admin-')) state.admin = true; navigate(META[initial] ? initial : 'overview');
+const initial = decodeURIComponent(location.hash.slice(1));
+const defaultPage = currentUser.role === 'ADMIN' ? 'admin-overview' : 'overview';
+const startPage = META[initial] ? initial : defaultPage;
+if (startPage.startsWith('admin-')) state.admin = true;
+navigate(startPage);
