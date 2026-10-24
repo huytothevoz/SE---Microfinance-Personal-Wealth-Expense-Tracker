@@ -25,6 +25,13 @@ globalThis.fetch = async (path, init = {}) => {
     '/api/gold': { gold: [{ id: 11, name: 'Vàng miếng SJC', goldType: 'SJC_BAR', quantityChi: '1.0000', valuationPerChi: '8500000.00000000', currentValue: '8500000.00000000', valuationDate: '2026-10-18', status: 'HELD' }] },
     '/api/loans': { loans: [{ id: 12, title: 'Khoản vay học tập', direction: 'BORROWED', currency: 'VND', remainingPrincipal: '10000000.00000000', nextDueDate: '2026-11-18', status: 'ACTIVE' }] },
     '/api/analytics/net-worth': { dashboard: { currency: 'VND', netWorth: '-1475000.00000000', assets: { wallets: '25000.00000000', gold: '8500000.00000000', receivableLoans: '0.00000000', totalAssets: '8525000.00000000', breakdown: { cash: '25000.00000000', bank: '0.00000000', eWallet: '0.00000000', savings: '0.00000000', gold: '8500000.00000000', receivableLoans: '0.00000000' } }, liabilities: { creditWallets: '0.00000000', payableLoans: '10000000.00000000', totalLiabilities: '10000000.00000000' }, cashFlow: { month: '2026-10', income: '25000000.00000000', expense: '1000000.00000000', net: '24000000.00000000', savingRate: '96.00' }, goals: { targetAmount: '50000000.00000000', currentAmount: '500000.00000000', activeCount: 1, items: [{ id: 9, name: 'Mua xe', targetAmount: '50000000.00000000', currentAmount: '500000.00000000', progressPercent: '1.00', deadline: '2027-10-18' }] } } },
+    '/api/reports/reconcile': { reconciliation: { overallStatus: 'MATCHED', isAllMatched: true, totalWallets: 1, matchedCount: 1, mismatchCount: 0, wallets: [{ walletId: 1, walletName: 'Ví kiểm thử', walletType: 'CASH', currency: 'VND', cachedBalance: 25000, ledgerSum: 25000, delta: 0, isMatched: true, status: 'MATCHED', entryCount: 1 }], trialBalance: { isBalanced: true, status: 'BALANCED', totalDebitBase: 25000, totalCreditBase: 25000, differenceBase: 0, accounts: [] }, recentExports: [] } },
+    '/api/admin/overview': { overview: { totalUsers: 2, activeUsers: 2, lockedUsers: 0, adminUsers: 1, personalUsers: 1, newUsersThisMonth: 1, activeDefaultCategories: 12, totalBroadcasts: 1, currencyDistribution: [{ currency: 'VND', count: 2 }], monthlyRegistrations: [{ month: '2026-10', count: 2 }] } },
+    '/api/admin/users': { users: [{ id: 1, fullName: 'Võ Trịnh Quốc Huy', email: 'huy.user@wealthflow.local', role: 'USER', status: 'ACTIVE', baseCurrency: 'VND', createdAt: '2026-10-01 08:00:00' }] },
+    '/api/admin/categories': { categories: [{ id: 1, name: 'Lương', categoryType: 'INCOME', isActive: true }] },
+    '/api/admin/system-config': { configs: [{ key: 'BUDGET_WARNING_THRESHOLD', value: '80', default: '80', type: 'int', min: 50, max: 95, label: 'Ngưỡng cảnh báo ngân sách sớm (%)', description: 'Tỷ lệ cảnh báo vàng' }], configMap: { BUDGET_WARNING_THRESHOLD: '80' } },
+    '/api/admin/announcements': { announcements: [{ id: 1, title: 'Bảo trì hệ thống', body: 'Nâng cấp định kỳ', priority: 'INFO', recipientCount: 2, createdAt: '2026-10-18 09:00:00' }] },
+    '/api/admin/audit-logs': { logs: [{ id: 1, adminUserId: 3, adminName: 'Admin', action: 'BROADCAST_ANNOUNCEMENT', reason: 'Bảo trì hệ thống', createdAt: '2026-10-18 09:00:00' }] },
   };
   if (['POST', 'PUT', 'DELETE'].includes(init.method)) {
     assert.equal(init.headers['X-WealthFlow'], '1');
@@ -51,8 +58,10 @@ assert.equal(data.dataStatus.loans.state, 'ready', 'FR08: Loans API is the autho
 assert.equal(data.loans[0].remainingPrincipal, '10000000.00000000', 'FR08: remaining loan principal mapping');
 assert.equal(data.gold[0].currentValue, '8500000.00000000', 'FR08: current gold valuation mapping');
 assert.equal(data.analytics.netWorth, '-1475000.00000000', 'FR10: dashboard summary mapping');
+assert.equal(data.reconciliation.overallStatus, 'MATCHED', 'FR12: reconciliation status mapping');
 const render = (name, extraState = {}) => liveRender(name, { state: { search: '', txFilter: 'all', notifFilter: 'all', ...extraState }, heading: () => '<h1>test</h1>', currentUser: { fullName: 'Test', email: 'test@example.com', baseCurrency: 'VND', role: 'USER' } });
 assert.match(render('transactions'), /Chuyển vào mục tiêu: Mua xe/, 'All-transactions view includes savings-goal history');
+assert.match(render('reconciliation'), /Ví kiểm thử/, 'FR12: Reconciliation page renders wallet reconciliation table');
 assert.match(render('wallets'), /25\.000/, 'Wallet value displayed from server only');
 assert.match(render('overview'), /1\.475\.000/, 'FR10: Dashboard renders backend-authoritative Net Worth');
 assert.match(render('overview'), /10\.000\.000/, 'FR10: Dashboard renders liabilities from Loans');
@@ -81,6 +90,12 @@ const { GoldApi } = await import('../source/frontend/js/services/gold-api.js');
 await GoldApi.createGoldTransaction({ actionType: 'BUY', goldType: 'SJC_BAR', quantityChi: '1', pricePerChi: '8500000' });
 assert.equal(requests.at(-1).path, 'api/gold/transactions', 'FR08: Gold purchase uses the dedicated endpoint');
 assert.match(requests.at(-1).init.headers['Idempotency-Key'], /^[0-9a-f-]{36}$/i, 'FR08: Gold purchase carries an idempotency key');
+const { ReportApi } = await import('../source/frontend/js/services/report-api.js');
+await ReportApi.runReconciliation();
+assert.equal(requests.at(-1).path, 'api/reports/reconcile', 'FR12: Reconciliation uses the reports reconcile endpoint');
+const { AdminApi } = await import('../source/frontend/js/services/admin-api.js');
+await AdminApi.broadcastAnnouncement({ title: 'Thông báo', body: 'Nội dung', priority: 'INFO' });
+assert.equal(requests.at(-1).path, 'api/admin/announcements', 'FR13: Broadcast uses the admin announcements endpoint');
 const walletFeatureSource = await readFile(new URL('../source/frontend/js/app/wallet-feature.js', import.meta.url), 'utf8');
 const walletViewSource = await readFile(new URL('../source/frontend/js/app/wallets.js', import.meta.url), 'utf8');
 const appCssSource = await readFile(new URL('../source/frontend/css/app.css', import.meta.url), 'utf8');

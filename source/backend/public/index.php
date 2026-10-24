@@ -8,12 +8,14 @@ use WealthFlow\Core\Database;
 use WealthFlow\Core\JsonResponse;
 use WealthFlow\Core\Request;
 use WealthFlow\Core\Router;
+use WealthFlow\Modules\Admin\AdminController;
 use WealthFlow\Modules\Auth\AuthController;
 use WealthFlow\Modules\Budgets\BudgetController;
 use WealthFlow\Modules\Goals\GoalController;
 use WealthFlow\Modules\Loans\LoanController;
 use WealthFlow\Modules\Notifications\NotificationController;
 use WealthFlow\Modules\Recurring\RecurringController;
+use WealthFlow\Modules\Reports\ReportController;
 use WealthFlow\Modules\Transactions\TransactionController;
 use WealthFlow\Modules\Wallets\WalletController;
 use WealthFlow\Modules\Wealth\AnalyticsDashboardController;
@@ -50,7 +52,7 @@ try {
     });
     $router->get('/features', static function (): void {
         JsonResponse::success([
-            'integrated' => ['FR01', 'FR02', 'FR03', 'FR04', 'FR05', 'FR06', 'FR07', 'FR08', 'FR10'],
+            'integrated' => ['FR01', 'FR02', 'FR03', 'FR04', 'FR05', 'FR06', 'FR07', 'FR08', 'FR09', 'FR10', 'FR11', 'FR12', 'FR13', 'FR14', 'FR15'],
             'integrationVerifiedWithMysql' => false,
             'note' => 'Đã nối giao diện và backend nhưng cần kiểm thử nghiệm thu MySQL/SMTP thực tế trước khi sử dụng dữ liệu tài chính.',
         ]);
@@ -114,6 +116,7 @@ try {
     $router->get('/notifications', [$notifController, 'list']);
     $router->post('/notifications/{id}/read', [$notifController, 'markRead']);
     $router->post('/notifications/read-all', [$notifController, 'markAllRead']);
+    $router->post('/notifications/broadcast', [$notifController, 'broadcast']);
 
     // 8. Savings goals
     $goalController = new GoalController();
@@ -143,6 +146,35 @@ try {
     $analyticsController = new AnalyticsDashboardController();
     $router->get('/analytics/net-worth', [$analyticsController, 'netWorth']);
     $router->get('/analytics/net-worth/history', [$analyticsController, 'history']);
+
+    // 10. FR12: Ledger Reconciliation, Trial Balance & CSV Export with Sanitization
+    $reportController = new ReportController();
+    $router->get('/reports/reconcile', [$reportController, 'reconcile']);
+    $router->post('/reports/reconcile', [$reportController, 'reconcile']);
+    $router->get('/reports/trial-balance', [$reportController, 'trialBalance']);
+    $router->get('/reports/export/csv', [$reportController, 'exportCsv']);
+
+    // 11. FR13 & FR14: System Administration, Default Categories, Config & Broadcast
+    $adminController = new AdminController();
+    $router->get('/admin/overview', [$adminController, 'overview']);
+    $router->get('/admin/users', [$adminController, 'listUsers']);
+    $router->put('/admin/users/{id}/lock', [$adminController, 'lockUser']);
+    $router->put('/admin/users/{id}/unlock', [$adminController, 'unlockUser']);
+
+    $router->get('/admin/categories', [$adminController, 'listCategories']);
+    $router->post('/admin/categories', [$adminController, 'createCategory']);
+    $router->put('/admin/categories/{id}', [$adminController, 'updateCategory']);
+    $router->get('/admin/default-categories', [$adminController, 'listCategories']);
+    $router->post('/admin/default-categories', [$adminController, 'createCategory']);
+    $router->put('/admin/default-categories/{id}', [$adminController, 'updateCategory']);
+
+    $router->get('/admin/system-config', [$adminController, 'getSystemConfig']);
+    $router->put('/admin/system-config', [$adminController, 'updateSystemConfig']);
+    $router->put('/admin/system-config/{key}', [$adminController, 'updateSystemConfig']);
+
+    $router->get('/admin/announcements', [$adminController, 'listAnnouncements']);
+    $router->post('/admin/announcements', [$adminController, 'broadcastAnnouncement']);
+    $router->get('/admin/audit-logs', [$adminController, 'listAuditLogs']);
 
     $router->dispatch($request);
 } catch (ApiException $error) {

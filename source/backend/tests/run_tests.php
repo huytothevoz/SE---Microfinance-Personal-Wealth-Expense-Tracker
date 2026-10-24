@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/bootstrap.php';
 
+use WealthFlow\Core\ApiException;
 use WealthFlow\Core\Database;
+use WealthFlow\Modules\Admin\AdminDAO;
+use WealthFlow\Modules\Admin\AdminService;
+use WealthFlow\Modules\Admin\AuditLogDAO;
 use WealthFlow\Modules\Budgets\BudgetDAO;
 use WealthFlow\Modules\Budgets\BudgetService;
 use WealthFlow\Modules\Notifications\NotificationDAO;
@@ -12,6 +16,9 @@ use WealthFlow\Modules\Notifications\NotificationService;
 use WealthFlow\Modules\Recurring\RecurringRuleDAO;
 use WealthFlow\Modules\Recurring\RecurringService;
 use WealthFlow\Modules\Recurring\RecurringWorker;
+use WealthFlow\Modules\Reports\ExportService;
+use WealthFlow\Modules\Reports\ReconciliationService;
+use WealthFlow\Modules\Reports\ReportDAO;
 use WealthFlow\Modules\Transactions\CategoryDAO;
 use WealthFlow\Modules\Transactions\ExchangeRateService;
 use WealthFlow\Modules\Transactions\LedgerDAO;
@@ -38,11 +45,11 @@ final class TestRunner
     public function run(): void
     {
         echo "====================================================================\n";
-        echo "WEALTHFLOW BACKEND AUTOMATED TEST SUITE: FR02 - FR06 VERIFICATION\n";
+        echo "WEALTHFLOW BACKEND AUTOMATED TEST SUITE: FR02 - FR14 VERIFICATION\n";
         echo "====================================================================\n\n";
 
         if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
-            fwrite(STDERR, "[SKIP] pdo_sqlite not installed; FR02-FR06 tests require SQLite.\n");
+            fwrite(STDERR, "[SKIP] pdo_sqlite not installed; FR02-FR14 tests require SQLite.\n");
             exit(2);
         }
         // Setup isolated in-memory SQLite database for deterministic tests
@@ -624,6 +631,239 @@ final class TestRunner
         $sub1Updated = $recRepo->findByIdAndUser((int) $sub1['id'], $userId);
         $expectedNext = RecurringService::calculateNextMonthlyDueDate(5, $today);
         $this->assert('TC-F06.03.4 Next due date advanced correctly for next cycle', $sub1Updated['next_due_date'] === $expectedNext);
+
+        // -------------------------------------------------------------
+        echo "\n--- GROUP 5: FR12 - Ledger Reconciliation, Trial Balance & CSV Export ---\n";
+        // -------------------------------------------------------------
+
+        $reportDao = new ReportDAO($pdo);
+        $auditLogDao = new AuditLogDAO($pdo);
+        $reconcileService = new ReconciliationService($reportDao);
+        $exportService = new ExportService($reportDao);
+
+        // 5.1: TC-F12.01 Multi-criteria Transaction History Filtering & Pagination
+        $filteredBySearch = $txRepo->listTransactions($userId, ['search' => 'Ăn tiệc', 'limit' => 10, 'offset' => 0]);
+        $countBySearch = $txRepo->countTransactions($userId, ['search' => 'Ăn tiệc']);
+        $this->assert(
+            'TC-F12.01.1 Transaction history search filter matches description and countTransactions agrees',
+            count($filteredBySearch) === 1 && $countBySearch === 1 && $filteredBySearch[0]['description'] === 'Ăn tiệc liên hoan'
+        );
+
+        $filteredByWallet = $txRepo->listTransactions($userId, ['walletId' => 4, 'status' => 'POSTED', 'limit' => 10, 'offset' => 0]);
+        $this->assert(
+            'TC-F12.01.2 Transaction history walletId filter returns only transactions touching that wallet',
+            count($filteredByWallet) >= 1 && array_reduce(
+                $filteredByWallet,
+                static fn(bool $carry, array $tx): bool => $carry && $tx['currency'] === 'USD',
+                true
+            )
+        );
+
+        // 5.2: TC-F12.02 Wallet Balance vs. Double-Entry Ledger Reconciliation & Trial Balance
+        $reconResult = $reconcileService->reconcileAllWallets($userId);
+        $this->assert(
+            'TC-F12.02.1 Reconciliation confirms cached_balance == ledgerSum for all wallets (isAllMatched == true)',
+            $reconResult['isAllMatched'] === true
+                && $reconResult['overallStatus'] === 'MATCHED'
+                && $reconResult['mismatchCount'] === 0
+        );
+        $this->assert(
+            'TC-F12.02.2 Trial balance confirms sum(DebitBase) == sum(CreditBase) and excludes DRAFT rows',
+            $reconResult['trialBalance']['isBalanced'] === true
+                && $reconResult['trialBalance']['status'] === 'BALANCED'
+                && (float) $reconResult['trialBalance']['totalDebitBase'] > 0
+                && abs((float) $reconResult['trialBalance']['differenceBase']) < 0.0001
+        );
+
+        // Simulate a cached_balance drift on Wallet 1 (+50,000 VND) and verify LEDGER_MISMATCH audit logging
+        $pdo->exec("UPDATE wallets SET cached_balance = cached_balance + 50000 WHERE id = 1");
+        $reconDrifted = $reconcileService->reconcileAllWallets($userId, null, true, '127.0.0.1');
+        $securityLogCount = (int) $pdo->query("SELECT COUNT(*) FROM security_audit_logs WHERE event_type = 'LEDGER_MISMATCH' AND user_id = {$userId}")->fetchColumn();
+        $this->assert(
+            'TC-F12.02.3 Tampered cached_balance is detected (mismatchCount == 1) and logged to security_audit_logs',
+            $reconDrifted['isAllMatched'] === false
+                && $reconDrifted['overallStatus'] === 'MISMATCHED'
+                && $reconDrifted['mismatchCount'] === 1
+                && $securityLogCount >= 1
+        );
+        // Restore Wallet 1 balance
+        $pdo->exec("UPDATE wallets SET cached_balance = cached_balance - 50000 WHERE id = 1");
+        $reconRestored = $reconcileService->reconcileAllWallets($userId);
+        $this->assert('TC-F12.02.4 Restored wallet balance returns reconciliation to isAllMatched == true', $reconRestored['isAllMatched'] === true);
+
+        // 5.3: TC-F12.03 & TC-F12.04 CSV Export with UTF-8 BOM, Audit Hash & OWASP Formula Injection Sanitization
+        $this->assert(
+            'TC-F12.04.1 ExportService::sanitizeCsvField prepends single quote to =, +, -, @, tab, CR and leading-space formulas',
+            $exportService->sanitizeCsvField('=1+1') === "'=1+1"
+                && $exportService->sanitizeCsvField('+cmd|\' /C calc\'!A0') === "'+cmd|' /C calc'!A0"
+                && $exportService->sanitizeCsvField('-2+3') === "'-2+3"
+                && $exportService->sanitizeCsvField('@SUM(A1:A10)') === "'@SUM(A1:A10)"
+                && $exportService->sanitizeCsvField("\t=1+1") === "'\t=1+1"
+                && $exportService->sanitizeCsvField('  =HYPERLINK("http://evil")') === "'  =HYPERLINK(\"http://evil\")"
+                && $exportService->sanitizeCsvField('Bữa trưa bình thường') === 'Bữa trưa bình thường'
+        );
+
+        // Post an expense with a formula-like description to test end-to-end CSV export sanitization
+        $ledgerService->postExpense($userId, [
+            'walletId' => 2,
+            'categoryId' => 1,
+            'amount' => 45000,
+            'description' => '=CMD|\' /C calc\'!A0',
+        ]);
+        $csvExport = $exportService->exportTransactionsCsv($userId, ['status' => 'POSTED'], '127.0.0.1');
+        $exportAuditRow = $pdo->query("SELECT * FROM export_audit_logs WHERE user_id = {$userId} ORDER BY id DESC LIMIT 1")->fetch();
+        $this->assert(
+            'TC-F12.03.1 CSV export starts with UTF-8 BOM (\\xEF\\xBB\\xBF) and records SHA-256 hash & row_count in export_audit_logs',
+            str_starts_with($csvExport['csv'], "\xEF\xBB\xBF")
+                && $csvExport['rowCount'] >= 1
+                && is_array($exportAuditRow)
+                && $exportAuditRow['file_hash'] === hash('sha256', $csvExport['csv'])
+                && (int) $exportAuditRow['row_count'] === $csvExport['rowCount']
+        );
+        $this->assert(
+            'TC-F12.04.2 Exported CSV neutralizes formula injection payload in transaction description',
+            str_contains($csvExport['csv'], "'=CMD|")
+        );
+
+        // -------------------------------------------------------------
+        echo "\n--- GROUP 6: FR13 & FR14 - Admin Governance, Config, Broadcast & User Lock ---\n";
+        // -------------------------------------------------------------
+
+        $adminDao = new AdminDAO($pdo);
+        $adminService = new AdminService($adminDao, $auditLogDao, $notifService);
+        $adminUserId = 3; // Seeded ADMIN user
+
+        // 6.1: TC-F13.01 Default Categories Management
+        $initialTemplates = $adminService->listDefaultCategories();
+        $newTemplate = $adminService->createDefaultCategory($adminUserId, [
+            'name' => 'Bảo hiểm sức khỏe',
+            'categoryType' => 'EXPENSE',
+        ]);
+        $this->assert(
+            'TC-F13.01.1 Admin creates default category template and logs CREATE_DEFAULT_CATEGORY',
+            (int) $newTemplate['id'] > count($initialTemplates)
+                && $newTemplate['name'] === 'Bảo hiểm sức khỏe'
+                && $newTemplate['categoryType'] === 'EXPENSE'
+        );
+
+        $dupCatConflict = false;
+        try {
+            $adminService->createDefaultCategory($adminUserId, [
+                'name' => 'Bảo hiểm sức khỏe',
+                'categoryType' => 'EXPENSE',
+            ]);
+        } catch (ApiException $e) {
+            $dupCatConflict = ($e->status === 409 && $e->errorCode === 'DUPLICATE_DEFAULT_CATEGORY');
+        }
+        $this->assert('TC-F13.01.2 Duplicate default category (name, category_type) is rejected with 409 Conflict', $dupCatConflict);
+
+        $updatedTemplate = $adminService->updateDefaultCategory($adminUserId, (int) $newTemplate['id'], [
+            'name' => 'Bảo hiểm & Y tế',
+            'categoryType' => 'EXPENSE',
+            'isActive' => true,
+        ]);
+        $this->assert(
+            'TC-F13.01.3 Admin updates default category template name',
+            $updatedTemplate['name'] === 'Bảo hiểm & Y tế' && $updatedTemplate['isActive'] === true
+        );
+
+        // 6.2: TC-F13.02 System Operational Configuration & Bounds Validation
+        $sysConfigBefore = $adminService->getSystemConfig();
+        $this->assert('TC-F13.02.1 System configuration loads seeded parameters', count($sysConfigBefore['configs']) >= 8);
+
+        $updatedConfigRes = $adminService->updateSystemConfig($adminUserId, [
+            'BUDGET_WARNING_THRESHOLD' => '75',
+            'BUDGET_CRITICAL_THRESHOLD' => '95',
+        ]);
+        $this->assert(
+            'TC-F13.02.2 Valid system config update persists new thresholds and logs audit entry',
+            count($updatedConfigRes['updatedKeys']) === 2
+                && $updatedConfigRes['configMap']['BUDGET_WARNING_THRESHOLD'] === '75'
+        );
+
+        $invalidConfigRejected = false;
+        try {
+            $adminService->updateSystemConfig($adminUserId, [
+                'BUDGET_WARNING_THRESHOLD' => '150', // Out of bounds (max 95)
+            ]);
+        } catch (ApiException $e) {
+            $invalidConfigRejected = ($e->status === 422);
+        }
+        $invertedThresholdsRejected = false;
+        try {
+            $adminService->updateSystemConfig($adminUserId, [
+                'BUDGET_WARNING_THRESHOLD' => '95',
+                'BUDGET_CRITICAL_THRESHOLD' => '95', // Warning >= Critical must fail
+            ]);
+        } catch (ApiException $e) {
+            $invertedThresholdsRejected = ($e->status === 422);
+        }
+        $this->assert(
+            'TC-F13.02.3 Out-of-bounds and inverted threshold configs are rejected with 422 Unprocessable Entity',
+            $invalidConfigRejected && $invertedThresholdsRejected
+        );
+
+        // 6.3: TC-F13.03 System Announcement Broadcast Fan-out
+        $emptyBroadcastRejected = false;
+        try {
+            $adminService->broadcastAnnouncement($adminUserId, ['title' => '', 'body' => '']);
+        } catch (ApiException $e) {
+            $emptyBroadcastRejected = ($e->status === 400);
+        }
+        $this->assert('TC-F13.03.1 Empty broadcast title/body rejected with 400 Bad Request', $emptyBroadcastRejected);
+
+        $unreadUser2Before = $notifService->countUnreadForUser(2);
+        $broadcastRes = $adminService->broadcastAnnouncement($adminUserId, [
+            'title' => 'Bảo trì hệ thống định kỳ',
+            'body' => 'Hệ thống sẽ nâng cấp cơ sở dữ liệu vào 02:00 sáng Chủ Nhật.',
+        ]);
+        $unreadUser2After = $notifService->countUnreadForUser(2);
+        $this->assert(
+            'TC-F13.03.2 Broadcast fans out notification to all ACTIVE users and records admin audit log',
+            $broadcastRes['recipientCount'] >= 3 && $unreadUser2After === ($unreadUser2Before + 1)
+        );
+
+        // 6.4: TC-F14.01 & TC-F14.02 Admin Macro Overview Isolation (BR11) & User Lock/Unlock with Session Revocation
+        $overview = $adminService->getOverview();
+        $overviewJson = json_encode($overview, JSON_UNESCAPED_UNICODE);
+        $this->assert(
+            'TC-F14.01.1 Admin macro overview returns aggregate counts without exposing personal wallet balances or transaction notes (BR11)',
+            isset($overview['totalUsers'], $overview['activeUsers'], $overview['activeDefaultCategories'])
+                && $overview['totalUsers'] >= 3
+                && !str_contains((string) $overviewJson, 'cached_balance')
+                && !str_contains((string) $overviewJson, 'Ăn tiệc liên hoan')
+        );
+
+        // Seed an active auth session for User 2 and test lockUser
+        $pdo->exec("INSERT INTO auth_sessions (user_id, refresh_token_hash, expires_at) VALUES (2, 'hash_u2_session', '2099-01-01 00:00:00')");
+        $shortReasonRejected = false;
+        try {
+            $adminService->lockUser($adminUserId, 2, 'Ngắn');
+        } catch (ApiException $e) {
+            $shortReasonRejected = ($e->status === 422 && $e->errorCode === 'LOCK_REASON_REQUIRED');
+        }
+        $this->assert('TC-F14.02.1 Locking user with reason < 10 chars is rejected with 422', $shortReasonRejected);
+
+        $lockedRes = $adminService->lockUser($adminUserId, 2, 'Phát hiện đăng nhập bất thường từ nhiều IP lạ');
+        $activeSessionsU2 = (int) $pdo->query("SELECT COUNT(*) FROM auth_sessions WHERE user_id = 2 AND revoked_at IS NULL")->fetchColumn();
+        $this->assert(
+            'TC-F14.02.2 Locking user sets status = LOCKED and revokes all active auth_sessions',
+            $lockedRes['user']['status'] === 'LOCKED' && $lockedRes['revokedSessions'] >= 1 && $activeSessionsU2 === 0
+        );
+
+        $selfLockRejected = false;
+        try {
+            $adminService->lockUser($adminUserId, $adminUserId, 'Tự khóa tài khoản quản trị viên');
+        } catch (ApiException $e) {
+            $selfLockRejected = ($e->status === 400 && $e->errorCode === 'CANNOT_LOCK_LAST_ADMIN');
+        }
+        $this->assert('TC-F14.02.3 Admin cannot lock their own account', $selfLockRejected);
+
+        $unlockedRes = $adminService->unlockUser($adminUserId, 2, 'Đã xác minh danh tính chủ tài khoản');
+        $this->assert('TC-F14.02.4 Unlocking user restores status = ACTIVE', $unlockedRes['user']['status'] === 'ACTIVE');
+
+        $auditLogs = $adminService->getAuditLogs(20);
+        $this->assert('TC-F14.03.1 Admin audit log lists all recorded governance actions', count($auditLogs) >= 5);
 
         echo "\n====================================================================\n";
         echo "TEST SUMMARY: {$this->passed} PASSED, {$this->failed} FAILED\n";
