@@ -17,6 +17,7 @@ use WealthFlow\Modules\Recurring\RecurringController;
 use WealthFlow\Modules\Transactions\TransactionController;
 use WealthFlow\Modules\Wallets\WalletController;
 use WealthFlow\Modules\Wealth\AnalyticsDashboardController;
+use WealthFlow\Modules\Reports\ReportController;
 use WealthFlow\Modules\Wealth\GoldController;
 
 try {
@@ -143,6 +144,11 @@ try {
     $analyticsController = new AnalyticsDashboardController();
     $router->get('/analytics/net-worth', [$analyticsController, 'netWorth']);
     $router->get('/analytics/net-worth/history', [$analyticsController, 'history']);
+
+    $reportController = new ReportController();
+    $router->get('/reports/reconcile', [$reportController, 'reconcile']);
+    $router->get('/reports/trial-balance', [$reportController, 'trialBalance']);
+    $router->get('/reports/export/csv', [$reportController, 'exportCsv']);
 
     $router->dispatch($request);
 } catch (ApiException $error) {

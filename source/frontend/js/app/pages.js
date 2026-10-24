@@ -5,6 +5,7 @@ import { renderWalletPage } from './wallets.js?v=wallet-ui-13';
 import { renderGoalsPage } from './goals.js?v=wealth-ui-2';
 import { renderGoldPage } from './gold.js?v=wealth-ui-2';
 import { renderLoansPage } from './loans.js?v=wealth-ui-2';
+import { renderReconciliationPage } from './reports.js';
 
 export function createPages({ state, heading, currentUser }) {
   const ctx = { state, heading, currentUser };
@@ -15,6 +16,7 @@ export function createPages({ state, heading, currentUser }) {
       : name === 'goals' ? () => renderGoalsPage()
       : name === 'gold' ? () => renderGoldPage()
       : name === 'loans' ? () => renderLoansPage()
+      : name === 'reconciliation' ? () => renderReconciliationPage()
       : () => liveRender(name, ctx);
   }
   return { PAGES, txTable: liveTransactionTable };
