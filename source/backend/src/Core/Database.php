@@ -348,6 +348,25 @@ final class Database
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE (user_id, dedup_key)
         );
+
+        CREATE TABLE IF NOT EXISTS security_audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NULL,
+            event TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS export_audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            export_type TEXT NOT NULL,
+            row_count INTEGER NOT NULL DEFAULT 0,
+            file_hash TEXT NULL,
+            ip_address TEXT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
 SQL;
 
         $pdo->exec($schema);

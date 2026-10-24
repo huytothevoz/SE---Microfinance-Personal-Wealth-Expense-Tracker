@@ -10,6 +10,8 @@ import { createWalletFeature } from './wallet-feature.js?v=wallet-ui-13';
 import { handleGoalAction } from './goals.js?v=wealth-ui-2';
 import { handleGoldAction } from './gold.js?v=wealth-ui-2';
 import { handleLoanAction } from './loans.js?v=wealth-ui-2';
+import { runReconciliationAudit } from './reports.js';
+import { ReportApi } from '../services/report-api.js';
 
 let currentUser;
 try {
@@ -333,14 +335,32 @@ function handleAction(action, trigger) {
 
   }
   if (action === 'export') {
-    exportTransactionsCSV();
+    void (async () => {
+      try {
+        toast('Đang chuẩn bị tệp CSV từ máy chủ...');
+        await ReportApi.downloadCsv();
+        toast('Tải xuống tệp CSV thành công!');
+      } catch (err) {
+        toast(err.message || 'Lỗi khi tải xuất tệp CSV.', 'error');
+      }
+    })();
     return;
-
   }
   if (action === 'reconcile') {
-    toast('Tính năng đối soát đang được phát triển. Chưa có kết quả đối soát được xác nhận.');
+    void (async () => {
+      try {
+        toast('Đang kiểm tra đối soát với sổ cái kép...');
+        const res = await runReconciliationAudit();
+        if (res.isAllMatched) {
+          toast('Đối soát thành công: Toàn bộ ví khớp đúng với sổ cái kép!');
+        } else {
+          toast(`Cảnh báo an ninh: Phát hiện ${res.mismatchedWallets} ví bị lệch số dư!`, 'error');
+        }
+      } catch (err) {
+        toast(err.message || 'Lỗi khi chạy đối soát sổ cái.', 'error');
+      }
+    })();
     return;
-
   }
   if (action === 'reversal') {
     dialog.close();

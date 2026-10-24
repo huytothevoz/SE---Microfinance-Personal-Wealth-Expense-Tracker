@@ -12,3 +12,6 @@ source/backend/storage/
 source/backend/vendor/
 __pycache__/
 *.pyc
+
+# Test artifacts
+source/tests/**/downloads/
