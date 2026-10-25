@@ -1,3 +1,4 @@
+import '../i18n.js?v=i18n-4';
 import { authApi, errorMessage } from '../services/auth-api.js';
 
 void authApi('me')

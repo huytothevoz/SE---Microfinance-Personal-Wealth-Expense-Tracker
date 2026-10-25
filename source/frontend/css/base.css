@@ -150,6 +150,31 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   background: rgba(26,67,109,.07);
 }
 
+.language-toggle {
+  min-width: 42px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #d7e1eb;
+  border-radius: 9px;
+  background: #fff;
+  color: #173958;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .2s,border-color .2s,color .2s;
+}
+
+.language-toggle:hover {
+  background: #edf4f8;
+  border-color: #9bb3c7;
+}
+
+.language-toggle:focus-visible {
+  outline: 3px solid #238b9e55;
+  outline-offset: 2px;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;

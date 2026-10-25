@@ -17,7 +17,7 @@ Cần PHP 8.2+, MySQL/MariaDB, extension `pdo_mysql`, `bcmath`, `mbstring`, `cur
 
 1. Giải nén vào **thư mục dự án riêng**; KHÔNG chép đè toàn bộ `C:\xampp\htdocs`.
 2. Đặt XAMPP ở `C:\xampp` (hoặc `D:\xampp`, `F:\xampp`), nếu khác đặt biến môi trường `XAMPP_DIR`.
-3. Chạy `run_wealthflow.bat`, chọn `[1]` để bắt đầu (hoặc `CHAY_SE.bat`). Cả hai dùng chung `setup-se.ps1`, không còn hai luồng khởi tạo SQL khác nhau. Dự án SE sử dụng PHP web **8080**, MySQL riêng **3307**; không chủ động đụng MySQL 3306 của đồ án LTW.
+3. Double-click `SETUP_SE.bat` hoặc `CHAY_SE.bat` để chạy setup; cửa sổ sẽ giữ lại kết quả để đọc lỗi. Không double-click `setup-se.ps1` trực tiếp vì PowerShell có thể đóng cửa sổ sau khi script kết thúc. Có thể chọn `[1]` trong `run_wealthflow.bat` thay thế. Các cách khởi động dùng chung `setup-se.ps1`; dự án SE sử dụng PHP web **8080**, MySQL riêng **3307** và không chủ động đụng MySQL 3306 của đồ án LTW.
 4. Mở `http://localhost:8080/`. Kiểm tra API: `http://localhost:8080/api/health` (phải có `success=true` và `databaseConnected=true`).
 5. Nếu backend chưa có dependencies, chạy `composer install` tại `source/backend` rồi thực hiện lại.
 

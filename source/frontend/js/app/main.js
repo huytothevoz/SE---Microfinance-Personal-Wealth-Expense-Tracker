@@ -1,3 +1,4 @@
+import '../i18n.js?v=i18n-4';
 import { icon, safe, money, USER_NAV, ADMIN_NAV, META, formatMoneyInput, heading, btn, panel } from './ui-core.js?v=wealth-ui-2';
 import { createPages } from './pages.js?v=wealth-ui-2';
 import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=wealth-ui-2';

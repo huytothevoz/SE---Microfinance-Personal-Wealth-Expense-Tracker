@@ -4,8 +4,11 @@ WEALTHFLOW - HUONG DAN KHOI DONG & QUAN LY HE THONG (TUI CONTROL CENTER)
 1. KHOI DONG TRUC TIEP BANG 1 CLICK / 1 DONG LENH
 ------------------------------------------------------------------------
 * Tren Windows:
-  - Cach 1: Double-click vao file `run_wealthflow.bat`.
-  - Cach 2: Mo terminal PowerShell/CMD tai thu muc project, chay:
+  - Double-click `SETUP_SE.bat` de cai dat/khoi dong truc tiep; hoac
+    double-click `CHAY_SE.bat` (ca hai se giu cua so mo de xem ket qua).
+  - Khong double-click truc tiep `setup-se.ps1`; hay chay qua file `.bat`.
+  - Cach khac: Double-click vao file `run_wealthflow.bat`.
+  - Mo terminal PowerShell/CMD tai thu muc project, chay:
       .\run_wealthflow.bat
 
 * Tren Linux / macOS:
