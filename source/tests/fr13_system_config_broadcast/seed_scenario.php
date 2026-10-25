@@ -9,31 +9,14 @@ declare(strict_types=1);
 
 $scenario = $argv[1] ?? 'baseline';
 
-$dbHost = getenv('DB_HOST') ?: '127.0.0.1';
-$dbPort = getenv('DB_PORT') ?: '3307';
-$dbName = getenv('DB_NAME') ?: 'wealthflow';
-$dbUser = getenv('DB_USER') ?: 'root';
-$dbPass = getenv('DB_PASSWORD') ?: '';
+require_once dirname(__DIR__, 2) . '/backend/bootstrap.php';
+use WealthFlow\Core\Database;
 
 try {
-    $pdo = new PDO("mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4", $dbUser, $dbPass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
-} catch (PDOException $e) {
-    // Thử fallback sang port 3306 nếu 3307 không kết nối được
-    try {
-        $dbPort = '3306';
-        $pdo = new PDO("mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4", $dbUser, $dbPass, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ]);
-    } catch (PDOException $e2) {
-        echo json_encode(['status' => 'ERROR', 'message' => "Không thể kết nối MySQL trên port 3307 hoặc 3306: " . $e2->getMessage()]);
-        exit(1);
-    }
+    $pdo = Database::getConnection();
+} catch (\Throwable $e) {
+    echo json_encode(['status' => 'ERROR', 'message' => "Không thể kết nối MySQL: " . $e->getMessage()]);
+    exit(1);
 }
 
 $pdo->beginTransaction();
@@ -72,8 +55,31 @@ try {
         $stmt->execute(['Nguyễn Văn A', 'user1@gmail.com', $adminPasswordHash]);
     }
 
-    // 4. Dọn dẹp các danh mục test tạm của các lần chạy trước
+    // 4. Dọn dẹp các người dùng test động và danh mục test tạm của các lần chạy trước
+    $stmtTestUsers = $pdo->query("SELECT id FROM users WHERE email LIKE 'newuser_%@wealthflow.local' OR email LIKE 'testuser_%'");
+    $testUserIds = $stmtTestUsers ? $stmtTestUsers->fetchAll(PDO::FETCH_COLUMN) : [];
+    if (!empty($testUserIds)) {
+        $inClause = implode(',', array_map('intval', $testUserIds));
+        $pdo->exec("DELETE FROM categories WHERE user_id IN ($inClause)");
+        $pdo->exec("DELETE FROM wallets WHERE user_id IN ($inClause)");
+        $pdo->exec("DELETE FROM auth_sessions WHERE user_id IN ($inClause)");
+        $pdo->exec("DELETE FROM registration_emails WHERE user_id IN ($inClause)");
+        $pdo->exec("DELETE FROM users WHERE id IN ($inClause)");
+    }
     $pdo->exec("DELETE FROM default_categories WHERE name LIKE '%Thưởng kinh doanh%' OR name LIKE '%Test%' OR name LIKE '%Thử nghiệm%'");
+    $pdo->exec("UPDATE default_categories SET is_active = 1 WHERE name = 'Mua sắm'");
+
+    // Đảm bảo user1@gmail.com có danh mục cá nhân 'Mua sắm' để đối chiếu bảo toàn dữ liệu
+    $stmtU1 = $pdo->prepare("SELECT id FROM users WHERE email = 'user1@gmail.com'");
+    $stmtU1->execute();
+    $u1Id = $stmtU1->fetchColumn();
+    if ($u1Id) {
+        $stmtC = $pdo->prepare("SELECT id FROM categories WHERE user_id = ? AND name = 'Mua sắm'");
+        $stmtC->execute([$u1Id]);
+        if (!$stmtC->fetchColumn()) {
+            $pdo->prepare("INSERT INTO categories (user_id, name, category_type) VALUES (?, 'Mua sắm', 'EXPENSE')")->execute([$u1Id]);
+        }
+    }
 
     // 5. Đảm bảo các danh mục mặc định chuẩn luôn có sẵn
     $defaults = [
@@ -95,7 +101,26 @@ try {
         }
     }
 
-    $pdo->commit();
+    // 6. Đảm bảo cấu hình hệ thống (system_config) có sẵn các tham số vận hành FR13.02
+    $defaultConfigs = [
+        'BUDGET_WARNING_THRESHOLD_PERCENT' => '80',
+        'JWT_ACCESS_TOKEN_TTL_MINUTES' => '60',
+        'CSV_EXPORT_MAX_ROWS' => '5000',
+        'LOAN_REMINDER_DAYS_BEFORE' => '3',
+        'MAX_FAILED_LOGINS' => '5',
+        'OTP_EXPIRY_MINUTES' => '10',
+        'SESSION_EXPIRY_DAYS' => '7',
+        'DEFAULT_BASE_CURRENCY' => 'VND',
+        'ALLOW_REGISTRATION' => 'true',
+    ];
+    $stmtCfg = $pdo->prepare("INSERT INTO system_config (config_key, config_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)");
+    foreach ($defaultConfigs as $k => $v) {
+        $stmtCfg->execute([$k, $v]);
+    }
+
+    if ($pdo->inTransaction()) {
+        $pdo->commit();
+    }
     echo json_encode([
         'status' => 'OK',
         'scenario' => $scenario,
@@ -103,7 +128,9 @@ try {
         'message' => 'Seeder FR13 thiết lập dữ liệu mẫu và quyền Admin thành công.',
     ]);
 } catch (Throwable $e) {
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     echo json_encode(['status' => 'ERROR', 'message' => $e->getMessage()]);
     exit(1);
 }

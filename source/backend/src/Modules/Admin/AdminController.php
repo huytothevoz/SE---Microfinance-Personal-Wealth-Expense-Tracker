@@ -91,4 +91,78 @@ final class AdminController
             JsonResponse::error('INTERNAL_ERROR', $e->getMessage(), 500);
         }
     }
+
+    /**
+     * GET /api/admin/system-config (FR13.02)
+     */
+    public function getSystemConfig(Request $request): void
+    {
+        try {
+            $adminUserId = AuthContext::getUserId($request);
+            $data = $this->adminService->getSystemConfigs($adminUserId);
+
+            JsonResponse::success($data);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
+        } catch (Throwable $e) {
+            JsonResponse::error('INTERNAL_ERROR', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * PUT /api/admin/system-config (FR13.02)
+     */
+    public function updateSystemConfig(Request $request): void
+    {
+        try {
+            $adminUserId = AuthContext::getUserId($request);
+            $dto = $request->getBody();
+            $data = $this->adminService->updateSystemConfigs($adminUserId, $dto);
+
+            JsonResponse::success($data, 200);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
+        } catch (Throwable $e) {
+            JsonResponse::error('INTERNAL_ERROR', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/announcements (FR13.03, SQ08)
+     */
+    public function sendAnnouncement(Request $request): void
+    {
+        try {
+            $adminUserId = AuthContext::getUserId($request);
+            $dto = $request->getBody();
+            $result = $this->adminService->broadcastAnnouncement($adminUserId, $dto);
+
+            JsonResponse::success($result, 201);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
+        } catch (Throwable $e) {
+            JsonResponse::error('INTERNAL_ERROR', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * GET /api/admin/announcements (FR13.03)
+     */
+    public function listAnnouncements(Request $request): void
+    {
+        try {
+            $adminUserId = AuthContext::getUserId($request);
+            $limit = (int) $request->getQuery('limit', 20);
+            $history = $this->adminService->getBroadcastHistory($adminUserId, $limit);
+
+            JsonResponse::success([
+                'announcements' => $history,
+                'count' => count($history),
+            ]);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
+        } catch (Throwable $e) {
+            JsonResponse::error('INTERNAL_ERROR', $e->getMessage(), 500);
+        }
+    }
 }

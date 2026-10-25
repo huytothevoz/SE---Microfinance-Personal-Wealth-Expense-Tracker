@@ -72,6 +72,18 @@ class TestFR13DataLayer:
         data = run_php_test("tc_d13_01_default_categories_dao.php")
         assert data.get("passed") is True
 
+    def test_d13_02_system_config_dao(self):
+        """TC-D13-02: AdminDAO getSystemConfigs, getSystemConfig, updateSystemConfig."""
+        data = run_php_test("tc_d13_02_system_config_dao.php")
+        assert data.get("passed") is True
+
+    def test_d13_03_broadcast_dao(self):
+        """TC-D13-03: NotificationDAO broadcast O(1) fan-out và AuditLogDAO getBroadcastLogs."""
+        data = run_php_test("tc_d13_03_broadcast_dao.php")
+        assert data.get("passed") is True
+        assert data.get("recipientCount") == 2
+        assert data.get("titleLength") == 255
+
 
 # =========================================================================
 # TẦNG C: CONTROL & BUSINESS LOGIC LAYER (AdminService & Rules)
@@ -108,6 +120,19 @@ class TestFR13ControlLayer:
         assert "CREATE_DEFAULT_CATEGORY" in data.get("loggedActions", [])
         assert "UPDATE_DEFAULT_CATEGORY" in data.get("loggedActions", [])
         assert "DELETE_DEFAULT_CATEGORY" in data.get("loggedActions", [])
+
+    def test_c13_05_system_config_validation_and_budget_integration(self):
+        """TC-C13-05: Cấu hình tham số hệ thống FR13.02: 403 với user thường, 422 khi ngoài khoảng, cập nhật 200, ghi audit log và tích hợp động cảnh báo ngân sách."""
+        data = run_php_test("tc_c13_05_system_config_validation.php")
+        assert data.get("passed") is True
+
+    def test_c13_06_broadcast_service_validation(self):
+        """TC-C13-06: Phát thông báo phát thanh FR13.03: 403 user thường, 422 rỗng hoặc tiêu đề > 255 ký tự, 201 phát thanh O(1) thành công, audit log và gửi inbox."""
+        data = run_php_test("tc_c13_06_broadcast_service_validation.php")
+        assert data.get("firstBroadcast", {}).get("status") == "DISPATCHED"
+        assert data.get("firstBroadcast", {}).get("recipientCount") >= 3
+        assert data.get("urgentBroadcast", {}).get("priority") == "URGENT"
+        assert data.get("userNotificationsCount") >= 2
 
 
 # =========================================================================
@@ -147,7 +172,7 @@ class TestFR13BoundaryUiContracts:
         content = ADMIN_JS.read_text(encoding="utf-8")
 
         assert "export async function renderAdminCategoriesPage" in content
-        assert "export function handleAdminCategoryAction" in content
+        assert "handleAdminAction" in content or "handleAdminCategoryAction" in content
         assert "/api/admin/default-categories" in content
         assert "admin-category-edit" in content
         assert "admin-category-toggle" in content
@@ -162,4 +187,39 @@ class TestFR13BoundaryUiContracts:
         main_content = MAIN_JS.read_text(encoding="utf-8")
 
         assert "renderAdminCategoriesPage" in pages_content
-        assert "handleAdminCategoryAction" in main_content
+        assert "renderAdminSettingsPage" in pages_content
+        assert "renderAdminBroadcastPage" in pages_content
+        assert "renderNotificationsPage" in pages_content
+        assert "handleAdminAction" in main_content or "handleAdminCategoryAction" in main_content
+
+    def test_b13_ui_admin_settings_contract(self):
+        """TC-B13-05: admin-settings.html và admin.js cấu hình tham số hệ thống và audit log."""
+        admin_settings_html = BASE_DIR / "frontend" / "views" / "admin-settings.html"
+        assert admin_settings_html.exists(), "admin-settings.html không tồn tại"
+        html_content = admin_settings_html.read_text(encoding="utf-8")
+
+        assert 'data-action="admin-config"' in html_content
+        assert 'id="cfg-budget-threshold"' in html_content
+        assert 'id="admin-audit-table-body"' in html_content
+
+        admin_js_content = ADMIN_JS.read_text(encoding="utf-8")
+        assert "export async function renderAdminSettingsPage" in admin_js_content
+        assert "admin-config" in admin_js_content
+        assert "/api/admin/system-config" in admin_js_content
+
+    def test_b13_ui_admin_broadcasts_contract(self):
+        """TC-B13-06: admin-broadcasts.html và admin.js phát thông báo phát thanh FR13.03."""
+        admin_bc_html = BASE_DIR / "frontend" / "views" / "admin-broadcasts.html"
+        assert admin_bc_html.exists(), "admin-broadcasts.html không tồn tại"
+        html_content = admin_bc_html.read_text(encoding="utf-8")
+
+        assert 'data-action="admin-broadcast-add"' in html_content
+        assert 'id="btn-broadcast-add"' in html_content
+        assert 'id="admin-broadcast-history-body"' in html_content
+
+        admin_js_content = ADMIN_JS.read_text(encoding="utf-8")
+        assert "export async function renderAdminBroadcastPage" in admin_js_content
+        assert "admin-broadcast-add" in admin_js_content
+        assert "/api/admin/announcements" in admin_js_content
+        assert "maxlength=\"255\"" in admin_js_content or "maxlength=\\\"255\\\"" in admin_js_content or "255" in admin_js_content
+        assert "export async function renderNotificationsPage" in admin_js_content

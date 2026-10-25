@@ -156,6 +156,10 @@ try {
     $router->post('/admin/default-categories', [$adminController, 'createDefaultCategory']);
     $router->put('/admin/default-categories/{id}', [$adminController, 'updateDefaultCategory']);
     $router->delete('/admin/default-categories/{id}', [$adminController, 'deleteDefaultCategory']);
+    $router->get('/admin/system-config', [$adminController, 'getSystemConfig']);
+    $router->put('/admin/system-config', [$adminController, 'updateSystemConfig']);
+    $router->post('/admin/announcements', [$adminController, 'sendAnnouncement']);
+    $router->get('/admin/announcements', [$adminController, 'listAnnouncements']);
 
     $router->dispatch($request);
 } catch (ApiException $error) {

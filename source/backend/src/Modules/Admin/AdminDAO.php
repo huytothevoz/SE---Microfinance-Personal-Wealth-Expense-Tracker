@@ -136,4 +136,44 @@ final class AdminDAO
         $stmt = $this->pdo->prepare('DELETE FROM default_categories WHERE id = ?');
         return $stmt->execute([$id]);
     }
+
+    /**
+     * Lấy toàn bộ tham số cấu hình hệ thống từ bảng system_config (FR13.02)
+     * @return array<string, string>
+     */
+    public function getSystemConfigs(): array
+    {
+        $stmt = $this->pdo->query('SELECT config_key, config_value FROM system_config');
+        return $stmt ? $stmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+    }
+
+    /**
+     * Lấy giá trị của một tham số hệ thống cụ thể (FR13.02)
+     */
+    public function getSystemConfig(string $key, ?string $default = null): ?string
+    {
+        $stmt = $this->pdo->prepare('SELECT config_value FROM system_config WHERE config_key = ?');
+        $stmt->execute([$key]);
+        $val = $stmt->fetchColumn();
+        return $val !== false ? (string) $val : $default;
+    }
+
+    /**
+     * Cập nhật hoặc thêm mới tham số hệ thống (FR13.02)
+     */
+    public function updateSystemConfig(string $key, string $value): bool
+    {
+        $trimmedKey = trim($key);
+        $trimmedValue = trim($value);
+
+        $checkStmt = $this->pdo->prepare('SELECT COUNT(*) FROM system_config WHERE config_key = ?');
+        $checkStmt->execute([$trimmedKey]);
+        if ((int) $checkStmt->fetchColumn() > 0) {
+            $update = $this->pdo->prepare('UPDATE system_config SET config_value = ?, updated_at = CURRENT_TIMESTAMP WHERE config_key = ?');
+            return $update->execute([$trimmedValue, $trimmedKey]);
+        }
+
+        $insert = $this->pdo->prepare('INSERT INTO system_config (config_key, config_value) VALUES (?, ?)');
+        return $insert->execute([$trimmedKey, $trimmedValue]);
+    }
 }

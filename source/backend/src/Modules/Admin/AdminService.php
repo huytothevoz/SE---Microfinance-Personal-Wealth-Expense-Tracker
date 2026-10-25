@@ -7,16 +7,22 @@ namespace WealthFlow\Modules\Admin;
 use InvalidArgumentException;
 use WealthFlow\Core\ApiException;
 use WealthFlow\Core\AuthContext;
+use WealthFlow\Modules\Notifications\NotificationDAO;
 
 final class AdminService
 {
     private AdminDAO $adminDao;
     private AuditLogDAO $auditLogDao;
+    private NotificationDAO $notifDao;
 
-    public function __construct(?AdminDAO $adminDao = null, ?AuditLogDAO $auditLogDao = null)
-    {
+    public function __construct(
+        ?AdminDAO $adminDao = null,
+        ?AuditLogDAO $auditLogDao = null,
+        ?NotificationDAO $notifDao = null
+    ) {
         $this->adminDao = $adminDao ?? new AdminDAO();
         $this->auditLogDao = $auditLogDao ?? new AuditLogDAO();
+        $this->notifDao = $notifDao ?? new NotificationDAO();
     }
 
     /**
@@ -155,5 +161,206 @@ final class AdminService
         }
 
         return $deleted;
+    }
+
+    /**
+     * Lấy cấu hình tham số vận hành hệ thống (FR13.02)
+     *
+     * @return array<string, mixed>
+     */
+    public function getSystemConfigs(int $adminUserId): array
+    {
+        AuthContext::requireAdmin($adminUserId);
+
+        $defaults = [
+            'BUDGET_WARNING_THRESHOLD_PERCENT' => '80',
+            'JWT_ACCESS_TOKEN_TTL_MINUTES' => '60',
+            'CSV_EXPORT_MAX_ROWS' => '5000',
+            'LOAN_REMINDER_DAYS_BEFORE' => '3',
+        ];
+
+        $current = $this->adminDao->getSystemConfigs();
+        $configs = array_merge($defaults, $current);
+
+        return [
+            'configs' => $configs,
+            'definitions' => [
+                'BUDGET_WARNING_THRESHOLD_PERCENT' => [
+                    'label' => 'Ngưỡng cảnh báo chi tiêu ngân sách (%)',
+                    'type' => 'integer',
+                    'min' => 50,
+                    'max' => 95,
+                    'unit' => '%',
+                    'description' => 'Khi mức chi tiêu đạt ngưỡng này, hệ thống sẽ gửi cảnh báo Vàng (Yellow Alert) cho người dùng.',
+                ],
+                'JWT_ACCESS_TOKEN_TTL_MINUTES' => [
+                    'label' => 'Thời gian sống Token xác thực (Phút)',
+                    'type' => 'integer',
+                    'min' => 15,
+                    'max' => 1440,
+                    'unit' => 'phút',
+                    'description' => 'Thời gian hiệu lực của JWT Access Token trước khi phiên làm việc cần làm mới.',
+                ],
+                'CSV_EXPORT_MAX_ROWS' => [
+                    'label' => 'Giới hạn số dòng đối soát xuất CSV',
+                    'type' => 'integer',
+                    'min' => 100,
+                    'max' => 50000,
+                    'unit' => 'dòng',
+                    'description' => 'Số lượng bản ghi giao dịch tối đa cho phép xuất trong một lần đối soát CSV.',
+                ],
+                'LOAN_REMINDER_DAYS_BEFORE' => [
+                    'label' => 'Số ngày nhắc hạn khoản vay trước hạn',
+                    'type' => 'integer',
+                    'min' => 1,
+                    'max' => 30,
+                    'unit' => 'ngày',
+                    'description' => 'Thời điểm hệ thống kích hoạt thông báo nhắc nợ trước ngày đến hạn thanh toán.',
+                ],
+            ],
+            'auditLogs' => $this->auditLogDao->getAdminLogs(10),
+        ];
+    }
+
+    /**
+     * Cập nhật tham số vận hành hệ thống (FR13.02)
+     *
+     * @param array<string, mixed> $dto
+     * @return array<string, mixed>
+     */
+    public function updateSystemConfigs(int $adminUserId, array $dto): array
+    {
+        AuthContext::requireAdmin($adminUserId);
+
+        $fieldErrors = [];
+        $allowedKeys = [
+            'BUDGET_WARNING_THRESHOLD_PERCENT',
+            'JWT_ACCESS_TOKEN_TTL_MINUTES',
+            'CSV_EXPORT_MAX_ROWS',
+            'LOAN_REMINDER_DAYS_BEFORE',
+        ];
+
+        if (array_key_exists('BUDGET_WARNING_THRESHOLD_PERCENT', $dto)) {
+            $val = $dto['BUDGET_WARNING_THRESHOLD_PERCENT'];
+            if (!is_numeric($val) || (int) $val < 50 || (int) $val > 95) {
+                $fieldErrors['BUDGET_WARNING_THRESHOLD_PERCENT'] = 'Ngưỡng cảnh báo ngân sách phải là số nguyên từ 50% đến 95%.';
+            }
+        }
+
+        if (array_key_exists('JWT_ACCESS_TOKEN_TTL_MINUTES', $dto)) {
+            $val = $dto['JWT_ACCESS_TOKEN_TTL_MINUTES'];
+            if (!is_numeric($val) || (int) $val < 15 || (int) $val > 1440) {
+                $fieldErrors['JWT_ACCESS_TOKEN_TTL_MINUTES'] = 'Thời gian sống Token phải từ 15 phút đến 1440 phút (24 giờ).';
+            }
+        }
+
+        if (array_key_exists('CSV_EXPORT_MAX_ROWS', $dto)) {
+            $val = $dto['CSV_EXPORT_MAX_ROWS'];
+            if (!is_numeric($val) || (int) $val < 100 || (int) $val > 50000) {
+                $fieldErrors['CSV_EXPORT_MAX_ROWS'] = 'Số dòng xuất CSV tối đa phải từ 100 đến 50.000 dòng.';
+            }
+        }
+
+        if (array_key_exists('LOAN_REMINDER_DAYS_BEFORE', $dto)) {
+            $val = $dto['LOAN_REMINDER_DAYS_BEFORE'];
+            if (!is_numeric($val) || (int) $val < 1 || (int) $val > 30) {
+                $fieldErrors['LOAN_REMINDER_DAYS_BEFORE'] = 'Số ngày nhắc hạn khoản vay phải từ 1 đến 30 ngày.';
+            }
+        }
+
+        if (!empty($fieldErrors)) {
+            throw new ApiException('VALIDATION_ERROR', 'Tham số cấu hình không hợp lệ.', 422, $fieldErrors);
+        }
+
+        $updated = [];
+        foreach ($allowedKeys as $key) {
+            if (array_key_exists($key, $dto)) {
+                $valStr = (string) (int) $dto[$key];
+                $this->adminDao->updateSystemConfig($key, $valStr);
+                $updated[$key] = $valStr;
+            }
+        }
+
+        if (empty($updated)) {
+            throw new ApiException('VALIDATION_ERROR', 'Không có tham số cấu hình hợp lệ nào được cung cấp để cập nhật.', 422);
+        }
+
+        // Ghi nhật ký kiểm toán hành động quản trị
+        $this->auditLogDao->logAdminAction(
+            $adminUserId,
+            'UPDATE_SYSTEM_CONFIG',
+            null,
+            'Cập nhật tham số hệ thống: ' . json_encode($updated, JSON_UNESCAPED_UNICODE)
+        );
+
+        return $this->getSystemConfigs($adminUserId);
+    }
+
+    /**
+     * Phát thông báo phát thanh (Broadcast) đến toàn bộ người dùng (FR13.03, SQ08)
+     *
+     * @param array<string, mixed> $dto
+     * @return array<string, mixed>
+     */
+    public function broadcastAnnouncement(int $adminUserId, array $dto): array
+    {
+        AuthContext::requireAdmin($adminUserId);
+
+        $fieldErrors = [];
+        $title = trim((string) ($dto['title'] ?? ''));
+        $body = trim((string) ($dto['body'] ?? ''));
+        $priority = strtoupper(trim((string) ($dto['priority'] ?? 'INFO')));
+
+        if ($title === '') {
+            $fieldErrors['title'] = 'Tiêu đề thông báo không được để trống.';
+        } elseif (mb_strlen($title) > 255) {
+            $fieldErrors['title'] = 'Tiêu đề thông báo không được vượt quá 255 ký tự.';
+        }
+
+        if ($body === '') {
+            $fieldErrors['body'] = 'Nội dung thông báo không được để trống.';
+        } elseif (mb_strlen($body) > 2000) {
+            $fieldErrors['body'] = 'Nội dung thông báo không được vượt quá 2000 ký tự.';
+        }
+
+        $allowedPriorities = ['INFO', 'WARNING', 'CRITICAL', 'MAINTENANCE', 'URGENT'];
+        if (!in_array($priority, $allowedPriorities, true)) {
+            $priority = 'INFO';
+        }
+
+        if (!empty($fieldErrors)) {
+            throw new ApiException('VALIDATION_ERROR', 'Dữ liệu thông báo phát thanh không hợp lệ.', 422, $fieldErrors);
+        }
+
+        // Thực thi SQL Batch Fan-out O(1)
+        $recipientCount = $this->notifDao->broadcast($title, $body, $priority);
+
+        // Ghi nhật ký kiểm toán quản trị
+        $this->auditLogDao->logAdminAction(
+            $adminUserId,
+            'BROADCAST_ANNOUNCEMENT',
+            null,
+            "Phát broadcast: {$title} | Mức độ: {$priority} | Người nhận: {$recipientCount}"
+        );
+
+        return [
+            'title' => $title,
+            'body' => $body,
+            'priority' => $priority,
+            'recipientCount' => $recipientCount,
+            'status' => 'DISPATCHED',
+            'message' => "Đã phát thông báo thành công tới {$recipientCount} người dùng.",
+        ];
+    }
+
+    /**
+     * Lấy lịch sử thông báo broadcast (FR13.03)
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getBroadcastHistory(int $adminUserId, int $limit = 20): array
+    {
+        AuthContext::requireAdmin($adminUserId);
+        return $this->auditLogDao->getBroadcastLogs($limit);
     }
 }

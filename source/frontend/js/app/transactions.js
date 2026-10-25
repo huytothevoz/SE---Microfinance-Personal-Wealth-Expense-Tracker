@@ -1,10 +1,10 @@
 /**
  * WealthFlow Transactions & Categories Controller
- * Handles transaction filtering, search query updates, detail modal data, and category cards.
+ * Handles transaction filtering, search query updates, detail modal data, CSV export, and category cards.
  */
 import { loadView } from './view-loader.js';
 import { transactions, categories } from '../data/live-data.js?v=wealth-ui-2';
-import { safe, money } from './ui-core.js';
+import { safe, money } from './ui-core.js?v=wealth-ui-2';
 
 export function txTable(items = transactions) {
   if (!items.length) {
@@ -121,4 +121,149 @@ export async function renderCategoryPage() {
   }
 
   return temp.innerHTML;
+}
+
+export function showTransactionDetails(id, { dialog } = {}) {
+  const t = transactions.find(row => String(row.id) === String(id));
+  if (!t) return;
+  const targetDialog = dialog || document.querySelector('#action-dialog');
+  if (!targetDialog) return;
+
+  const overline = document.querySelector('#modal-overline');
+  if (overline) overline.textContent = '';
+  const title = document.querySelector('#modal-title');
+  if (title) title.textContent = 'Chi tiết giao dịch';
+  const content = document.querySelector('#modal-content');
+  if (content) {
+    content.innerHTML = `
+      <dl class="detail-grid">
+        <div>
+          <dt>Mã giao dịch</dt>
+          <dd>${safe(t.id)}</dd>
+        </div>
+        <div>
+          <dt>Danh mục</dt>
+          <dd>${safe(t.category)}</dd>
+        </div>
+        <div>
+          <dt>Ngày giao dịch</dt>
+          <dd>${safe(t.date)}</dd>
+        </div>
+        <div>
+          <dt>Ví liên quan</dt>
+          <dd>${safe(t.wallet)}</dd>
+        </div>
+        <div>
+          <dt>Số tiền</dt>
+          <dd>${money(Math.abs(t.amount))}</dd>
+        </div>
+        <div>
+          <dt>Tiền tệ</dt>
+          <dd>${safe(t.currency)}</dd>
+        </div>
+        <div>
+          <dt>Tỷ giá lúc ghi nhận</dt>
+          <dd>${safe(t.rate)}</dd>
+        </div>
+      </dl>
+      <div class="modal-footer">
+        <button class="btn btn--outline btn-sm" data-close-modal>Đóng</button>
+      </div>
+    `;
+  }
+  targetDialog.showModal();
+}
+
+export function exportTransactionsCSV({ toast = () => {} } = {}) {
+  const rows = [
+    [
+      'Mã giao dịch',
+      'Tên giao dịch',
+      'Danh mục',
+      'Ví',
+      'Ngày',
+      'Số tiền VND'
+    ],
+    ...transactions.map(t => [
+      t.id,
+      t.name,
+      t.category,
+      t.wallet,
+      t.date,
+      String(t.amount)
+    ])
+  ];
+  const neutralize = v => {
+    const text = String(v).replace(/^[\s\u0000-\u001f]+/, '');
+    return /^[=+\-@]/.test(text) ? "'" + String(v) : String(v);
+  };
+  const csv = rows.map(row => row.map(col => '"' + neutralize(col).replaceAll('"', '""') + '"').join(',')).join('\r\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'wealthflow_giao_dich.csv';
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('Đã xuất danh sách giao dịch hiện hiển thị.');
+}
+
+export function applyTransactionSearch({ state, txTableRenderer = txTable } = {}) {
+  if (!state) return;
+  const filters = (Array.isArray(state.txFilter) ? state.txFilter : [state.txFilter || 'ALL'])
+    .map(value => String(value).toUpperCase())
+    .filter(value => value !== 'ALL');
+  const filtered = transactions.filter(t => (!filters.length || filters.includes(String(t.type).toUpperCase()))
+    && [t.name, t.id, t.category, t.wallet].join(' ').toLocaleLowerCase('vi').includes(state.search.toLocaleLowerCase('vi')));
+  const target = document.querySelector('#transaction-table');
+  if (target) target.innerHTML = txTableRenderer(filtered);
+}
+
+export function openTransactionFilter({ state, dialog } = {}) {
+  const options = [['ALL','Tất cả'],['INCOME','Thu nhập'],['EXPENSE','Chi tiêu'],['TRANSFER','Chuyển tiền'],['SAVINGS_GOAL','Mục tiêu tiết kiệm']];
+  const selected = (Array.isArray(state.txFilter) ? state.txFilter : [state.txFilter || 'ALL'])
+    .map(value => String(value).toUpperCase());
+  const checked = selected.length ? selected : ['ALL'];
+  const targetDialog = dialog || document.querySelector('#action-dialog');
+  if (!targetDialog) return;
+
+  const overline = document.querySelector('#modal-overline');
+  if (overline) overline.textContent = '';
+  const title = document.querySelector('#modal-title');
+  if (title) title.textContent = 'Lọc theo loại giao dịch';
+  const content = document.querySelector('#modal-content');
+  if (content) {
+    content.innerHTML = `<form id="transaction-filter-form">
+      <div class="wallet-filter-options">${options.map(([value,label]) => `<label class="wallet-filter-option">
+        <input type="checkbox" name="transactionTypeFilter" value="${value}" ${checked.includes(value) ? 'checked' : ''}>
+        <span>${label}</span>
+      </label>`).join('')}</div>
+      <div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary">Áp dụng</button></div>
+    </form>`;
+  }
+  targetDialog.showModal();
+}
+
+export function handleTransactionFilterChange(target) {
+  if (!target || target.name !== 'transactionTypeFilter') return false;
+  const form = target.closest('#transaction-filter-form');
+  if (!form) return false;
+  const all = form.querySelector('input[value="ALL"]');
+  const types = [...form.querySelectorAll('input[name="transactionTypeFilter"]:not([value="ALL"])')];
+  if (target.value === 'ALL' && target.checked) types.forEach(input => { input.checked = false; });
+  else if (target.value !== 'ALL' && target.checked) all.checked = false;
+  if (!types.some(input => input.checked)) all.checked = true;
+  return true;
+}
+
+export function handleTransactionFilterSubmit(event, { state, dialog, navigate } = {}) {
+  if (event.target.id !== 'transaction-filter-form') return false;
+  event.preventDefault();
+  const selected = [...event.target.querySelectorAll('input[name="transactionTypeFilter"]:checked')]
+    .map(input => input.value)
+    .filter(value => value !== 'ALL');
+  if (state) state.txFilter = selected.length ? selected : ['ALL'];
+  if (dialog) dialog.close();
+  if (navigate) navigate('transactions');
+  return true;
 }

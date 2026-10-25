@@ -15,6 +15,7 @@ use WealthFlow\Modules\Admin\AdminDAO;
 use WealthFlow\Modules\Admin\AdminService;
 use WealthFlow\Modules\Admin\AuditLogDAO;
 use WealthFlow\Modules\Auth\UserDAO;
+use WealthFlow\Modules\Notifications\NotificationDAO;
 
 class SqliteCompatPDO extends PDO
 {
@@ -117,7 +118,8 @@ function setupAdminTestContext(): array
 
     $adminDao = new AdminDAO($pdo);
     $auditLogDao = new AuditLogDAO($pdo);
-    $adminService = new AdminService($adminDao, $auditLogDao);
+    $notifDao = new NotificationDAO($pdo);
+    $adminService = new AdminService($adminDao, $auditLogDao, $notifDao);
     $controller = new AdminController($adminService);
     $userDao = new UserDAO($pdo);
 
@@ -125,6 +127,7 @@ function setupAdminTestContext(): array
         'pdo' => $pdo,
         'adminDao' => $adminDao,
         'auditLogDao' => $auditLogDao,
+        'notifDao' => $notifDao,
         'adminService' => $adminService,
         'controller' => $controller,
         'userDao' => $userDao,

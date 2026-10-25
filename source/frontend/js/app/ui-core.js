@@ -141,5 +141,13 @@ export const META = {
   'admin-categories': ['Danh mục mặc định', 'Thiết lập danh mục mẫu cho người dùng mới'],
   'admin-broadcasts': ['Thông báo hệ thống', 'Soạn và gửi broadcast announcement'],
   'admin-settings': ['Cấu hình hệ thống', 'Tham số vận hành và nhật ký quản trị']
-
 };
+
+export function heading(id, buttons = '') {
+  const [name, description] = META[id] || ['WealthFlow', ''];
+  return `<div class="page-heading"><div><h1>${safe(name)}</h1><p>${safe(description)}</p></div><div class="page-actions">${buttons}</div></div>`;
+}
+
+export const btn = (label, action, style = 'primary', ico = 'plus') => `<button type="button" class="btn btn--${style} btn-sm" data-action="${action}">${icon(ico)} ${label}</button>`;
+
+export const panel = (title, subtitle, content, right = '') => `<section class="panel"><div class="panel-title"><div><h2>${title}</h2>${subtitle ? `<p>${subtitle}</p>` : ''}</div><div class="panel-tools">${right}</div></div>${content}</section>`;

@@ -120,5 +120,22 @@ final class AuditLogDAO
         $stmt->execute();
         return $stmt->fetchAll();
     }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function getBroadcastLogs(int $limit = 20): array
+    {
+        $limit = max(1, min(100, $limit));
+        $stmt = $this->pdo->prepare(
+            "SELECT l.*, u.email as admin_email 
+             FROM admin_audit_logs l
+             JOIN users u ON l.admin_user_id = u.id
+             WHERE l.action = 'BROADCAST_ANNOUNCEMENT'
+             ORDER BY l.id DESC LIMIT {$limit}"
+        );
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
 }
 

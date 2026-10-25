@@ -4,7 +4,7 @@
     <p>Gửi thông báo vận hành, bảo trì hoặc chính sách mới đến toàn bộ người dùng.</p>
   </div>
   <div class="page-actions">
-    <button type="button" class="btn btn--primary btn-sm" data-action="broadcast-add">
+    <button type="button" class="btn btn--primary btn-sm" data-action="admin-broadcast-add" id="btn-broadcast-add">
       <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
       Tạo broadcast
     </button>
@@ -14,29 +14,14 @@
 <section class="panel">
   <div class="panel-title">
     <div>
-      <h2>Thông báo toàn hệ thống</h2>
-      <p>Nội dung gửi đến trung tâm thông báo của người dùng</p>
+      <h2>Lịch sử thông báo toàn hệ thống</h2>
+      <p>Nhật ký các thông báo phát thanh đã gửi đến trung tâm thông báo của người dùng</p>
     </div>
     <div class="panel-tools"></div>
   </div>
-  <div class="notification-item">
-    <span class="notification-icon">✧</span>
-    <div class="notification-copy">
-      <strong>Chào mừng đến WealthFlow</strong>
-      <p>Thông tin cập nhật từ WealthFlow.</p>
-      <small>10/10/2026 · Thông tin</small>
-    </div>
-    <span class="badge blue">Thông tin</span>
-  </div>
-  <div class="notification-item">
-    <span class="notification-icon">◷</span>
-    <div class="notification-copy">
-      <strong>Thông báo bảo trì dự kiến</strong>
-      <p>Thông báo bảo trì sẽ được gửi đến người dùng khi có lịch vận hành.</p>
-      <small>Chưa gửi</small>
-    </div>
-    <span class="badge warn">Nháp</span>
+  <div id="admin-broadcast-history-body" class="notification-list">
+    <!-- Dynamic broadcast items rendered by renderAdminBroadcastPage() -->
   </div>
 </section>
 
-<div class="hint-box" style="margin-top:17px">Chỉ Admin được tạo broadcast. Cần kiểm tra tiêu đề, nội dung, mức ưu tiên và lưu dấu vết tác giả khi triển khai.</div>
+<div class="hint-box" style="margin-top:17px">Chỉ Admin được tạo broadcast. Thông báo được phát thanh tức thời tới tất cả người dùng đang hoạt động (ACTIVE) trong hệ thống với độ phức tạp tối ưu O(1).</div>

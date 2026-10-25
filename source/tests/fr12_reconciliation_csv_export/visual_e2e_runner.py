@@ -328,6 +328,12 @@ class FR12VisualTest(BaseVisualTest):
 
 def main():
     runner = FR12VisualTest(base_url="http://localhost:8080", test_dir=TEST_DIR)
+
+    def run_all():
+        for key in ["1", "2", "3", "4", "5", "6"]:
+            scenarios[key][1]()
+            time.sleep(1.5)
+
     scenarios = {
         "1": ("TC-UI-01: Đối soát hoàn hảo (100% Khớp sổ - Badge Xanh Lá)", runner.test_case_01_matched),
         "2": ("TC-UI-02: Phát hiện sai lệch số dư (Delta != 0 - Badge Đỏ & Cảnh báo)", runner.test_case_02_mismatch),
@@ -335,12 +341,8 @@ def main():
         "4": ("TC-UI-04: Phòng chống CSV Formula Injection (Khử độc '=cmd' OWASP)", runner.test_case_04_formula_injection),
         "5": ("TC-UI-05: Bảng cân đối phát sinh kép (Trial Balance Tổng Nợ = Tổng Có)", runner.test_case_05_trial_balance),
         "6": ("TC-UI-06: Phân quyền & Cách ly dữ liệu đa người dùng (Multi-tenant)", runner.test_case_06_multi_tenant),
+        "a": ("Chạy tất cả kịch bản tự động lần lượt (Bấm phím 'a' hoặc 'all')", run_all),
     }
-
-    def run_all():
-        for key in sorted(scenarios.keys()):
-            scenarios[key][1]()
-            time.sleep(1.5)
 
     FR12VisualTest.run_cli_menu("FR12 (ĐỐI SOÁT & XUẤT CSV)", scenarios, all_runner=run_all)
 

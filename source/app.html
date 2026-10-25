@@ -57,6 +57,22 @@
       <div class="modal-content" id="modal-content">
       </div>
     </dialog>
+    <dialog id="urgent-broadcast-dialog" class="app-dialog urgent-dialog" aria-labelledby="urgent-broadcast-title">
+      <div class="urgent-modal-banner" id="urgent-modal-banner">
+        <span class="urgent-modal-overline" id="urgent-modal-overline">THÔNG BÁO BẢO TRÌ HỆ THỐNG</span>
+        <h2 id="urgent-broadcast-title" class="urgent-modal-title">Tiêu đề thông báo</h2>
+      </div>
+      <div class="urgent-modal-body">
+        <div id="urgent-broadcast-content" class="urgent-modal-text"></div>
+        <div class="urgent-modal-meta">
+          <span id="urgent-broadcast-time"></span>
+          <span id="urgent-broadcast-badge" class="badge"></span>
+        </div>
+      </div>
+      <div class="urgent-modal-footer">
+        <button type="button" class="btn btn--primary" id="btn-dismiss-urgent-broadcast">Tôi đã hiểu</button>
+      </div>
+    </dialog>
     <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false">
     </div>
   </body>

@@ -9,26 +9,31 @@ declare(strict_types=1);
 
 $scenario = $argv[1] ?? 'matched';
 
-$dbHost = getenv('DB_HOST') ?: '127.0.0.1';
-$dbPort = getenv('DB_PORT') ?: '3307';
-$dbName = getenv('DB_NAME') ?: 'wealthflow';
-$dbUser = getenv('DB_USER') ?: 'root';
-$dbPass = getenv('DB_PASSWORD') ?: '';
+require_once dirname(__DIR__, 2) . '/backend/bootstrap.php';
+use WealthFlow\Core\Database;
 
 try {
-    $pdo = new PDO("mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4", $dbUser, $dbPass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
-} catch (PDOException $e) {
-    echo json_encode(['status' => 'ERROR', 'message' => "Không thể kết nối MySQL SE trên port {$dbPort}: " . $e->getMessage()]);
+    $pdo = Database::getConnection();
+} catch (\Throwable $e) {
+    echo json_encode(['status' => 'ERROR', 'message' => "Không thể kết nối MySQL: " . $e->getMessage()]);
     exit(1);
 }
 
-$userId = 2; // user1@gmail.com
+$stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+$stmt->execute(['user1@gmail.com']);
+$userId = $stmt->fetchColumn();
+if (!$userId) {
+    $passwordHash = password_hash('User1234', PASSWORD_BCRYPT);
+    $pdo->prepare("INSERT INTO users (full_name, email, password_hash, role, status, base_currency) VALUES (?, ?, ?, 'USER', 'ACTIVE', 'VND')")
+        ->execute(['Người Dùng Thử Nghiệm 1', 'user1@gmail.com', $passwordHash]);
+    $userId = (int) $pdo->lastInsertId();
+} else {
+    $userId = (int) $userId;
+    $passwordHash = password_hash('User1234', PASSWORD_BCRYPT);
+    $pdo->prepare("UPDATE users SET status = 'ACTIVE', password_hash = ? WHERE id = ?")->execute([$passwordHash, $userId]);
+}
 
-// 1. Clean up existing records for user 2 to ensure deterministic state
+// 1. Clean up existing records for user1 to ensure deterministic state
 $pdo->beginTransaction();
 try {
     // Delete audit logs
@@ -131,12 +136,20 @@ try {
         $pdo->prepare("UPDATE wallets SET cached_balance = cached_balance - 85000 WHERE id = ?")->execute([$w1Id]);
     }
 
-    // 4. Seed User 4 (inksan27112006@gmail.com) with isolated private wallet for multi-tenant testing
-    $user2Id = 4;
-    $pdo->prepare("UPDATE users SET status = 'ACTIVE', password_hash = ? WHERE id = ?")->execute([
-        '$2y$12$3E5SQtCbtDHbZEvyMahaBOeGp5XEtthDK6v8k3QATe.gBCokmPRhm',
-        $user2Id
-    ]);
+    // 4. Seed User 2 (inksan27112006@gmail.com) with isolated private wallet for multi-tenant testing
+    $stmtU2 = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+    $stmtU2->execute(['inksan27112006@gmail.com']);
+    $user2Id = $stmtU2->fetchColumn();
+    if (!$user2Id) {
+        $u2PassHash = password_hash('User1234', PASSWORD_BCRYPT);
+        $pdo->prepare("INSERT INTO users (full_name, email, password_hash, role, status, base_currency) VALUES (?, ?, ?, 'USER', 'ACTIVE', 'VND')")
+            ->execute(['Người Dùng Độc Lập 2', 'inksan27112006@gmail.com', $u2PassHash]);
+        $user2Id = (int) $pdo->lastInsertId();
+    } else {
+        $user2Id = (int) $user2Id;
+        $u2PassHash = password_hash('User1234', PASSWORD_BCRYPT);
+        $pdo->prepare("UPDATE users SET status = 'ACTIVE', password_hash = ? WHERE id = ?")->execute([$u2PassHash, $user2Id]);
+    }
     $pdo->prepare("DELETE FROM ledger_entries WHERE transaction_id IN (SELECT id FROM financial_transactions WHERE user_id = ?)")->execute([$user2Id]);
     $pdo->prepare("DELETE FROM financial_transactions WHERE user_id = ?")->execute([$user2Id]);
     $pdo->prepare("DELETE FROM ledger_accounts WHERE user_id = ?")->execute([$user2Id]);
@@ -168,7 +181,7 @@ try {
             'w3' => ['id' => $w3Id, 'name' => 'Ví Ngoại tệ USD', 'cached' => $w3Cached],
             'user2Wallet' => ['id' => $wUser2Id, 'name' => 'Ví Tiết Kiệm BIDV (User 2)', 'cached' => '88000000.00000000'],
         ],
-        'message' => "Đã reset và nạp dữ liệu kịch bản '{$scenario}' thành công trên MySQL port {$dbPort}.",
+        'message' => "Đã reset và nạp dữ liệu kịch bản '{$scenario}' thành công trên MySQL.",
     ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 } catch (\Throwable $e) {
     if ($pdo->inTransaction()) {

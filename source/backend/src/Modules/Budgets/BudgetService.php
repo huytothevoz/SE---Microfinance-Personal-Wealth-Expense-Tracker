@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WealthFlow\Modules\Budgets;
 
 use InvalidArgumentException;
+use WealthFlow\Modules\Admin\AdminDAO;
 use WealthFlow\Modules\Notifications\NotificationService;
 use WealthFlow\Modules\Transactions\CategoryDAO;
 
@@ -13,15 +14,18 @@ final class BudgetService
     private BudgetDAO $budgetDao;
     private CategoryDAO $catDao;
     private NotificationService $notifService;
+    private AdminDAO $adminDao;
 
     public function __construct(
         ?BudgetDAO $budgetDao = null,
         ?CategoryDAO $catDao = null,
-        ?NotificationService $notifService = null
+        ?NotificationService $notifService = null,
+        ?AdminDAO $adminDao = null
     ) {
         $this->budgetDao = $budgetDao ?? new BudgetDAO();
         $this->catDao = $catDao ?? new CategoryDAO();
         $this->notifService = $notifService ?? new NotificationService();
+        $this->adminDao = $adminDao ?? new AdminDAO();
     }
 
     /**
@@ -95,6 +99,7 @@ final class BudgetService
             : date('Y-m');
         $list = $this->budgetDao->listByMonth($userId, $month);
         $result = [];
+        $warningThreshold = $this->getWarningThreshold();
 
         foreach ($list as $b) {
             $catId = (int) $b['category_id'];
@@ -105,7 +110,7 @@ final class BudgetService
 
             $alertLevel = match (true) {
                 $usage >= 100 => 'RED',
-                $usage >= 80 => 'YELLOW',
+                $usage >= $warningThreshold => 'YELLOW',
                 default => 'GREEN',
             };
 
@@ -148,6 +153,7 @@ final class BudgetService
         $yellowSent = !empty($budget['is_yellow_sent']);
         $redSent = !empty($budget['is_red_sent']);
         $alertTriggered = null;
+        $warningThreshold = $this->getWarningThreshold();
 
         if ($usage >= 100) {
             // RED Alert (BR08: also marks Yellow as activated so reversal to 80-99% won't emit a belated Yellow alert)
@@ -160,12 +166,12 @@ final class BudgetService
             }
             $redSent = true;
             $yellowSent = true;
-        } elseif ($usage >= 80) {
+        } elseif ($usage >= $warningThreshold) {
             // YELLOW Alert — only if neither Yellow nor Red was previously triggered in this period
             if (!$yellowSent && !$redSent) {
                 $dedupKey = "BUDGET_YELLOW_{$userId}_{$categoryId}_{$month}";
                 $title = "Cảnh báo Vàng: Ngân sách [{$categoryName}] đạt {$usageRounded}%";
-                $body = 'Chi tiêu thực tế ' . number_format($spent, 0, ',', '.') . ' đ đã chạm ngưỡng cảnh báo 80% hạn mức ' . number_format($limit, 0, ',', '.') . " đ trong tháng {$month}.";
+                $body = 'Chi tiêu thực tế ' . number_format($spent, 0, ',', '.') . ' đ đã chạm ngưỡng cảnh báo ' . (int) $warningThreshold . '% hạn mức ' . number_format($limit, 0, ',', '.') . " đ trong tháng {$month}.";
                 $sent = $this->notifService->notify($userId, $title, $body, 'BUDGET', $dedupKey, 'WARNING');
                 if ($sent) {
                     $alertTriggered = 'YELLOW';
@@ -174,7 +180,7 @@ final class BudgetService
             $yellowSent = true;
         }
 
-        $dbAlertLevel = $usage >= 100 ? 'RED_100' : ($usage >= 80 ? 'YELLOW_80' : 'NORMAL');
+        $dbAlertLevel = $usage >= 100 ? 'RED_100' : ($usage >= $warningThreshold ? 'YELLOW_80' : 'NORMAL');
         $this->budgetDao->syncBudgetState($budgetId, $userId, $spent, $dbAlertLevel, $yellowSent, $redSent);
 
         return [
@@ -183,7 +189,7 @@ final class BudgetService
             'limitAmount' => $limit,
             'spentAmount' => $spent,
             'usagePercent' => $usageRounded,
-            'alertLevel' => $usage >= 100 ? 'RED' : ($usage >= 80 ? 'YELLOW' : 'GREEN'),
+            'alertLevel' => $usage >= 100 ? 'RED' : ($usage >= $warningThreshold ? 'YELLOW' : 'GREEN'),
             'alertTriggered' => $alertTriggered,
         ];
     }
@@ -198,6 +204,7 @@ final class BudgetService
         $limit = (float) $b['limit_amount'];
         $spent = (float) $this->budgetDao->getCategoryNetExpenseInMonth($userId, $catId, $month);
         $usage = $limit > 0 ? round(($spent / $limit) * 100, 1) : 0.0;
+        $warningThreshold = $this->getWarningThreshold();
 
         return [
             'id' => (int) $b['id'],
@@ -208,7 +215,18 @@ final class BudgetService
             'spentAmount' => $spent,
             'remainingAmount' => max(0.0, $limit - $spent),
             'usagePercent' => $usage,
-            'alertLevel' => $usage >= 100 ? 'RED' : ($usage >= 80 ? 'YELLOW' : 'GREEN'),
+            'alertLevel' => $usage >= 100 ? 'RED' : ($usage >= $warningThreshold ? 'YELLOW' : 'GREEN'),
         ];
+    }
+
+    private function getWarningThreshold(): float
+    {
+        try {
+            $val = $this->adminDao->getSystemConfig('BUDGET_WARNING_THRESHOLD_PERCENT', '80');
+            $num = (float) $val;
+            return ($num >= 50 && $num <= 95) ? $num : 80.0;
+        } catch (\Throwable) {
+            return 80.0;
+        }
     }
 }
