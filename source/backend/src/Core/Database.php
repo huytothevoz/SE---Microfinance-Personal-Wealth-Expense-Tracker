@@ -18,15 +18,44 @@ final class Database
         if (!preg_match('/^[A-Za-z0-9_]+$/D', $name)) {
             throw new RuntimeException('Invalid database name.');
         }
-        $dsn = 'mysql:host=' . $config->get('DB_HOST') . ';port=' . $config->get('DB_PORT')
-            . ($selectDatabase ? ';dbname=' . $name : '') . ';charset=utf8mb4';
-        $pdo = new PDO($dsn, $config->get('DB_USER'), $config->get('DB_PASSWORD'), [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ]);
-        $pdo->exec("SET time_zone = '+00:00'");
-        return $pdo;
+        $host = $config->get('DB_HOST');
+        $primaryPort = $config->get('DB_PORT');
+        $user = $config->get('DB_USER');
+        $password = $config->get('DB_PASSWORD');
+        $isLocal = ($config->get('APP_ENV') === 'local');
+
+        // On production/staging: strictly respect configured port (fail-fast, secure).
+        // On local dev: auto-try standard MySQL ports (e.g. 3306 for XAMPP, 3307 for isolated SE Docker)
+        $candidatePorts = [$primaryPort];
+        if ($isLocal) {
+            foreach (['3306', '3307'] as $port) {
+                if (!in_array($port, $candidatePorts, true)) {
+                    $candidatePorts[] = $port;
+                }
+            }
+        }
+
+        $lastException = null;
+        foreach ($candidatePorts as $port) {
+            $dsn = 'mysql:host=' . $host . ';port=' . $port
+                . ($selectDatabase ? ';dbname=' . $name : '') . ';charset=utf8mb4';
+            try {
+                $pdo = new PDO($dsn, $user, $password, [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ]);
+                $pdo->exec("SET time_zone = '+00:00'");
+                return $pdo;
+            } catch (\PDOException $e) {
+                $lastException = $e;
+                if (!$isLocal) {
+                    throw $e;
+                }
+            }
+        }
+
+        throw $lastException ?? new RuntimeException("Could not connect to MySQL on host: {$host}");
     }
 
     public static function getConnection(): PDO
@@ -348,6 +377,42 @@ final class Database
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE (user_id, dedup_key)
         );
+
+        CREATE TABLE IF NOT EXISTS security_audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NULL,
+            event TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS export_audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            export_type TEXT NOT NULL,
+            row_count INTEGER NOT NULL DEFAULT 0,
+            file_hash TEXT NULL,
+            ip_address TEXT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS admin_audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            admin_user_id INTEGER NOT NULL,
+            action TEXT NOT NULL,
+            target_user_id INTEGER NULL,
+            reason TEXT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (admin_user_id) REFERENCES users(id),
+            FOREIGN KEY (target_user_id) REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS system_config (
+            config_key TEXT PRIMARY KEY,
+            config_value TEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
 SQL;
 
         $pdo->exec($schema);
@@ -356,6 +421,15 @@ SQL;
 
     private static function seedDefaultData(PDO $pdo): void
     {
+        // Seed default system_config if empty
+        $stmt = $pdo->query('SELECT COUNT(*) FROM system_config');
+        if ((int) $stmt->fetchColumn() === 0) {
+            $pdo->exec("INSERT INTO system_config (config_key, config_value) VALUES
+                ('BUDGET_WARNING_THRESHOLD_PERCENT', '80'),
+                ('JWT_ACCESS_TOKEN_TTL_MINUTES', '60'),
+                ('CSV_EXPORT_MAX_ROWS', '5000'),
+                ('LOAN_REMINDER_DAYS_BEFORE', '3')");
+        }
         // Seed default test user if empty
         $stmt = $pdo->query('SELECT COUNT(*) FROM users');
         if ((int) $stmt->fetchColumn() === 0) {

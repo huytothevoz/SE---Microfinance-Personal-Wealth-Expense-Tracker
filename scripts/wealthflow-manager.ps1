@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Continue'
+$ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $WebPort = 8080
@@ -56,17 +56,22 @@ function Get-Listener([int]$Port) {
 function Test-OwnListener([int]$Port, [string]$UniqueArgument) {
     $conn = @(Get-Listener $Port)
     if ($conn.Count -eq 0) { return $false }
+    $argBase = [IO.Path]::GetFileName($UniqueArgument)
     foreach ($ownerPid in @($conn | Select-Object -ExpandProperty OwningProcess -Unique)) {
         $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $ownerPid" -ErrorAction SilentlyContinue
-        if ($processInfo -and $processInfo.CommandLine -and $processInfo.CommandLine.Contains($UniqueArgument)) {
-            return $true
+        if ($processInfo -and $processInfo.CommandLine) {
+            if ($processInfo.CommandLine.IndexOf($UniqueArgument, [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+                $processInfo.CommandLine.IndexOf('router.php', [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+                ($argBase -and $processInfo.CommandLine.IndexOf($argBase, [StringComparison]::OrdinalIgnoreCase) -ge 0)) {
+                return $true
+            }
         }
     }
     return $false
 }
 
-function Test-WebRunning { return ((Get-Listener $WebPort).Count -gt 0) }
-function Test-DbRunning { return ((Get-Listener $DbPort).Count -gt 0) }
+function Test-WebRunning { return (@(Get-Listener $WebPort).Count -gt 0) }
+function Test-DbRunning { return (@(Get-Listener $DbPort).Count -gt 0) }
 function Test-OwnWeb { return Test-OwnListener $WebPort $Router }
 function Test-OwnDb { return Test-OwnListener $DbPort $MysqlConfig }
 
@@ -155,8 +160,8 @@ function Apply-Migrations {
 function Stop-AllServices {
     Write-Host "  [*] Dang dung he thong WealthFlow..." -ForegroundColor Cyan
     # 1. Dung PHP Server
-    $listeners = Get-Listener $WebPort
-    if (Test-WebRunning -and -not (Test-OwnWeb)) {
+    $listeners = @(Get-Listener $WebPort)
+    if ((Test-WebRunning) -and (-not (Test-OwnWeb))) {
         Write-Host "  [CANH BAO] Web :$WebPort khong thuoc WealthFlow. Khong dong cham vao." -ForegroundColor Yellow
     } else {
         foreach ($pidValue in @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)) {
@@ -165,7 +170,7 @@ function Stop-AllServices {
         }
     }
     # 2. Dung MySQL SE an toan qua mysqladmin
-    if (Test-DbRunning -and -not (Test-OwnDb)) {
+    if ((Test-DbRunning) -and (-not (Test-OwnDb))) {
         Write-Host "  [CANH BAO] MySQL :$DbPort khong thuoc WealthFlow. Bo qua, KHONG tat DB khac." -ForegroundColor Yellow
     } elseif (Test-DbRunning) {
         if (Test-Path $MysqlAdmin) {
@@ -193,7 +198,7 @@ function Reset-Database {
         return
     }
 
-    if ((Test-DbRunning) -and -not (Test-OwnDb)) {
+    if ((Test-DbRunning) -and (-not (Test-OwnDb))) {
         Write-Host "  [LOI] Port $DbPort dang thuoc DB khac. Huy reset." -ForegroundColor Red
         return
     }
@@ -229,7 +234,7 @@ function Check-HealthStatus {
     Write-Host "  * XAMPP Thu muc:                   $XamppRoot" -ForegroundColor Gray
     Write-Host "  * Du lieu SE MySQL:                $DbData" -ForegroundColor Gray
 
-    if ($web) {
+    if ($web -and $db) {
         Write-Host "  * Kiem tra Endpoint /api/health: " -NoNewline
         try {
             $res = Invoke-RestMethod -Uri "http://127.0.0.1:$WebPort/api/health" -TimeoutSec 3
@@ -242,6 +247,8 @@ function Check-HealthStatus {
         } catch {
             Write-Host "KHONG THE KET NOI: $_" -ForegroundColor Red
         }
+    } elseif ($web -and -not $db) {
+        Write-Host "  * Luu y: MySQL SE chua khoi dong, API can DB de truy van day du." -ForegroundColor Yellow
     }
     Write-Host "---------------------------------------------------------------" -ForegroundColor Cyan
 }
@@ -289,6 +296,9 @@ function View-Logs {
 }
 
 # VONG LAP MENU DIEU KHIEN CHINH (TUI)
+$isSingleRun = ($args -and $args.Count -gt 0)
+$initialArg = if ($isSingleRun) { $args[0].ToString().Trim() } else { $null }
+
 while ($true) {
     $webState = if (Test-WebRunning) { "RUNNING (http://localhost:$WebPort)" } else { "STOPPED" }
     $dbState = if (Test-DbRunning) { "RUNNING (Port $DbPort)" } else { "STOPPED" }
@@ -316,8 +326,14 @@ while ($true) {
     Write-Host "  [8] Mo trinh duyet Web (http://localhost:$WebPort/)" -ForegroundColor White
     Write-Host "  [0] Thoat (Exit)" -ForegroundColor Red
     Write-Host "=======================================================================" -ForegroundColor Cyan
-    $raw = Read-Host "  Chon chuc nang [0-8]"
-    $choice = if ($raw) { $raw.Trim() } else { "" }
+
+    if ($initialArg) {
+        $choice = $initialArg
+        $initialArg = $null
+    } else {
+        $raw = Read-Host "  Chon chuc nang [0-8]"
+        $choice = if ($raw) { $raw.Trim() } else { "" }
+    }
 
     switch ($choice) {
         '1' {
@@ -339,8 +355,8 @@ while ($true) {
         }
         '4' {
             Write-Host ""
-            if (-not (Test-DbRunning) -and -not (Start-Database)) { break }
-            if (Test-DbRunning -and -not (Test-OwnDb)) { Write-Host '[LOI] Foreign DB process on 3307; refusing migration.' -ForegroundColor Red; break }
+            if ((-not (Test-DbRunning)) -and (-not (Start-Database))) { break }
+            if ((Test-DbRunning) -and (-not (Test-OwnDb))) { Write-Host '[LOI] Foreign DB process on 3307; refusing migration.' -ForegroundColor Red; break }
             Apply-Migrations
         }
         '5' {
@@ -356,7 +372,7 @@ while ($true) {
             Start-Process "http://localhost:$WebPort/" | Out-Null
         }
         '0' {
-            if (Test-WebRunning -or Test-DbRunning) {
+            if ((Test-WebRunning) -or (Test-DbRunning)) {
                 $ans = Read-Host "  He thong van dang chay. Ban co muon giu chay ngam khong? (Y/n)"
                 if ($ans -eq 'n' -or $ans -eq 'N') {
                     Stop-AllServices
@@ -368,5 +384,8 @@ while ($true) {
         default {
             Write-Host "  [!] Lua chon khong hop le, vui long nhap so tu 0 den 8." -ForegroundColor Yellow
         }
+    }
+    if ($isSingleRun) {
+        break
     }
 }

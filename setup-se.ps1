@@ -1,4 +1,4 @@
-﻿# WealthFlow/SE local runner. Non-destructive; does not modify XAMPP Apache,
+# WealthFlow/SE local runner. Non-destructive; does not modify XAMPP Apache,
 # XAMPP's primary MySQL datadir, or any other project in htdocs.
 [CmdletBinding()]
 param(
@@ -26,10 +26,15 @@ function Same-Path([string]$Left, [string]$Right) {
 function Assert-OwnedListener([int]$Port, [string]$ExpectedExecutable, [string]$ExpectedArgument) {
     $listeners = @(Get-Listener $Port)
     if ($listeners.Count -eq 0) { return $false }
+    $argBase = [IO.Path]::GetFileName($ExpectedArgument)
     foreach ($pidValue in @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)) {
         $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $pidValue" -ErrorAction SilentlyContinue
-        if (-not $proc -or -not $proc.ExecutablePath -or -not (Same-Path $proc.ExecutablePath $ExpectedExecutable) -or
-            -not $proc.CommandLine -or $proc.CommandLine.IndexOf($ExpectedArgument, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
+        $isArgMatch = $proc -and $proc.CommandLine -and (
+            ($proc.CommandLine.IndexOf($ExpectedArgument, [StringComparison]::OrdinalIgnoreCase) -ge 0) -or
+            ($proc.CommandLine.IndexOf("router.php", [StringComparison]::OrdinalIgnoreCase) -ge 0) -or
+            ($argBase -and $proc.CommandLine.IndexOf($argBase, [StringComparison]::OrdinalIgnoreCase) -ge 0)
+        )
+        if (-not $proc -or -not $proc.ExecutablePath -or -not (Same-Path $proc.ExecutablePath $ExpectedExecutable) -or -not $isArgMatch) {
             $description = if ($proc) { "$($proc.Name), PID $pidValue" } else { "PID $pidValue" }
             Fail "Port $Port is already occupied by $description. Nothing was stopped or overwritten."
         }

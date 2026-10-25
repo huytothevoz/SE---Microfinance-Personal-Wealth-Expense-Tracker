@@ -232,14 +232,15 @@
 
 .notify-dot {
   position: absolute;
-  top: 7px;
-  right: 7px;
-  width: 7px;
-  height: 7px;
-  background: #e17d72;
-  border: 2px solid white;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border: 2px solid #ffffff;
   border-radius: 50%;
   box-sizing: content-box;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.4);
 }
 
 .user-chip {
@@ -1928,4 +1929,115 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Urgent / Maintenance Instant Alert Dialog (No Icons, Prominent Headers) */
+.urgent-dialog {
+  border: 0;
+  padding: 0;
+  border-radius: 16px;
+  box-shadow: 0 25px 70px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  width: min(520px, calc(100% - 32px));
+  max-height: calc(100vh - 48px);
+  color: var(--ink, #1e293b);
+  overflow: hidden;
+  animation: urgentModalAppear 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes urgentModalAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.urgent-modal-banner {
+  padding: 24px 28px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 5px solid #ef4444;
+  background: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.urgent-dialog.priority-maintenance .urgent-modal-banner {
+  border-top-color: #f59e0b;
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, #ffffff 100%);
+}
+
+.urgent-dialog.priority-critical .urgent-modal-banner {
+  border-top-color: #dc2626;
+  background: linear-gradient(180deg, rgba(220, 38, 38, 0.08) 0%, #ffffff 100%);
+}
+
+.urgent-dialog.priority-urgent .urgent-modal-banner {
+  border-top-color: #ef4444;
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, #ffffff 100%);
+}
+
+.urgent-modal-overline {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  color: #ef4444;
+}
+
+.urgent-dialog.priority-maintenance .urgent-modal-overline {
+  color: #d97706;
+}
+
+.urgent-dialog.priority-critical .urgent-modal-overline {
+  color: #dc2626;
+}
+
+.urgent-modal-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #0f172a;
+}
+
+.urgent-modal-body {
+  padding: 20px 28px;
+  background: #ffffff;
+}
+
+.urgent-modal-text {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: #334155;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.urgent-modal-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed #e2e8f0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.urgent-modal-footer {
+  padding: 16px 28px 24px;
+  display: flex;
+  justify-content: flex-end;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+}
+
+.urgent-modal-footer .btn {
+  min-width: 130px;
+  padding: 10px 20px;
+  font-weight: 600;
 }

@@ -1,10 +1,10 @@
 <div class="page-heading">
   <div>
     <h1>Tham số hệ thống</h1>
-    <p>Cấu hình ngưỡng ngân sách, tỷ lệ cảnh báo, thời hạn token và kiểm tra nhật ký quản trị.</p>
+    <p>Cấu hình ngưỡng ngân sách, tỷ lệ cảnh báo, thời hạn token và nhật ký kiểm toán quản trị.</p>
   </div>
   <div class="page-actions">
-    <button type="button" class="btn btn--primary btn-sm" data-action="admin-config">
+    <button type="button" class="btn btn--primary btn-sm" data-action="admin-config" id="btn-admin-config">
       <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
       Điều chỉnh tham số
     </button>
@@ -16,31 +16,30 @@
     <div class="panel-title">
       <div>
         <h2>Tham số vận hành</h2>
-        <p>Cấu hình mặc định</p>
+        <p>Quy chuẩn vận hành áp dụng toàn hệ thống</p>
       </div>
       <div class="panel-tools"></div>
     </div>
-    <div class="metric-list">
+    <div class="metric-list" id="admin-config-metric-list">
       <div class="metric-item">
-        <span>Cảnh báo ngân sách</span>
-        <strong>80%</strong>
+        <span>Ngưỡng cảnh báo chi tiêu ngân sách (Yellow Alert)</span>
+        <strong id="cfg-budget-threshold">80%</strong>
       </div>
       <div class="metric-item">
-        <span>Vượt ngân sách</span>
-        <strong>100%</strong>
+        <span>Thời gian sống Token xác thực (JWT TTL)</span>
+        <strong id="cfg-jwt-ttl">60 phút</strong>
       </div>
       <div class="metric-item">
-        <span>TTL access token tối đa</span>
-        <strong>60 phút</strong>
+        <span>Giới hạn số dòng đối soát xuất CSV</span>
+        <strong id="cfg-csv-max-rows">5.000 dòng</strong>
       </div>
       <div class="metric-item">
-        <span>Nhắc khoản vay</span>
-        <strong>Trước hạn 3 ngày</strong>
+        <span>Nhắc hạn khoản vay trước hạn</span>
+        <strong id="cfg-loan-reminder">Trước hạn 3 ngày</strong>
       </div>
-      <div class="metric-item">
-        <span>Hạn ngạch tệp xuất</span>
-        <strong>Chưa thiết lập</strong>
-      </div>
+    </div>
+    <div class="hint-box" style="margin-top:16px;">
+      💡 Thay đổi ngưỡng cảnh báo ngân sách sẽ cập nhật tức thời quy tắc phân loại rủi ro (Xanh/Vàng/Đỏ) cho toàn bộ người dùng khi ghi nhận giao dịch.
     </div>
   </section>
 
@@ -48,15 +47,29 @@
     <div class="panel-title">
       <div>
         <h2>Admin Audit Log</h2>
-        <p>Lịch sử thao tác quản trị</p>
+        <p>Lịch sử thao tác quản trị được kiểm toán tự động</p>
       </div>
       <div class="panel-tools"></div>
     </div>
-    <div class="empty-state">
-      <span class="empty-icon">◷</span>
-      <strong>Chưa có hoạt động</strong>
-      <p>Nhật ký thao tác sẽ xuất hiện tại đây.</p>
+    <div class="table-container" style="overflow-x:auto;">
+      <table class="table" id="admin-audit-table" style="width:100%; font-size:0.875rem;">
+        <thead>
+          <tr>
+            <th>Thời gian</th>
+            <th>Hành động</th>
+            <th>Quản trị viên</th>
+            <th>Chi tiết thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="admin-audit-table-body">
+          <tr>
+            <td colspan="4" style="text-align:center; padding:16px; color:var(--text-muted, #64748b);">Đang tải nhật ký kiểm toán…</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <div class="hint-box">Các hành động khóa tài khoản, mở khóa, cập nhật cấu hình và phát broadcast cần có nhật ký với thời gian và Admin thực hiện.</div>
+    <div class="hint-box" style="margin-top:16px;">
+      🔒 Mọi thao tác thêm/sửa/xóa danh mục mẫu, đổi tham số vận hành hoặc xử lý tài khoản đều được lưu vết kiểm toán bất biến.
+    </div>
   </section>
 </div>

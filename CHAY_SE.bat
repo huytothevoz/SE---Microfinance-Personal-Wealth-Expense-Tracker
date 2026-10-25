@@ -5,10 +5,13 @@ title SE WealthFlow - Safe Local Setup
 set "XAMPP_ROOT=%XAMPP_DIR%"
 if not defined XAMPP_ROOT (
     if exist "C:\xampp\php\php.exe" set "XAMPP_ROOT=C:\xampp"
+    if exist "D:\xampp\php\php.exe" set "XAMPP_ROOT=D:\xampp"
+    if exist "E:\xampp\php\php.exe" set "XAMPP_ROOT=E:\xampp"
+    if exist "F:\xampp\php\php.exe" set "XAMPP_ROOT=F:\xampp"
 )
 if not defined XAMPP_ROOT (
-    echo XAMPP was not found at C:\xampp. Set XAMPP_DIR to its installation folder first.
-    echo Example: set "XAMPP_DIR=F:\xampp"
+    echo XAMPP was not found at standard paths (C:\, D:\, E:\, F:\xampp). Set XAMPP_DIR first.
+    echo Example: set "XAMPP_DIR=D:\xampp"
     pause
     exit /b 1
 )

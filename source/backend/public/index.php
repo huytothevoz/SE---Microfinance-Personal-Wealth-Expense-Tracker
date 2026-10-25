@@ -17,7 +17,9 @@ use WealthFlow\Modules\Recurring\RecurringController;
 use WealthFlow\Modules\Transactions\TransactionController;
 use WealthFlow\Modules\Wallets\WalletController;
 use WealthFlow\Modules\Wealth\AnalyticsDashboardController;
+use WealthFlow\Modules\Reports\ReportController;
 use WealthFlow\Modules\Wealth\GoldController;
+use WealthFlow\Modules\Admin\AdminController;
 
 try {
     /** @var Config $config */
@@ -143,6 +145,21 @@ try {
     $analyticsController = new AnalyticsDashboardController();
     $router->get('/analytics/net-worth', [$analyticsController, 'netWorth']);
     $router->get('/analytics/net-worth/history', [$analyticsController, 'history']);
+
+    $reportController = new ReportController();
+    $router->get('/reports/reconcile', [$reportController, 'reconcile']);
+    $router->get('/reports/trial-balance', [$reportController, 'trialBalance']);
+    $router->get('/reports/export/csv', [$reportController, 'exportCsv']);
+
+    $adminController = new AdminController();
+    $router->get('/admin/default-categories', [$adminController, 'listDefaultCategories']);
+    $router->post('/admin/default-categories', [$adminController, 'createDefaultCategory']);
+    $router->put('/admin/default-categories/{id}', [$adminController, 'updateDefaultCategory']);
+    $router->delete('/admin/default-categories/{id}', [$adminController, 'deleteDefaultCategory']);
+    $router->get('/admin/system-config', [$adminController, 'getSystemConfig']);
+    $router->put('/admin/system-config', [$adminController, 'updateSystemConfig']);
+    $router->post('/admin/announcements', [$adminController, 'sendAnnouncement']);
+    $router->get('/admin/announcements', [$adminController, 'listAnnouncements']);
 
     $router->dispatch($request);
 } catch (ApiException $error) {

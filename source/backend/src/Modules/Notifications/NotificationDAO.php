@@ -37,7 +37,7 @@ final class NotificationDAO
             }
         }
 
-        $allowedPriorities = ['INFO', 'WARNING', 'CRITICAL', 'MAINTENANCE'];
+        $allowedPriorities = ['INFO', 'WARNING', 'CRITICAL', 'MAINTENANCE', 'URGENT'];
         $normPriority = strtoupper(trim($priority));
         if (!in_array($normPriority, $allowedPriorities, true)) {
             $normPriority = 'INFO';
@@ -107,7 +107,7 @@ final class NotificationDAO
 
     public function broadcast(string $title, string $body, string $priority = 'INFO'): int
     {
-        $allowedPriorities = ['INFO', 'WARNING', 'CRITICAL', 'MAINTENANCE'];
+        $allowedPriorities = ['INFO', 'WARNING', 'CRITICAL', 'MAINTENANCE', 'URGENT'];
         $normPriority = strtoupper(trim($priority));
         if (!in_array($normPriority, $allowedPriorities, true)) {
             $normPriority = 'INFO';
