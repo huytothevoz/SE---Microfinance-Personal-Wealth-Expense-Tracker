@@ -6,6 +6,7 @@ import { renderGoalsPage } from './goals.js?v=wealth-ui-2';
 import { renderGoldPage } from './gold.js?v=wealth-ui-2';
 import { renderLoansPage } from './loans.js?v=wealth-ui-2';
 import { renderReconciliationPage } from './reports.js';
+import { renderAdminCategoriesPage } from './admin.js';
 
 export function createPages({ state, heading, currentUser }) {
   const ctx = { state, heading, currentUser };
@@ -17,6 +18,7 @@ export function createPages({ state, heading, currentUser }) {
       : name === 'gold' ? () => renderGoldPage()
       : name === 'loans' ? () => renderLoansPage()
       : name === 'reconciliation' ? () => renderReconciliationPage()
+      : name === 'admin-categories' ? () => renderAdminCategoriesPage()
       : () => liveRender(name, ctx);
   }
   return { PAGES, txTable: liveTransactionTable };

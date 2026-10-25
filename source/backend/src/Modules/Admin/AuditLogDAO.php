@@ -82,4 +82,43 @@ final class AuditLogDAO
         $stmt->execute([$userId]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Log an administrative action (e.g., CREATE_DEFAULT_CATEGORY, UPDATE_DEFAULT_CATEGORY)
+     */
+    public function logAdminAction(
+        int $adminUserId,
+        string $action,
+        ?int $targetUserId = null,
+        ?string $reason = null
+    ): int {
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO admin_audit_logs (admin_user_id, action, target_user_id, reason, created_at)
+             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)'
+        );
+        $stmt->execute([
+            $adminUserId,
+            strtoupper(trim($action)),
+            $targetUserId,
+            $reason,
+        ]);
+        return (int) $this->pdo->lastInsertId();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function getAdminLogs(int $limit = 50): array
+    {
+        $limit = max(1, min(100, $limit));
+        $stmt = $this->pdo->prepare(
+            "SELECT l.*, u.email as admin_email 
+             FROM admin_audit_logs l
+             JOIN users u ON l.admin_user_id = u.id
+             ORDER BY l.id DESC LIMIT {$limit}"
+        );
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
 }
+

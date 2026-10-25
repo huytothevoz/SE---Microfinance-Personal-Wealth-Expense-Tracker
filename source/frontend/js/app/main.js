@@ -12,6 +12,7 @@ import { handleGoldAction } from './gold.js?v=wealth-ui-2';
 import { handleLoanAction } from './loans.js?v=wealth-ui-2';
 import { runReconciliationAudit } from './reports.js';
 import { ReportApi } from '../services/report-api.js';
+import { handleAdminCategoryAction } from './admin.js';
 
 let currentUser;
 try {
@@ -314,6 +315,7 @@ function handleAction(action, trigger) {
   if (handleGoalAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (handleGoldAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (handleLoanAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
+  if (handleAdminCategoryAction(action, trigger, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (action === 'transaction-filter') { openTransactionFilter(); return; }
   if (action === 'password') { openPasswordForm(); return; }
   if (action === 'logout') {

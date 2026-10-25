@@ -19,6 +19,7 @@ use WealthFlow\Modules\Wallets\WalletController;
 use WealthFlow\Modules\Wealth\AnalyticsDashboardController;
 use WealthFlow\Modules\Reports\ReportController;
 use WealthFlow\Modules\Wealth\GoldController;
+use WealthFlow\Modules\Admin\AdminController;
 
 try {
     /** @var Config $config */
@@ -149,6 +150,12 @@ try {
     $router->get('/reports/reconcile', [$reportController, 'reconcile']);
     $router->get('/reports/trial-balance', [$reportController, 'trialBalance']);
     $router->get('/reports/export/csv', [$reportController, 'exportCsv']);
+
+    $adminController = new AdminController();
+    $router->get('/admin/default-categories', [$adminController, 'listDefaultCategories']);
+    $router->post('/admin/default-categories', [$adminController, 'createDefaultCategory']);
+    $router->put('/admin/default-categories/{id}', [$adminController, 'updateDefaultCategory']);
+    $router->delete('/admin/default-categories/{id}', [$adminController, 'deleteDefaultCategory']);
 
     $router->dispatch($request);
 } catch (ApiException $error) {
