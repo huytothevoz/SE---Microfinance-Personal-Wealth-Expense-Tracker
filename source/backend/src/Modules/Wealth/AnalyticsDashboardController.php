@@ -66,7 +66,7 @@ final class AnalyticsDashboardController
             JsonResponse::error('VALIDATION_ERROR', $error->getMessage(), 422);
             return;
         }
-        error_log('Analytics read failed; type=' . get_class($error));
+        error_log('Analytics read failed; type=' . get_class($error) . '; message=' . $error->getMessage());
         JsonResponse::error('ANALYTICS_UNAVAILABLE', 'Chưa thể tổng hợp tài sản ròng. Vui lòng kiểm tra dữ liệu tiền tệ và thử lại.', 503);
     }
 }
