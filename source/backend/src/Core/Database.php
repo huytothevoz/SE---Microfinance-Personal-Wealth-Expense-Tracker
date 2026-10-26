@@ -131,6 +131,7 @@ final class Database
             user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             category_type TEXT NOT NULL,
+            note TEXT NULL,
             archived_at DATETIME NULL,
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE (user_id, name, category_type)

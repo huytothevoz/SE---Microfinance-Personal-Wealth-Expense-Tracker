@@ -184,9 +184,14 @@ final class TransactionController
         $body = $request->getBody();
         $name = trim((string) ($body['name'] ?? ''));
         $type = strtoupper((string) ($body['type'] ?? 'EXPENSE'));
+        $note = trim((string) ($body['note'] ?? ''));
 
-        if ($name === '') {
-            JsonResponse::error('VALIDATION_ERROR', 'Tên danh mục không được để trống.', 422);
+        if ($name === '' || mb_strlen($name) > 100) {
+            JsonResponse::error('VALIDATION_ERROR', 'Tên danh mục phải có từ 1 đến 100 ký tự.', 422);
+            return;
+        }
+        if (mb_strlen($note) > 500) {
+            JsonResponse::error('VALIDATION_ERROR', 'Ghi chú không được vượt quá 500 ký tự.', 422);
             return;
         }
         if (!in_array($type, ['INCOME', 'EXPENSE'], true)) {
@@ -195,8 +200,8 @@ final class TransactionController
         }
 
         try {
-            $id = $this->catRepo->create($userId, $name, $type);
-            JsonResponse::success(['id' => $id, 'name' => $name, 'type' => $type], 201);
+            $id = $this->catRepo->create($userId, $name, $type, $note);
+            JsonResponse::success(['id' => $id, 'name' => $name, 'type' => $type, 'note' => $note], 201);
         } catch (Exception $e) {
             JsonResponse::error('DUPLICATE_CATEGORY', 'Danh mục đã tồn tại: ' . $e->getMessage(), 409);
         }
@@ -240,15 +245,25 @@ final class TransactionController
         $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
         $body = $request->getBody();
         $name = trim((string) ($body['name'] ?? ''));
+        $note = trim((string) ($body['note'] ?? ''));
 
-        if ($name === '') {
-            JsonResponse::error('VALIDATION_ERROR', 'Tên danh mục không được để trống.', 422);
+        if ($name === '' || mb_strlen($name) > 100) {
+            JsonResponse::error('VALIDATION_ERROR', 'Tên danh mục phải có từ 1 đến 100 ký tự.', 422);
+            return;
+        }
+        if (mb_strlen($note) > 500) {
+            JsonResponse::error('VALIDATION_ERROR', 'Ghi chú không được vượt quá 500 ký tự.', 422);
             return;
         }
 
         try {
-            $this->catRepo->update($id, $userId, $name);
-            JsonResponse::success(['id' => $id, 'name' => $name, 'message' => 'Cập nhật danh mục thành công.']);
+            if (!$this->catRepo->findByIdAndUser($id, $userId)) {
+                JsonResponse::error('NOT_FOUND', 'Danh mục không tồn tại.', 404);
+                return;
+            }
+            $updated = $this->catRepo->update($id, $userId, $name, $note);
+            if (!$updated) throw new RuntimeException('Category update failed.');
+            JsonResponse::success(['name' => $name, 'note' => $note, 'message' => 'Cập nhật danh mục thành công.']);
         } catch (Exception $e) {
             JsonResponse::error('SERVER_ERROR', 'Không thể cập nhật danh mục: ' . $e->getMessage(), 500);
         }

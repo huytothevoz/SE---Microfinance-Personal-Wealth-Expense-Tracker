@@ -37,7 +37,7 @@ export function txTable(items = transactions) {
               <td>
                 <div class="table-name">
                   <span class="table-icon">${safe(t.icon)}</span>
-                  <span>${safe(t.name)}<small>${safe(t.id)}</small></span>
+                  <span>${safe(t.name)}</span>
                 </div>
               </td>
               <td>${safe(t.category)}</td>
@@ -113,8 +113,9 @@ export async function renderCategoryPage() {
           </div>
           <span class="badge ${c.type === 'Thu nhập' ? 'blue' : 'neutral'}">${c.type}</span>
         </div>
+        ${c.description ? `<p class="form-hint">${safe(c.description)}</p>` : ''}
         <div style="margin-top: 18px">
-          <button class="text-action" data-action="category-edit">Xem / chỉnh sửa →</button>
+          <button class="text-action" data-action="live:detail:categories:${encodeURIComponent(String(c.id))}">Chi tiết</button>
         </div>
       </div>
     `).join('');
@@ -138,10 +139,6 @@ export function showTransactionDetails(id, { dialog } = {}) {
     content.innerHTML = `
       <dl class="detail-grid">
         <div>
-          <dt>Mã giao dịch</dt>
-          <dd>${safe(t.id)}</dd>
-        </div>
-        <div>
           <dt>Danh mục</dt>
           <dd>${safe(t.category)}</dd>
         </div>
@@ -161,10 +158,6 @@ export function showTransactionDetails(id, { dialog } = {}) {
           <dt>Tiền tệ</dt>
           <dd>${safe(t.currency)}</dd>
         </div>
-        <div>
-          <dt>Tỷ giá lúc ghi nhận</dt>
-          <dd>${safe(t.rate)}</dd>
-        </div>
       </dl>
       <div class="modal-footer">
         <button class="btn btn--outline btn-sm" data-close-modal>Đóng</button>
@@ -177,7 +170,6 @@ export function showTransactionDetails(id, { dialog } = {}) {
 export function exportTransactionsCSV({ toast = () => {} } = {}) {
   const rows = [
     [
-      'Mã giao dịch',
       'Tên giao dịch',
       'Danh mục',
       'Ví',
@@ -185,7 +177,6 @@ export function exportTransactionsCSV({ toast = () => {} } = {}) {
       'Số tiền VND'
     ],
     ...transactions.map(t => [
-      t.id,
       t.name,
       t.category,
       t.wallet,

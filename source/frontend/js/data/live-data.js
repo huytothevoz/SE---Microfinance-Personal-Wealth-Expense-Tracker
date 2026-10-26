@@ -101,6 +101,7 @@ function shape(name, row) {
   }
   if (name === 'categories') {
     r.type = String(r.type ?? r.category_type ?? '').toUpperCase();
+    r.description = String(r.description ?? r.note ?? '');
   }
   if (name === 'recurring') {
     r.nextRun = r.nextRun ?? r.next_due_date ?? r.nextDueDate ?? '';

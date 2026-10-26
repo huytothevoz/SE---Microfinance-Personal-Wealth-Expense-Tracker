@@ -15,6 +15,17 @@ const ownMonth = iso => String(iso ?? '').slice(0, 7);
 const month = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}`; };
 const posted = () => transactions.filter(t => t.status === 'POSTED');
 const TRANSACTION_TYPE_LABELS = { income: 'Thu nhập', expense: 'Chi tiêu', transfer: 'Chuyển tiền', savings_goal: 'Mục tiêu tiết kiệm', loan_disbursement: 'Giải ngân khoản vay', loan_payment: 'Thanh toán khoản vay', gold_purchase: 'Mua vàng', gold_sale: 'Bán vàng', other: 'Số dư' };
+const DETAIL_FIELDS = {
+  wallets: [['Tên ví','name'],['Loại ví','type'],['Tiền tệ','currency'],['Số dư','balance','money'],['Trạng thái','status','status']],
+  categories: [['Tên danh mục','name'],['Loại danh mục','type','categoryType'],['Ghi chú','description']],
+  budgets: [['Danh mục','name'],['Tháng áp dụng','month'],['Hạn mức','limit','money'],['Đã chi','spent','money'],['Còn lại','remaining','money']],
+  recurring: [['Tên khoản định kỳ','name'],['Mô tả','description'],['Số tiền','amount','money'],['Chu kỳ','frequency'],['Ngày tiếp theo','nextRun','date'],['Trạng thái','status','status']],
+  goals: [['Mục tiêu','name'],['Đã tích lũy','current','money'],['Mục tiêu cần đạt','target','money'],['Ngày hoàn thành','deadline','date'],['Ưu tiên','priority','priority'],['Trạng thái','status','status']],
+  loans: [['Khoản vay','name'],['Hình thức','direction','loanDirection'],['Dư nợ còn lại','remainingPrincipal','money'],['Tiền tệ','currency'],['Ngày đến hạn','nextDueDate','date'],['Trạng thái','status','status']],
+  gold: [['Tài sản vàng','name'],['Loại vàng','goldType','goldType'],['Khối lượng (chỉ)','quantityChi'],['Giá trị hiện tại','currentValue','money'],['Ngày định giá','valuationDate','date'],['Trạng thái','status','status']],
+  notifications: [['Thông báo','title'],['Nội dung','body'],['Mức độ','priority','priority'],['Ngày nhận','createdAt','date'],['Trạng thái','status','status']],
+  adminUsers: [['Họ và tên','fullName|name'],['Email','email'],['Vai trò','role','role'],['Trạng thái','status','status']]
+};
 const stateOf = key => dataStatus[key]?.state || 'idle';
 const ready = key => stateOf(key) === 'ready';
 const loading = key => stateOf(key) === 'loading' || stateOf(key) === 'idle';
@@ -47,7 +58,12 @@ function table(key, columns, list = ITEMS[key]) {
       : key === 'transactions'
         ? (row.hasBaseAmount ? 'VND' : row.currency)
         : 'VND';
-    return `<tr>${columns.map(([, field, fmt]) => `<td>${display(val(row, ...field.split('|')), fmt, moneyCurrency)}</td>`).join('')}<td class="wf-table-actions"><button type="button" class="text-action" data-action="live:detail:${key}:${encodeURIComponent(String(row.id ?? ''))}">Chi tiết</button>${key === 'recurring' && row.id && ['ACTIVE','PAUSED'].includes(String(row.status).toUpperCase()) ? `<button type="button" class="text-action" data-action="live:${String(row.status).toUpperCase() === 'ACTIVE' ? 'pause' : 'resume'}:recurring:${encodeURIComponent(String(row.id))}">${String(row.status).toUpperCase() === 'ACTIVE' ? 'Tạm dừng' : 'Tiếp tục'}</button>` : ''}</td></tr>`;
+    return `<tr>${columns.map(([, field, fmt]) => {
+      if (key === 'categories' && field === 'description' && !row.description) {
+        return `<td><button type="button" class="text-action" data-action="live:edit:categories:${encodeURIComponent(String(row.id ?? ''))}" title="Thêm ghi chú" aria-label="Thêm ghi chú cho ${esc(row.name)}">+</button></td>`;
+      }
+      return `<td>${display(val(row, ...field.split('|')), fmt, moneyCurrency)}</td>`;
+    }).join('')}<td class="wf-table-actions"><button type="button" class="text-action" data-action="live:detail:${key}:${encodeURIComponent(String(row.id ?? ''))}">Chi tiết</button>${key === 'recurring' && row.id && ['ACTIVE','PAUSED'].includes(String(row.status).toUpperCase()) ? `<button type="button" class="text-action" data-action="live:${String(row.status).toUpperCase() === 'ACTIVE' ? 'pause' : 'resume'}:recurring:${encodeURIComponent(String(row.id))}">${String(row.status).toUpperCase() === 'ACTIVE' ? 'Tạm dừng' : 'Tiếp tục'}</button>` : ''}</td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 function card(label, value, caption) { return `<div class="kpi-card"><div class="kpi-top"><span class="kpi-label">${esc(label)}</span></div><div class="kpi-number">${esc(value)}</div><div class="kpi-desc">${esc(caption)}</div></div>`; }
@@ -204,7 +220,7 @@ export function liveTransactionTable(items = transactions) {
   return `<div class="data-table-wrap"><table class="data-table transaction-table"><thead><tr>
     <th>Giao dịch</th><th>Loại</th><th>Danh mục</th><th>Ngày</th><th>Ví sử dụng</th><th>Số tiền</th><th></th>
   </tr></thead><tbody>${items.map(row => `<tr>
-    <td><div class="table-name"><span class="table-icon" aria-hidden="true">${esc(row.icon)}</span><span>${esc(row.name)}<small>Mã #${esc(row.id)}</small></span></div></td>
+    <td><div class="table-name"><span class="table-icon" aria-hidden="true">${esc(row.icon)}</span><span>${esc(row.name)}</span></div></td>
     <td>${esc(TRANSACTION_TYPE_LABELS[row.type] || row.type || 'Giao dịch')}</td>
     <td>${esc(row.type === 'transfer' ? 'Chuyển nội bộ' : row.type === 'savings_goal' ? (row.goalName || 'Mục tiêu tiết kiệm') : row.category)}</td>
     <td>${display(row.date, 'date')}</td>
@@ -229,7 +245,7 @@ function transactionList(state) {
       <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
       <span>Lọc theo loại giao dịch · ${esc(filterLabel)}</span>
     </button>
-    <input id="transaction-search" class="input-sm" type="search" placeholder="Tìm tên, mã, danh mục hoặc ví" aria-label="Tìm kiếm giao dịch" value="${esc(state.search||'')}">
+    <input id="transaction-search" class="input-sm" type="search" placeholder="Tìm tên, danh mục hoặc ví" aria-label="Tìm kiếm giao dịch" value="${esc(state.search||'')}">
   </div></div>
   <div id="transaction-table">${liveTransactionTable(list)}</div>`;
 }
@@ -243,8 +259,6 @@ function transactionDetail(item) {
   const category = item.type === 'transfer' ? 'Chuyển nội bộ' : item.type === 'savings_goal' ? (item.goalName || 'Mục tiêu tiết kiệm') : item.category;
   const specialStatus = item.status === 'DRAFT' ? '<span class="badge neutral">Bản nháp</span>'
     : item.status === 'REVERSED' ? '<span class="badge warn">Đã đảo</span>' : '';
-  const rate = currency !== 'VND' && Number(item.rate) > 0
-    ? `<div><small>Tỷ giá lúc ghi nhận</small><strong>1 ${esc(currency)} = ${vnd(item.rate)}</strong></div>` : '';
   return `<div class="transaction-detail-hero">
     <span class="transaction-detail-icon" aria-hidden="true">${esc(item.icon)}</span>
     <div><small>${esc(TRANSACTION_TYPE_LABELS[item.type] || item.type || 'Giao dịch')}</small><strong>${esc(item.name)}</strong></div>
@@ -254,8 +268,8 @@ function transactionDetail(item) {
     <div><small>Ví sử dụng</small><strong>${esc(item.wallet)}</strong></div>
     <div><small>Danh mục</small><strong>${esc(category)}</strong></div>
     <div><small>Ngày giao dịch</small><strong>${display(item.date, 'date')}</strong></div>
-    <div><small>Mã giao dịch</small><strong>#${esc(item.id)}</strong></div>
-    ${rate}
+    <div><small>Tiền tệ</small><strong>${esc(currency)}</strong></div>
+    ${item.details ? `<div class="transaction-detail-note"><small>Ghi chú</small><strong>${esc(item.details)}</strong></div>` : ''}
   </div>
   ${specialStatus ? `<div class="transaction-detail-status">${specialStatus}</div>` : ''}
   <div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Đóng</button></div>`;
@@ -329,7 +343,9 @@ const needReferenceData = name => name === 'transactions' ? (!ready('wallets') |
  : name === 'recurring' ? (!ready('wallets') || !walletOptions().length || !ready('categories'))
  : name === 'budgets' ? (!ready('categories') || !categoryOptions().length) : false;
 function createForm(name) {
-  if (name==='categories') return field('name','Tên danh mục','text','maxlength="120"')+select('type','Loại danh mục',[['EXPENSE','Chi tiêu'],['INCOME','Thu nhập']]);
+  if (name==='categories') return field('name','Tên danh mục','text','maxlength="100"')
+    +select('type','Loại danh mục',[['EXPENSE','Chi tiêu'],['INCOME','Thu nhập']])
+    +`<div class="field form-grid-span"><label for="live-note">Ghi chú (không bắt buộc)</label><textarea id="live-note" name="note" maxlength="500" rows="3" placeholder="Thêm mô tả hoặc lưu ý cho danh mục"></textarea></div>`;
   if (name==='transactions') return field('description','Mô tả giao dịch','text','maxlength="255"')
     +select('type','Loại giao dịch',[['EXPENSE','Chi tiêu'],['INCOME','Thu nhập'],['TRANSFER','Chuyển tiền'],['SAVINGS_GOAL','Chuyển vào mục tiêu tiết kiệm']])
     +select('goalAction','Thao tác với mục tiêu',[['DEPOSIT','Chuyển vào mục tiêu'],['WITHDRAWAL','Lấy khỏi mục tiêu']])
@@ -364,11 +380,55 @@ export function liveAction(action, { dialog, toast, reload }) {
       dialog.showModal(); return true;
     }
     document.querySelector('#modal-overline').textContent = TITLES[name] || name;
-    document.querySelector('#modal-title').textContent = String(val(item,'name','title','description','id') || 'Chi tiết');
-    const dl = Object.entries(item).filter(([k,v]) => typeof v !== 'object' && !/password|secret|token/i.test(k)).slice(0,20)
-      .map(([k,v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
-    document.querySelector('#modal-content').innerHTML = `<dl class="detail-grid">${dl}</dl><div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Đóng</button></div>`;
+    document.querySelector('#modal-title').textContent = String(val(item,'name','title') || TITLES[name] || 'Chi tiết');
+    const dl = (DETAIL_FIELDS[name] || []).map(([label, keys, format]) => {
+      const value = val(item, ...keys.split('|'));
+      if (value === undefined || value === null || value === '') return '';
+      let text = value;
+      if (format === 'money') text = display(value, 'money', item.currency || 'VND');
+      else if (format === 'date') text = display(value, 'date');
+      else if (format === 'categoryType') text = ({ INCOME: 'Thu nhập', EXPENSE: 'Chi tiêu' })[String(value).toUpperCase()] || value;
+      else if (format === 'loanDirection') text = ({ BORROWED: 'Đi vay', LENT: 'Cho vay' })[String(value).toUpperCase()] || value;
+      else if (format === 'goldType') text = ({ RING_9999: 'Vàng nhẫn 9999', SJC_BAR: 'Vàng miếng SJC' })[String(value)] || value;
+      else if (format === 'priority') text = ({ LOW: 'Thấp', MEDIUM: 'Trung bình', HIGH: 'Cao' })[String(value).toUpperCase()] || value;
+      else if (format === 'role') text = ({ USER: 'Người dùng', ADMIN: 'Quản trị viên' })[String(value).toUpperCase()] || value;
+      else if (format === 'status') text = ({ ACTIVE: 'Đang hoạt động', PAUSED: 'Đang tạm dừng', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', ARCHIVED: 'Đã lưu trữ', HELD: 'Đang nắm giữ', PAID_OFF: 'Đã tất toán', DEFAULTED: 'Quá hạn' })[String(value).toUpperCase()] || value;
+      return `<div><dt>${esc(label)}</dt><dd>${esc(text)}</dd></div>`;
+    }).filter(Boolean).join('');
+    const categoryEdit = name === 'categories' ? `<button type="button" class="btn btn--outline btn-sm" data-action="live:edit:categories:${encodeURIComponent(String(item.id))}">Chỉnh sửa</button>` : '';
+    document.querySelector('#modal-content').innerHTML = `<dl class="detail-grid">${dl || '<div><dd>Chưa có thông tin chi tiết.</dd></div>'}</dl><div class="modal-footer">${categoryEdit}<button type="button" class="btn btn--outline" data-close-modal>Đóng</button></div>`;
     dialog.showModal(); return true;
+  }
+  if (name === 'categories' && verb === 'edit') {
+    const id = decodeURIComponent(encodedId || '');
+    const item = collection.find(x => String(x.id) === id);
+    if (!item || !/^\d+$/.test(id)) { toast('Không tìm thấy danh mục trong tài khoản.'); return true; }
+    if (dialog.open) dialog.close();
+    document.querySelector('#modal-overline').textContent = 'DANH MỤC CÁ NHÂN';
+    document.querySelector('#modal-title').textContent = 'Chỉnh sửa danh mục';
+    document.querySelector('#modal-content').innerHTML = `<form id="live-category-edit-form"><div class="form-grid">
+      ${field('name','Tên danh mục','text',`maxlength="100" value="${esc(item.name)}"`)}
+      <div class="field form-grid-span"><label for="live-note">Ghi chú (không bắt buộc)</label><textarea id="live-note" name="note" maxlength="500" rows="3">${esc(item.description || '')}</textarea></div>
+      <p class="form-hint">Loại danh mục: ${esc(item.type === 'INCOME' ? 'Thu nhập' : 'Chi tiêu')}</p>
+    </div><p id="live-form-feedback" role="status" aria-live="polite"></p><div class="modal-footer"><button type="button" class="btn btn--outline" data-close-modal>Hủy</button><button type="submit" class="btn btn--primary">Lưu thay đổi</button></div></form>`;
+    const form = document.querySelector('#live-category-edit-form');
+    form.addEventListener('submit', async e => {
+      e.preventDefault(); if (!form.reportValidity()) return;
+      const submit = form.querySelector('[type=submit]');
+      const feedback = form.querySelector('#live-form-feedback');
+      submit.disabled = true; feedback.textContent = 'Đang lưu thay đổi…';
+      try {
+        await mutateLiveData('categories', 'PUT', { name: form.elements.namedItem('name').value, note: form.elements.namedItem('note').value }, id);
+        dialog.close();
+        await loadLiveData();
+        reload();
+        toast('Đã cập nhật danh mục.');
+      } catch (error) { feedback.textContent = `Không thể cập nhật: ${error.message}`; }
+      finally { submit.disabled = false; }
+    });
+    dialog.showModal();
+    form.elements.namedItem('note').focus();
+    return true;
   }
   if (name === 'notifications' && verb === 'read') {
     const id = decodeURIComponent(encodedId || '');

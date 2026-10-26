@@ -47,31 +47,37 @@ final class CategoryDAO
     {
         if ($type !== null) {
             $stmt = $this->pdo->prepare(
-                'SELECT * FROM categories WHERE user_id = ? AND category_type = ? AND archived_at IS NULL ORDER BY id ASC'
+                'SELECT id, name, category_type, note FROM categories WHERE user_id = ? AND category_type = ? AND archived_at IS NULL ORDER BY id ASC'
             );
             $stmt->execute([$userId, strtoupper($type)]);
         } else {
             $stmt = $this->pdo->prepare(
-                'SELECT * FROM categories WHERE user_id = ? AND archived_at IS NULL ORDER BY category_type ASC, id ASC'
+                'SELECT id, name, category_type, note FROM categories WHERE user_id = ? AND archived_at IS NULL ORDER BY category_type ASC, id ASC'
             );
             $stmt->execute([$userId]);
         }
         return $stmt->fetchAll();
     }
 
-    public function create(int $userId, string $name, string $categoryType): int
+    public function create(int $userId, string $name, string $categoryType, ?string $note = null): int
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO categories (user_id, name, category_type) VALUES (?, ?, ?)'
+            'INSERT INTO categories (user_id, name, category_type, note) VALUES (?, ?, ?, ?)'
         );
-        $stmt->execute([$userId, trim($name), strtoupper($categoryType)]);
+        $stmt->execute([$userId, trim($name), strtoupper($categoryType), self::normalizeNote($note)]);
         return (int) $this->pdo->lastInsertId();
     }
 
-    public function update(int $id, int $userId, string $name): bool
+    public function update(int $id, int $userId, string $name, ?string $note = null): bool
     {
-        $stmt = $this->pdo->prepare('UPDATE categories SET name = ? WHERE id = ? AND user_id = ?');
-        return $stmt->execute([trim($name), $id, $userId]);
+        $stmt = $this->pdo->prepare('UPDATE categories SET name = ?, note = ? WHERE id = ? AND user_id = ?');
+        return $stmt->execute([trim($name), self::normalizeNote($note), $id, $userId]);
+    }
+
+    private static function normalizeNote(?string $note): ?string
+    {
+        $value = trim((string) $note);
+        return $value === '' ? null : $value;
     }
 
     public function archive(int $id, int $userId): bool
