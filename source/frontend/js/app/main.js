@@ -1,8 +1,8 @@
 import '../i18n.js?v=finance-ui-2';
 import { icon, safe, money, USER_NAV, ADMIN_NAV, META, formatMoneyInput, heading, btn, panel } from './ui-core.js?v=wealth-ui-2';
-import { createPages } from './pages.js?v=finance-ui-3';
+import { createPages } from './pages.js?v=finance-ui-4';
 import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=finance-ui-1';
-import { liveAction } from './live-pages.js?v=finance-ui-3';
+import { liveAction } from './live-pages.js?v=finance-ui-4';
 // WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';
@@ -17,6 +17,7 @@ import { checkUrgentBroadcasts } from './urgent-broadcast.js';
 import { showTransactionDetails, applyTransactionSearch, openTransactionFilter, handleTransactionFilterChange, handleTransactionFilterSubmit } from './transactions.js';
 import { handleSecurityAction } from './profile-security.js';
 import { PrivacyApi } from '../services/privacy-api.js';
+import { syncThemeSwitch, toggleTheme } from './theme-preference.js';
 import { handleStubAction, handleStubSubmit } from './stub-actions.js';
 
 let currentUser;
@@ -96,6 +97,7 @@ async function navigate(page) {
   if (page === 'wallets') await walletFeature.load();
   if (thisNavigation !== navigateVersion) return;
   app.innerHTML = await PAGES[page]();
+  syncThemeSwitch();
   closeSidebar();
   const hash = '#' + page;
   if (location.hash !== hash) history.replaceState(null, '', hash);
@@ -176,6 +178,13 @@ function handleAction(action, trigger) {
     })();
     return;
   }
+  if (action === 'toggle-theme') {
+    const result = toggleTheme();
+    toast(result.saved
+      ? `Đã ${result.theme === 'dark' ? 'bật' : 'tắt'} chế độ tối. Tùy chọn đã lưu trên trình duyệt này.`
+      : 'Đã đổi giao diện, nhưng trình duyệt không cho phép lưu tùy chọn.');
+    return;
+  }
   if (action === 'reconcile') {
     void (async () => {
       try {
@@ -196,6 +205,11 @@ function handleAction(action, trigger) {
 }
 
 document.addEventListener('click', event => {
+  const themeToggle = event.target.closest('[data-theme-toggle]');
+  if (themeToggle) {
+    handleAction('toggle-theme', themeToggle);
+    return;
+  }
   const page = event.target.closest('[data-page]');
   if (page) {
     if (page.matches('a')) event.preventDefault();

@@ -308,7 +308,7 @@ function settingsPage(user) {
   <section class="panel"><h2>Thông báo và trải nghiệm</h2>
     ${row('Cảnh báo ngân sách', 'Được tính theo các ngưỡng 80% và 100% từ dữ liệu chi tiêu đã ghi sổ.')}
     ${row('Quản lý thông báo', 'Xem thông báo được đồng bộ từ máy chủ.', '<button class="btn btn--outline btn-sm" data-page="notifications">Xem thông báo</button>')}
-    ${row('Tùy chỉnh giao diện', 'Chưa có API lưu tùy chọn giao diện theo tài khoản. Không hiển thị tùy chỉnh giả.')}
+    ${row('Chế độ tối', 'Lưu tùy chọn trên trình duyệt này và tự áp dụng cho các lần truy cập sau.', '<button type="button" class="theme-switch" role="switch" aria-checked="false" aria-label="Chế độ tối" data-theme-toggle><span class="theme-switch__track"><svg class="theme-switch__moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.7A8.5 8.5 0 0 1 8.3 3.8a8.6 8.6 0 1 0 11.9 11.9Z"/></svg><svg class="theme-switch__sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg><span class="theme-switch__thumb"></span></span></button>')}
   </section>
   <section class="danger-zone">
     <div class="danger-zone__heading"><span class="danger-zone__icon" aria-hidden="true">!</span><div><h2>Vùng nguy hiểm</h2><p>Các thao tác này ảnh hưởng trực tiếp đến dữ liệu và trạng thái tài khoản.</p></div></div>

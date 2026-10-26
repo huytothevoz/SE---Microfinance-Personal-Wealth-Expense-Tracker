@@ -2054,6 +2054,333 @@
   }
 }
 
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0c1422;
+  --white: #141f30;
+  --ink: #e7eef7;
+  --muted: #9aacc0;
+  --line: #29384c;
+  --navy: #dce9f5;
+  --navy-dark: #09111e;
+  --navy-700: #afc4da;
+  --teal: #59c5c2;
+  --teal-dark: #49aeb5;
+}
+
+html[data-theme="dark"] body.app-body {
+  color: var(--ink);
+  background: var(--canvas);
+}
+
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .kpi-card,
+html[data-theme="dark"] .data-card,
+html[data-theme="dark"] .mini-panel,
+html[data-theme="dark"] .app-dialog,
+html[data-theme="dark"] .urgent-modal-body,
+html[data-theme="dark"] .urgent-modal-banner {
+  color: var(--ink);
+  background-color: #141f30;
+  border-color: #29384c;
+}
+
+html[data-theme="dark"] .topbar {
+  background: #111b2a;
+  border-bottom-color: #29384c;
+}
+
+html[data-theme="dark"] .breadcrumb,
+html[data-theme="dark"] .page-heading p,
+html[data-theme="dark"] .panel-title p,
+html[data-theme="dark"] .settings-row p,
+html[data-theme="dark"] .wf-muted,
+html[data-theme="dark"] .wf-stat-note,
+html[data-theme="dark"] .form-hint,
+html[data-theme="dark"] .foot-source,
+html[data-theme="dark"] .kpi-label,
+html[data-theme="dark"] .kpi-desc,
+html[data-theme="dark"] .data-table th,
+html[data-theme="dark"] .detail-grid dt,
+html[data-theme="dark"] .table-name small,
+html[data-theme="dark"] .wallet-sub,
+html[data-theme="dark"] .wallet-meta,
+html[data-theme="dark"] .wallet-history-empty,
+html[data-theme="dark"] .wallet-history-heading small,
+html[data-theme="dark"] .goal-card p,
+html[data-theme="dark"] .loan-card p,
+html[data-theme="dark"] .gold-card p {
+  color: #9aacc0;
+}
+
+html[data-theme="dark"] .breadcrumb strong,
+html[data-theme="dark"] .page-heading h1,
+html[data-theme="dark"] .panel h2,
+html[data-theme="dark"] .kpi-number,
+html[data-theme="dark"] .table-name,
+html[data-theme="dark"] .data-table td,
+html[data-theme="dark"] .transaction-detail-hero strong,
+html[data-theme="dark"] .transaction-detail-amount,
+html[data-theme="dark"] .transaction-detail-grid strong,
+html[data-theme="dark"] .user-chip {
+  color: #e4edf7;
+}
+
+html[data-theme="dark"] .top-search,
+html[data-theme="dark"] .input-sm,
+html[data-theme="dark"] .select-sm,
+html[data-theme="dark"] .date-filter,
+html[data-theme="dark"] .field input,
+html[data-theme="dark"] .field select,
+html[data-theme="dark"] .field textarea,
+html[data-theme="dark"] .wallet-edit-option,
+html[data-theme="dark"] .urgent-dialog {
+  color: #e4edf7;
+  background: #101a29;
+  border-color: #34465e;
+}
+
+html[data-theme="dark"] .top-search input,
+html[data-theme="dark"] .field label,
+html[data-theme="dark"] .wallet-edit-option {
+  color: #d9e5f1;
+}
+
+html[data-theme="dark"] .top-icon {
+  color: #b6c8da;
+}
+
+html[data-theme="dark"] .top-icon:hover,
+html[data-theme="dark"] .wallet-edit-option:hover {
+  background: #1d2b3e;
+}
+
+html[data-theme="dark"] .data-table thead,
+html[data-theme="dark"] .data-table tr:hover td,
+html[data-theme="dark"] .filter-row,
+html[data-theme="dark"] .tabs,
+html[data-theme="dark"] .pill-segment {
+  background: #182538;
+}
+
+html[data-theme="dark"] .data-table td,
+html[data-theme="dark"] .settings-row,
+html[data-theme="dark"] .wallet-history-section,
+html[data-theme="dark"] .detail-grid > div {
+  border-color: #29384c;
+}
+
+html[data-theme="dark"] .transaction-detail-hero,
+html[data-theme="dark"] .transaction-detail-grid > div,
+html[data-theme="dark"] .wallet-detail-summary > div,
+html[data-theme="dark"] .wallet-history-item,
+html[data-theme="dark"] .hint-box,
+html[data-theme="dark"] .wf-progress,
+html[data-theme="dark"] .wf-graph,
+html[data-theme="dark"] .expense-bars {
+  color: #dce7f3;
+  background: #182538;
+  border-color: #34465e;
+}
+
+html[data-theme="dark"] .wallet-card {
+  background: linear-gradient(145deg, #182538 55%, color-mix(in srgb, var(--wallet-soft) 22%, #182538));
+  border-color: color-mix(in srgb, var(--wallet-accent) 36%, #34465e);
+}
+
+html[data-theme="dark"] .wallet-icon,
+html[data-theme="dark"] .wallet-type {
+  background: color-mix(in srgb, var(--wallet-accent) 18%, #182538);
+  border-color: color-mix(in srgb, var(--wallet-accent) 28%, #34465e);
+  color: color-mix(in srgb, var(--wallet-accent) 58%, #e4edf7);
+}
+
+html[data-theme="dark"] .wallet-edit-option__icon,
+html[data-theme="dark"] .table-icon,
+html[data-theme="dark"] .transaction-detail-icon {
+  background: #1d3445;
+  color: #75c8d1;
+}
+
+html[data-theme="dark"] .wallet-edit-option__icon {
+  border-color: #344b5f;
+}
+
+html[data-theme="dark"] .wallet-manage-button,
+html[data-theme="dark"] .pill-segment button.active,
+html[data-theme="dark"] .language-toggle,
+html[data-theme="dark"] .btn--outline {
+  color: #dce8f4;
+  border-color: #40536b;
+  background: #1b2a3d;
+}
+
+html[data-theme="dark"] .wallet-manage-button:hover,
+html[data-theme="dark"] .pill-segment button.active:hover,
+html[data-theme="dark"] .language-toggle:hover,
+html[data-theme="dark"] .btn--outline:hover {
+  background: #26374d;
+  border-color: #5a718d;
+}
+
+html[data-theme="dark"] .pill-segment button,
+html[data-theme="dark"] .tab {
+  color: #9aacc0;
+}
+
+html[data-theme="dark"] .tab.active {
+  color: #e4edf7;
+  background: #24354b;
+}
+
+html[data-theme="dark"] .btn--white {
+  color: #e4edf7;
+  background: #1b2a3d;
+}
+
+html[data-theme="dark"] .data-table th {
+  color: #a8b9cc;
+}
+
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .hint-box {
+  color: #bdcbd9;
+}
+
+html[data-theme="dark"] .filter-controls,
+html[data-theme="dark"] .transaction-detail-grid > div,
+html[data-theme="dark"] .detail-grid > div {
+  background-color: #182538;
+}
+
+html[data-theme="dark"] .top-search,
+html[data-theme="dark"] .input-sm,
+html[data-theme="dark"] .select-sm,
+html[data-theme="dark"] .date-filter {
+  background-color: #101a29;
+}
+
+html[data-theme="dark"] .danger-zone {
+  border-color: #75464b;
+  background: linear-gradient(135deg, #2a1c27 0%, #171d2b 78%);
+}
+
+html[data-theme="dark"] .danger-zone__heading,
+html[data-theme="dark"] .danger-zone__actions {
+  border-color: #55363d;
+}
+
+html[data-theme="dark"] .danger-zone__heading h2,
+html[data-theme="dark"] .danger-zone__actions h3 {
+  color: #ffb1ae;
+}
+
+html[data-theme="dark"] .danger-zone__heading p,
+html[data-theme="dark"] .danger-zone__actions p {
+  color: #c49a9b;
+}
+
+html[data-theme="dark"] .urgent-modal-title {
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .urgent-modal-text {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .urgent-modal-meta {
+  border-color: #34465e;
+}
+
+html[data-theme="dark"] .urgent-modal-footer {
+  background: #111b2a;
+  border-color: #29384c;
+}
+
+.theme-switch {
+  flex: 0 0 auto;
+  width: 88px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.theme-switch__track {
+  position: relative;
+  display: block;
+  width: 88px;
+  height: 44px;
+  border-radius: inherit;
+  background: #d9dadd;
+  box-shadow: inset 0 2px 5px #00000012;
+  transition: background-color .22s ease, box-shadow .22s ease;
+}
+
+.theme-switch__thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px #17253b22;
+  transition: transform .22s cubic-bezier(.2,.8,.2,1);
+}
+
+.theme-switch__moon,
+.theme-switch__sun {
+  position: absolute;
+  top: 12px;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: #697384;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  transition: opacity .18s ease, color .18s ease;
+}
+
+.theme-switch__moon {
+  left: 10px;
+  opacity: .9;
+}
+
+.theme-switch__sun {
+  right: 10px;
+  opacity: .45;
+}
+
+.theme-switch[aria-checked="true"] .theme-switch__track {
+  background: #27445b;
+  box-shadow: inset 0 2px 5px #00000030;
+}
+
+.theme-switch[aria-checked="true"] .theme-switch__thumb {
+  transform: translateX(44px);
+}
+
+.theme-switch[aria-checked="true"] .theme-switch__moon {
+  stroke: #b5e4ef;
+  opacity: .5;
+}
+
+.theme-switch[aria-checked="true"] .theme-switch__sun {
+  stroke: #f4d58b;
+  opacity: .95;
+}
+
+.theme-switch:focus-visible {
+  outline: 3px solid #72c8d9;
+  outline-offset: 3px;
+}
+
 @keyframes toastIn {
   from {
     opacity: 0;
