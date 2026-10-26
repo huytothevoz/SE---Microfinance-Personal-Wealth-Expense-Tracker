@@ -106,6 +106,18 @@ final class Database
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS auth_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            refresh_token_hash TEXT NOT NULL,
+            device_info TEXT NULL,
+            ip_address TEXT NULL,
+            expires_at DATETIME NOT NULL,
+            revoked_at DATETIME NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+
         CREATE TABLE IF NOT EXISTS wallets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,

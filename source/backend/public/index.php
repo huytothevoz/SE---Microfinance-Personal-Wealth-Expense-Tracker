@@ -160,6 +160,11 @@ try {
     $router->put('/admin/system-config', [$adminController, 'updateSystemConfig']);
     $router->post('/admin/announcements', [$adminController, 'sendAnnouncement']);
     $router->get('/admin/announcements', [$adminController, 'listAnnouncements']);
+    $router->get('/admin/overview', [$adminController, 'overview']);
+    $router->get('/admin/users', [$adminController, 'listUsers']);
+    $router->put('/admin/users/{id}/lock', [$adminController, 'lockUser']);
+    $router->put('/admin/users/{id}/unlock', [$adminController, 'unlockUser']);
+    $router->get('/admin/audit-logs', [$adminController, 'listAuditLogs']);
 
     $router->dispatch($request);
 } catch (ApiException $error) {

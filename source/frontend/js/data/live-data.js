@@ -18,6 +18,7 @@ export const trend = [];
 export const incomeTrend = [];
 export const expenseTrend = [];
 export const analytics = {};
+export const adminOverview = {};
 
 const collections = { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers };
 const candidates = {
@@ -32,7 +33,7 @@ const candidates = {
   categories: ['/api/categories', '/api/finance/categories'],
   adminUsers: ['/api/admin/users']
 };
-export const dataStatus = Object.fromEntries([...Object.keys(collections), 'analytics'].map(k => [k, { state: 'idle', message: '', endpoint: '' }]));
+export const dataStatus = Object.fromEntries([...Object.keys(collections), 'analytics', 'adminOverview'].map(k => [k, { state: 'idle', message: '', endpoint: '' }]));
 let generation = 0;
 const TRANSACTION_PAGE_SIZE = 100;
 const keyVariants = k => [k, k === 'recurring' ? 'schedules' : k, k === 'adminUsers' ? 'users' : k, 'items', 'rows', 'results'];
@@ -94,6 +95,16 @@ function shape(name, row) {
   }
   if (name === 'categories') {
     r.type = String(r.type ?? r.category_type ?? '').toUpperCase();
+  }
+  if (name === 'adminUsers') {
+    r.id = String(r.id ?? '');
+    r.fullName = String(r.fullName ?? r.full_name ?? r.name ?? '');
+    r.name = r.fullName;
+    r.email = String(r.email ?? '');
+    r.role = String(r.role ?? 'USER').toUpperCase();
+    r.status = String(r.status ?? 'ACTIVE').toUpperCase();
+    r.baseCurrency = String(r.baseCurrency ?? r.base_currency ?? 'VND').toUpperCase();
+    r.createdAt = String(r.createdAt ?? r.created_at ?? '');
   }
   if (name === 'recurring') {
     r.nextRun = r.nextRun ?? r.next_due_date ?? r.nextDueDate ?? '';
@@ -182,6 +193,36 @@ async function getAnalytics(requestGeneration) {
     if (requestGeneration === generation) dataStatus.analytics = { state: 'error', endpoint: '/api/analytics/net-worth', message: error.message };
   }
 }
+async function getAdminOverview(requestGeneration) {
+  adminOverview && Object.keys(adminOverview).forEach(key => delete adminOverview[key]);
+  dataStatus.adminOverview = { state: 'loading', message: '', endpoint: '/api/admin/overview' };
+  let response;
+  try {
+    response = await fetch('/api/admin/overview', {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+      cache: 'no-store'
+    });
+  } catch (error) {
+    if (requestGeneration === generation) dataStatus.adminOverview = { state: 'error', endpoint: '/api/admin/overview', message: `Không thể kết nối máy chủ: ${error.message}` };
+    return;
+  }
+  if (!response.ok) {
+    if (requestGeneration === generation) dataStatus.adminOverview = { state: response.status === 401 ? 'unauthorized' : 'error', endpoint: '/api/admin/overview', message: errorText(response.status) };
+    return;
+  }
+  try {
+    const payload = await response.json();
+    const data = payload?.data;
+    if (!payload?.success || !data || typeof data !== 'object') throw new Error('API Tổng quan quản trị trả về dữ liệu không hợp lệ.');
+    if (requestGeneration !== generation) return;
+    Object.assign(adminOverview, data);
+    dataStatus.adminOverview = { state: 'ready', message: '', endpoint: '/api/admin/overview' };
+  } catch (error) {
+    if (requestGeneration === generation) dataStatus.adminOverview = { state: 'error', endpoint: '/api/admin/overview', message: error.message };
+  }
+}
 function errorText(code, responseText = '') {
   if (code === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
   if (code === 403) return 'Tài khoản không có quyền truy cập dữ liệu này.';
@@ -247,7 +288,11 @@ async function getOne(name, requestGeneration) {
 export async function loadLiveData({ admin = false } = {}) {
   const thisGeneration = ++generation;
   const keys = Object.keys(collections).filter(k => k !== 'adminUsers' || admin);
-  await Promise.all([...keys.map(k => getOne(k, thisGeneration)), getAnalytics(thisGeneration)]);
+  const tasks = [...keys.map(k => getOne(k, thisGeneration)), getAnalytics(thisGeneration)];
+  if (admin) {
+    tasks.push(getAdminOverview(thisGeneration));
+  }
+  await Promise.all(tasks);
   return dataStatus;
 }
 export function getEndpoint(name) { return dataStatus[name]?.state === 'ready' ? dataStatus[name].endpoint : ''; }
