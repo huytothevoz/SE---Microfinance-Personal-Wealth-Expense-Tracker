@@ -1,6 +1,6 @@
 /** WealthFlow loans backed only by authenticated PHP APIs. */
 import { loadView } from './view-loader.js';
-import { loans, wallets, dataStatus } from '../data/live-data.js?v=wealth-ui-2';
+import { loans, wallets, dataStatus } from '../data/live-data.js?v=finance-ui-1';
 import { LoanApi } from '../services/loan-api.js';
 import { money, safe, formatMoneyInput, moneyInputValue, percent } from './ui-core.js?v=wealth-ui-2';
 
@@ -15,20 +15,21 @@ const walletOptions = () => wallets.filter(wallet =>
 
 function cards() {
   const state = dataStatus.loans?.state;
-  if (state === 'loading' || state === 'idle') return '<div class="empty-state"><strong>Đang tải khoản vay…</strong></div>';
-  if (state !== 'ready') return `<div class="empty-state"><strong>Chưa tải được khoản vay</strong><p>${safe(dataStatus.loans?.message || 'Vui lòng kiểm tra kết nối máy chủ.')}</p><button type="button" class="btn btn--outline btn-sm" data-page="loans">Thử lại</button></div>`;
-  if (!loans.length) return '<div class="empty-state"><strong>Bạn chưa có khoản vay hoặc khoản cho vay</strong><p>Thêm khoản mới để hệ thống theo dõi dư gốc, lãi/phí và lịch thanh toán.</p></div>';
+  if (state === 'loading' || state === 'idle') return '<div class="empty-state loan-state"><strong>Đang tải khoản vay…</strong><p>Đang đồng bộ dư gốc và lịch thanh toán từ máy chủ.</p></div>';
+  if (state !== 'ready') return `<div class="empty-state loan-state"><strong>Chưa tải được khoản vay</strong><p>${safe(dataStatus.loans?.message || 'Vui lòng kiểm tra kết nối máy chủ.')}</p><button type="button" class="btn btn--outline btn-sm" data-page="loans">Thử lại</button></div>`;
+  if (!loans.length) return '<div class="empty-state loan-state"><span class="loan-empty-icon" aria-hidden="true">↔</span><strong>Bạn chưa có khoản vay hoặc khoản cho vay</strong><p>Thêm khoản mới để theo dõi dư gốc, lãi/phí và lịch thanh toán.</p><button type="button" class="btn btn--primary btn-sm" data-action="loan:create">Thêm khoản vay đầu tiên</button></div>';
   return loans.map(loan => {
     const principal = Number(loan.principalOriginal || 0);
     const remaining = Number(loan.remainingPrincipal || 0);
     const paid = Math.max(0, principal - remaining);
     const direction = loan.direction === 'LENT' ? 'Cho vay' : 'Đi vay';
     const status = loan.status === 'PAID_OFF' ? 'Đã tất toán' : loan.status === 'DEFAULTED' ? 'Quá hạn' : 'Đang hoạt động';
-    return `<article class="loan-card">
-      <div class="status-row"><span class="badge ${loan.direction === 'BORROWED' ? 'warn' : 'blue'}">${direction}</span><span class="description">${safe(status)}</span></div>
-      <div><h3>${safe(loan.name)}</h3><p>Đối tác: ${safe(loan.partnerName || '—')} · ${safe(loan.walletName || '—')}</p></div>
-      <div><span class="description">Dư gốc còn lại</span><div class="loan-amount">${money(remaining)}</div><div class="budget-foot" style="margin:7px 0">Đã thanh toán ${money(paid)} / ${money(principal)}</div><div class="bar-track"><div class="bar-fill" style="width:${percent(paid, principal)}%"></div></div></div>
-      <div class="status-row"><span class="description">Hạn tiếp: ${safe(dateText(loan.nextDueDate))}</span><span class="goal-card-actions"><button type="button" class="btn btn--outline btn-sm" data-action="loan:detail:${safe(loan.id)}">Chi tiết</button>${loan.status === 'ACTIVE' ? `<button type="button" class="btn btn--primary btn-sm" data-action="loan:payment:${safe(loan.id)}">${loan.direction === 'LENT' ? 'Ghi nhận thu' : 'Ghi nhận trả'}</button>` : ''}</span></div>
+    return `<article class="loan-card loan-card--${loan.direction === 'BORROWED' ? 'borrowed' : 'lent'}">
+      <div class="loan-card-head"><span class="loan-direction-icon" aria-hidden="true">${loan.direction === 'BORROWED' ? '↓' : '↑'}</span><div class="loan-heading"><h3>${safe(loan.name)}</h3><p>${safe(loan.partnerName || 'Chưa ghi đối tác')}</p></div><span class="badge ${loan.direction === 'BORROWED' ? 'warn' : 'blue'}">${direction}</span></div>
+      <div class="loan-balance"><span>Dư gốc còn lại</span><strong>${money(remaining)}</strong><small>${safe(status)}</small></div>
+      <div class="loan-progress-copy"><span>Đã thanh toán ${money(paid)}</span><span>${safe(percent(paid, principal))}%</span></div><div class="bar-track"><div class="bar-fill" style="width:${percent(paid, principal)}%"></div></div>
+      <div class="loan-meta"><div><span>Gốc ban đầu</span><strong>${money(principal)}</strong></div><div><span>Ví liên kết</span><strong>${safe(loan.walletName || '—')}</strong></div><div><span>Kỳ tiếp theo</span><strong>${safe(dateText(loan.nextDueDate))}</strong></div></div>
+      <div class="loan-actions"><button type="button" class="btn btn--outline btn-sm" data-action="loan:detail:${safe(loan.id)}">Xem lịch</button>${loan.status === 'ACTIVE' ? `<button type="button" class="btn btn--primary btn-sm" data-action="loan:payment:${safe(loan.id)}">${loan.direction === 'LENT' ? 'Ghi nhận thu' : 'Ghi nhận trả'}</button>` : ''}</div>
     </article>`;
   }).join('');
 }

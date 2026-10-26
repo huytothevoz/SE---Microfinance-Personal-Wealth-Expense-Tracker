@@ -18,6 +18,7 @@ export const trend = [];
 export const incomeTrend = [];
 export const expenseTrend = [];
 export const analytics = {};
+export const expenseAnalytics = {};
 
 const collections = { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers };
 const candidates = {
@@ -32,7 +33,7 @@ const candidates = {
   categories: ['/api/categories', '/api/finance/categories'],
   adminUsers: ['/api/admin/users']
 };
-export const dataStatus = Object.fromEntries([...Object.keys(collections), 'analytics'].map(k => [k, { state: 'idle', message: '', endpoint: '' }]));
+export const dataStatus = Object.fromEntries([...Object.keys(collections), 'analytics', 'expenseAnalytics'].map(k => [k, { state: 'idle', message: '', endpoint: '' }]));
 let generation = 0;
 const TRANSACTION_PAGE_SIZE = 100;
 const keyVariants = k => [k, k === 'recurring' ? 'schedules' : k, k === 'adminUsers' ? 'users' : k, 'items', 'rows', 'results'];
@@ -54,12 +55,18 @@ function shape(name, row) {
     r.id = String(r.id ?? r.transactionId ?? r.transaction_id ?? '');
     r.name = String(r.name ?? r.description ?? r.title ?? r.note ?? 'Giao dịch');
     r.type = String(r.type ?? r.transactionType ?? r.transaction_type ?? '').toLowerCase();
-    r.amount = Number(r.amountBase ?? r.amount_base ?? r.baseAmount ?? r.amount ?? 0);
+    r.amountOriginal = String(r.amount ?? '0');
+    r.amountBase = String(r.amountBase ?? r.amount_base ?? r.baseAmount ?? (String(row.currency ?? 'VND').toUpperCase() === 'VND' ? r.amountOriginal : ''));
+    r.amount = r.amountBase || r.amountOriginal;
     r.hasBaseAmount = ['amountBase', 'amount_base', 'baseAmount'].some(k => row[k] != null) || String(row.currency ?? 'VND').toUpperCase() === 'VND';
     r.date = String(r.date ?? r.occurredOn ?? r.occurred_on ?? r.createdAt ?? '').slice(0, 10);
     r.category = String(r.categoryName ?? r.category_name ?? r.category?.name ?? r.category ?? 'Chưa phân loại');
     r.sourceWallet = String(r.sourceWalletName ?? r.source_wallet_name ?? '');
     r.destinationWallet = String(r.destinationWalletName ?? r.destination_wallet_name ?? '');
+    r.sourceAmount = String(r.sourceAmount ?? r.source_amount ?? '');
+    r.sourceCurrency = String(r.sourceCurrency ?? r.source_currency ?? '').toUpperCase();
+    r.destinationAmount = String(r.destinationAmount ?? r.destination_amount ?? '');
+    r.destinationCurrency = String(r.destinationCurrency ?? r.destination_currency ?? '').toUpperCase();
     const singleWallet = r.walletName ?? r.wallet_name ?? r.wallet?.name ?? r.wallet ?? '';
     r.wallet = r.type === 'transfer' && r.sourceWallet && r.destinationWallet
       ? `${r.sourceWallet} → ${r.destinationWallet}`
@@ -182,6 +189,26 @@ async function getAnalytics(requestGeneration) {
     if (requestGeneration === generation) dataStatus.analytics = { state: 'error', endpoint: '/api/analytics/net-worth', message: error.message };
   }
 }
+async function getExpenseAnalytics(requestGeneration) {
+  Object.keys(expenseAnalytics).forEach(key => delete expenseAnalytics[key]);
+  const endpoint = '/api/analytics/expenses';
+  dataStatus.expenseAnalytics = { state: 'loading', message: '', endpoint };
+  try {
+    const response = await fetch(endpoint, { method: 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' }, cache: 'no-store' });
+    if (!response.ok) {
+      if (requestGeneration === generation) dataStatus.expenseAnalytics = { state: response.status === 401 ? 'unauthorized' : 'error', endpoint, message: errorText(response.status) };
+      return;
+    }
+    const payload = await response.json();
+    const dashboard = payload?.data?.dashboard;
+    if (!payload?.success || !dashboard || typeof dashboard !== 'object') throw new Error('API Dashboard chi tiêu trả về dữ liệu không hợp lệ.');
+    if (requestGeneration !== generation) return;
+    Object.assign(expenseAnalytics, dashboard);
+    dataStatus.expenseAnalytics = { state: 'ready', message: '', endpoint };
+  } catch (error) {
+    if (requestGeneration === generation) dataStatus.expenseAnalytics = { state: 'error', endpoint, message: `Không thể tải Dashboard chi tiêu: ${error.message}` };
+  }
+}
 function errorText(code, responseText = '') {
   if (code === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
   if (code === 403) return 'Tài khoản không có quyền truy cập dữ liệu này.';
@@ -247,7 +274,7 @@ async function getOne(name, requestGeneration) {
 export async function loadLiveData({ admin = false } = {}) {
   const thisGeneration = ++generation;
   const keys = Object.keys(collections).filter(k => k !== 'adminUsers' || admin);
-  await Promise.all([...keys.map(k => getOne(k, thisGeneration)), getAnalytics(thisGeneration)]);
+  await Promise.all([...keys.map(k => getOne(k, thisGeneration)), getAnalytics(thisGeneration), getExpenseAnalytics(thisGeneration)]);
   return dataStatus;
 }
 export function getEndpoint(name) { return dataStatus[name]?.state === 'ready' ? dataStatus[name].endpoint : ''; }

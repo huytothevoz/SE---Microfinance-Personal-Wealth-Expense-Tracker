@@ -1,15 +1,15 @@
-import '../i18n.js?v=i18n-4';
+import '../i18n.js?v=finance-ui-1';
 import { icon, safe, money, USER_NAV, ADMIN_NAV, META, formatMoneyInput, heading, btn, panel } from './ui-core.js?v=wealth-ui-2';
-import { createPages } from './pages.js?v=wealth-ui-2';
-import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=wealth-ui-2';
-import { liveAction } from './live-pages.js?v=wealth-ui-2';
+import { createPages } from './pages.js?v=finance-ui-1';
+import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=finance-ui-1';
+import { liveAction } from './live-pages.js?v=finance-ui-1';
 // WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';
 import { createWalletFeature } from './wallet-feature.js?v=wallet-ui-13';
-import { handleGoalAction } from './goals.js?v=wealth-ui-2';
-import { handleGoldAction } from './gold.js?v=wealth-ui-2';
-import { handleLoanAction } from './loans.js?v=wealth-ui-2';
+import { handleGoalAction } from './goals.js?v=finance-ui-1';
+import { handleGoldAction } from './gold.js?v=finance-ui-1';
+import { handleLoanAction } from './loans.js?v=finance-ui-1';
 import { runReconciliationAudit } from './reports.js';
 import { ReportApi } from '../services/report-api.js';
 import { handleAdminAction } from './admin.js';
@@ -130,6 +130,10 @@ function handleAction(action, trigger) {
   if (handleLoanAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (handleAdminAction(action, trigger, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (handleSecurityAction(action, { dialog, toast })) return;
+  if (action === 'refresh-data') {
+    void navigate(state.page).then(() => toast('Đã làm mới dữ liệu từ máy chủ.'));
+    return;
+  }
   if (action === 'transaction-filter') { openTransactionFilter({ state, dialog }); return; }
   if (action === 'logout') {
     authApi('logout', {}).then(() => location.replace('index.html?auth=login')).catch(error => toast(errorMessage(error)));

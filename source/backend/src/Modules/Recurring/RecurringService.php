@@ -37,7 +37,7 @@ final class RecurringService
     public function createSchedule(int $userId, array $dto): array
     {
         $name = trim((string) ($dto['name'] ?? ''));
-        $amount = (float) ($dto['amount'] ?? 0);
+        $amount = $this->positiveAmount($dto['amount'] ?? null);
         $walletId = (int) ($dto['walletId'] ?? 0);
         $categoryId = isset($dto['categoryId']) && $dto['categoryId'] !== '' ? (int) $dto['categoryId'] : null;
         $dayOfMonth = (int) ($dto['dayOfMonth'] ?? 1);
@@ -45,9 +45,6 @@ final class RecurringService
 
         if ($name === '') {
             throw new InvalidArgumentException('Tên khoản định kỳ không được để trống.');
-        }
-        if ($amount <= 0) {
-            throw new InvalidArgumentException('Số tiền định kỳ phải lớn hơn 0.');
         }
         if ($dayOfMonth < 1 || $dayOfMonth > 31) {
             throw new InvalidArgumentException('Ngày neo định kỳ trong tháng phải từ 1 đến 31.');
@@ -57,11 +54,21 @@ final class RecurringService
         }
 
         $wallet = $this->walletDao->findByIdAndUser($walletId, $userId);
-        if (!$wallet) {
-            throw new InvalidArgumentException('Ví thanh toán không tồn tại hoặc không thuộc quyền sở hữu.');
+        if (!$wallet || (string) $wallet['status'] !== 'ACTIVE') {
+            throw new InvalidArgumentException('Ví thanh toán đang hoạt động không tồn tại hoặc không thuộc quyền sở hữu.');
         }
 
-        $currency = strtoupper($dto['currency'] ?? $wallet['currency']);
+        $currency = strtoupper((string) $wallet['currency']);
+        if (isset($dto['currency']) && strtoupper(trim((string) $dto['currency'])) !== $currency) {
+            throw new InvalidArgumentException('Đơn vị tiền định kỳ phải trùng với đơn vị tiền của ví.');
+        }
+        if ($categoryId !== null) {
+            $category = (new \WealthFlow\Modules\Transactions\CategoryDAO($this->walletDao->getPdo()))
+                ->findActiveByIdAndUserAndType($categoryId, $userId, 'EXPENSE');
+            if ($category === null) {
+                throw new InvalidArgumentException('Danh mục chi tiêu định kỳ không hợp lệ hoặc không thuộc quyền sở hữu.');
+            }
+        }
         $nextDueDate = self::calculateInitialDueDate($dayOfMonth);
 
         $id = $this->recurringDao->create([
@@ -156,5 +163,14 @@ final class RecurringService
 
         $clampedDay = min($anchorDay, $maxDaysNextMonth);
         return sprintf('%04d-%02d-%02d', $nextYear, $nextMonth, $clampedDay);
+    }
+
+    private function positiveAmount(mixed $value): string
+    {
+        $amount = trim((string) ($value ?? ''));
+        if (!preg_match('/^\d+(?:\.\d{1,8})?$/D', $amount) || bccomp($amount, '0', 8) !== 1) {
+            throw new InvalidArgumentException('Số tiền định kỳ phải là số thập phân hợp lệ lớn hơn 0.');
+        }
+        return bcadd($amount, '0', 8);
     }
 }

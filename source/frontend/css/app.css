@@ -1223,6 +1223,15 @@
   color: #1d8065;
 }
 
+.wallet-history-equivalent {
+  display: block;
+  margin-top: 2px;
+  color: #718293;
+  font-size: 9.5px;
+  font-weight: 600;
+  text-align: right;
+}
+
 .input-sm,.select-sm {
   min-height: 36px;
   border: 1px solid #dfe7ef;
@@ -1499,6 +1508,38 @@
   font-size: 22px;
   font-weight: 850;
 }
+
+.loan-page-heading { margin-bottom: 18px; }
+.loan-kpi-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.loan-kpi-grid .kpi-card { min-height: 136px; }
+.loan-kpi-mark { width: 34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#edf2f7;color:#61778d;font-weight:850;font-size:17px; }
+.loan-kpi-mark.is-borrowed { background:#fff0ea;color:#c76a46; }
+.loan-kpi-mark.is-lent { background:#e7f7f0;color:#1d8a65; }
+.loan-panel { margin-top: 2px; }
+.loan-page-grid { grid-template-columns: repeat(2,minmax(0,1fr));gap:16px; }
+.loan-state { grid-column:1/-1;min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center; }
+.loan-state p { margin:0 0 4px;color:#7d90a5; }
+.loan-empty-icon { width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:#eaf5f7;color:#25859b;font-size:22px; }
+.loan-card { position:relative;overflow:hidden;gap:16px; }
+.loan-card::before { content:"";position:absolute;inset:0 auto 0 0;width:4px;background:#5b91d1; }
+.loan-card--borrowed::before { background:#ef936e; }
+.loan-card-head { display:flex;align-items:center;gap:11px; }
+.loan-direction-icon { width:39px;height:39px;border-radius:11px;display:grid;place-items:center;background:#edf3fb;color:#477ebd;font-size:19px;font-weight:900;flex:0 0 auto; }
+.loan-card--borrowed .loan-direction-icon { background:#fff0ea;color:#c76a46; }
+.loan-heading { min-width:0;flex:1; }
+.loan-heading h3 { overflow-wrap:anywhere; }
+.loan-balance { display:grid;gap:5px;padding:14px;border-radius:12px;background:#f6f9fb; }
+.loan-balance span,.loan-balance small,.loan-meta span,.loan-progress-copy { color:#7d90a5;font-size:10px; }
+.loan-balance strong { font-size:23px;letter-spacing:-.5px;color:#163653; }
+.loan-progress-copy { display:flex;justify-content:space-between;gap:12px;margin-bottom:-9px; }
+.loan-meta { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px; }
+.loan-meta>div { display:grid;gap:4px;padding:10px;border:1px solid #e7edf4;border-radius:10px;min-width:0; }
+.loan-meta strong { font-size:11px;overflow-wrap:anywhere; }
+.loan-actions { display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap; }
+.report-actions { display:flex;justify-content:space-between;align-items:center;gap:12px;margin:-4px 0 16px;flex-wrap:wrap; }
+
+@media(max-width:900px){.loan-page-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.loan-kpi-grid{grid-template-columns:1fr}.loan-meta{grid-template-columns:1fr}.report-actions .btn{width:100%}}
 
 .notification-item {
   display: flex;

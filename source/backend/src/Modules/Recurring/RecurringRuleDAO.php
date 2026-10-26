@@ -105,7 +105,7 @@ final class RecurringRuleDAO
         $stmt = $this->pdo->prepare('SELECT s.*, w.cached_balance as wallet_balance, w.name as wallet_name
             FROM recurring_schedules s
             JOIN wallets w ON s.wallet_id = w.id
-            WHERE s.status = "ACTIVE" AND s.next_due_date <= ?
+            WHERE s.status = "ACTIVE" AND w.status = "ACTIVE" AND s.next_due_date <= ?
             ORDER BY s.id ASC');
         $stmt->execute([$asOfDate]);
         return $stmt->fetchAll();

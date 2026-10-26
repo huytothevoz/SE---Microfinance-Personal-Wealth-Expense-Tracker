@@ -119,12 +119,15 @@ final class WalletService
                 }
             }
 
+            $storedOpeningBalance = $walletType === 'CREDIT'
+                ? bcmul($initialBalance, '-1', 8)
+                : $initialBalance;
             $walletId = $this->walletDao->create(
                 $userId,
                 $name,
                 $walletType,
                 $currency,
-                $initialBalance
+                $storedOpeningBalance
             );
 
             $openingTransactionId = null;
@@ -213,6 +216,11 @@ final class WalletService
         if ($name === '' || mb_strlen($name) > 120) {
             throw new InvalidArgumentException('Tên ví phải từ 1 đến 120 ký tự.');
         }
+        if ($this->walletDao->nameExists($userId, $name, $walletId)) {
+            throw new ApiException('DUPLICATE_WALLET_NAME', 'Tên ví đã tồn tại.', 409, [
+                'name' => 'Hãy dùng tên khác; tên ví đang hoạt động hoặc đã lưu trữ không được trùng.',
+            ]);
+        }
 
         $this->walletDao->update($walletId, $userId, $name);
         return $this->getWallet($walletId, $userId);
@@ -255,6 +263,13 @@ final class WalletService
             $wallet = $this->walletDao->findByIdAndUser($walletId, $userId, true);
             if ($wallet === null || (string) $wallet['status'] !== 'ACTIVE') {
                 throw new ApiException('NOT_FOUND', 'Ví đang hoạt động không tồn tại hoặc không thuộc quyền sở hữu.', 404);
+            }
+            if ((string) $wallet['wallet_type'] === 'CREDIT') {
+                throw new ApiException(
+                    'CREDIT_ADJUSTMENT_NOT_ALLOWED',
+                    'Thẻ tín dụng chỉ thay đổi qua giao dịch chi tiêu hoặc chuyển tiền thanh toán thẻ.',
+                    422
+                );
             }
 
             $currency = strtoupper((string) $wallet['currency']);

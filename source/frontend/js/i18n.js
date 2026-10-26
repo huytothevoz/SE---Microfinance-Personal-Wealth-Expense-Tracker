@@ -280,10 +280,22 @@ const translations = new Map(Object.entries({
   'Chỉ Admin được tạo broadcast. Thông báo được phát thanh tức thời tới tất cả người dùng đang hoạt động (ACTIVE) trong hệ thống với độ phức tạp tối ưu O(1).': 'Only admins can create announcements. Messages are delivered immediately to all active users with O(1) complexity.',
   'Khoản vay & nợ vi mô': 'Microloans & debt',
   'Theo dõi đi vay, cho vay, dư gốc, lãi/phí và lịch thanh toán.': 'Track borrowing, lending, principal balances, interest, fees, and payment schedules.',
-  '+ Thêm khoản vay': '+ Add loan',
+  'Thêm khoản vay': 'Add loan',
+  'Thêm khoản vay đầu tiên': 'Add your first loan',
+  'Tổng dư nợ đi vay': 'Total borrowed principal',
   'Tổng phải thu cho vay': 'Total receivable',
   'Khoản đang hoạt động': 'Active loans',
+  'Nghĩa vụ gốc còn phải trả': 'Outstanding principal to repay',
+  'Tiền gốc còn được nhận lại': 'Principal still receivable',
+  'Đi vay và cho vay chưa tất toán': 'Open borrowing and lending positions',
+  'Danh sách khoản vay': 'Loan list',
+  'Dư gốc, tiến độ và kỳ thanh toán kế tiếp': 'Principal, progress, and next payment date',
   'Đang tải khoản vay…': 'Loading loans…',
+  'Đang đồng bộ dư gốc và lịch thanh toán từ máy chủ.': 'Syncing principal balances and payment schedules from the server.',
+  'Bạn chưa có khoản vay hoặc khoản cho vay': 'You have no loans yet',
+  'Thêm khoản mới để theo dõi dư gốc, lãi/phí và lịch thanh toán.': 'Add a loan to track principal, interest, fees, and payments.',
+  'Dữ liệu giao dịch đã ghi sổ từ MySQL': 'Posted transaction data from MySQL',
+  '↻ Làm mới dữ liệu': '↻ Refresh data',
   'Chọn điều bạn muốn đạt được và theo dõi từng khoản đã để dành.': 'Choose a goal and track every contribution.',
   'Đang thực hiện': 'In progress',
   '0 mục tiêu': '0 goals',
@@ -474,6 +486,19 @@ const translations = new Map(Object.entries({
   'Chưa có ngân sách': 'No budgets yet',
   'Chưa có lịch định kỳ': 'No recurring schedules',
   'Chưa có khoản vay': 'No loans yet'
+  ,'Dashboard chi tiêu': 'Expense dashboard'
+  ,'Tổng chi tiêu tháng': 'Monthly expenses'
+  ,'Số danh mục phát sinh': 'Active expense categories'
+  ,'Chỉ giao dịch chi phí đã ghi sổ': 'Posted expense transactions only'
+  ,'Tiền cơ sở': 'Base currency'
+  ,'Mọi số liệu đã được backend quy đổi': 'All figures are converted by the backend'
+  ,'Nguồn dữ liệu': 'Data source'
+  ,'Không dùng dữ liệu mẫu hoặc localStorage': 'No sample data or localStorage'
+  ,'Chi tiêu theo danh mục': 'Expenses by category'
+  ,'Thu nhập và chi tiêu': 'Income and expenses'
+  ,'Thu nhập': 'Income'
+  ,'Biểu đồ cột · 6 tháng gần nhất': 'Bar chart · last 6 months'
+  ,'Cơ cấu chi tiêu theo danh mục': 'Expense breakdown by category'
 }));
 
 const textOriginals = new WeakMap();
@@ -491,6 +516,10 @@ function translate(value) {
   if (translations.has(normalized)) return translations.get(normalized);
   const resendMatch = normalized.match(/^Gửi lại sau (\d+)s$/);
   if (resendMatch) return `Resend in ${resendMatch[1]}s`;
+  const monthMatch = normalized.match(/^Tháng (\d{4}-\d{2})$/);
+  if (monthMatch) return `Month ${monthMatch[1]}`;
+  const pieMonthMatch = normalized.match(/^Biểu đồ tròn · tháng (\d{4}-\d{2})$/);
+  if (pieMonthMatch) return `Pie chart · ${pieMonthMatch[1]}`;
   return value;
 }
 

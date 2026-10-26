@@ -96,13 +96,13 @@ final class RecurringWorker
             $userId = (int) $schedule['user_id'];
             $dueDate = $schedule['next_due_date'];
             $anchorDay = (int) $schedule['day_of_month'];
-            $amount = (float) $schedule['amount'];
+            $amount = (string) $schedule['amount'];
             $walletId = (int) $schedule['wallet_id'];
             $categoryId = !empty($schedule['category_id']) ? (int) $schedule['category_id'] : null;
             $name = $schedule['name'];
             $mode = $schedule['execution_mode'];
             $currency = $schedule['currency'];
-            $walletBalance = (float) $schedule['wallet_balance'];
+            $walletBalance = (string) $schedule['wallet_balance'];
 
             // Skip if already executed for this due date (Idempotent per due cycle)
             if ($this->recurringDao->hasExecutionForDue($scheduleId, $dueDate)) {
@@ -115,7 +115,7 @@ final class RecurringWorker
             $summary['processed']++;
 
             if ($mode === 'AUTO_POST') {
-                if ($walletBalance >= $amount && $categoryId !== null) {
+                if (bccomp($walletBalance, $amount, 8) >= 0 && $categoryId !== null) {
                     $pdo = $this->ledgerDao->getPdo();
                     $pdo->exec('SAVEPOINT recurring_post');
                     $savepointActive = true;
@@ -145,7 +145,7 @@ final class RecurringWorker
                         $this->notifService->notify(
                             $userId,
                             "Tự động thanh toán: {$name}",
-                            "Đã tự động trích " . number_format($amount, 0, ',', '.') . " {$currency} từ ví {$schedule['wallet_name']} cho khoản định kỳ.",
+                            "Đã tự động trích " . $this->formatAmount($amount) . " {$currency} từ ví {$schedule['wallet_name']} cho khoản định kỳ.",
                             'RECURRING',
                             "RECURRING_POSTED_{$scheduleId}_{$dueDate}"
                         );
@@ -180,7 +180,7 @@ final class RecurringWorker
                     $this->notifService->notify(
                         $userId,
                         "Cảnh báo ví thiếu tiền: {$name}",
-                        "Ví {$schedule['wallet_name']} không đủ số dư để tự động trích " . number_format($amount, 0, ',', '.') . " {$currency}. Hệ thống đã tạo bản nháp chờ bạn nạp tiền và xác nhận.",
+                        "Ví {$schedule['wallet_name']} không đủ số dư để tự động trích " . $this->formatAmount($amount) . " {$currency}. Hệ thống đã tạo bản nháp chờ bạn nạp tiền và xác nhận.",
                         'RECURRING',
                         "RECURRING_INSUFFICIENT_{$scheduleId}_{$dueDate}"
                     );
@@ -207,7 +207,7 @@ final class RecurringWorker
                 $this->notifService->notify(
                     $userId,
                     "Nhắc nhở định kỳ: {$name}",
-                    "Khoản định kỳ " . number_format($amount, 0, ',', '.') . " {$currency} đến hạn hôm nay. Bản nháp đã được tạo sẵn để bạn xác nhận ghi sổ.",
+                    "Khoản định kỳ " . $this->formatAmount($amount) . " {$currency} đến hạn hôm nay. Bản nháp đã được tạo sẵn để bạn xác nhận ghi sổ.",
                     'RECURRING',
                     "RECURRING_REMINDER_{$scheduleId}_{$dueDate}"
                 );
@@ -219,5 +219,13 @@ final class RecurringWorker
         }
 
         return $summary;
+    }
+
+    private function formatAmount(string $amount): string
+    {
+        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
+        $formatted = preg_replace('/\B(?=(\d{3})+(?!\d))/', '.', ltrim($whole, '0') ?: '0') ?? $whole;
+        $fraction = rtrim($fraction, '0');
+        return $fraction === '' ? $formatted : $formatted . ',' . $fraction;
     }
 }

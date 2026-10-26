@@ -625,6 +625,90 @@ final class TestRunner
         $expectedNext = RecurringService::calculateNextMonthlyDueDate(5, $today);
         $this->assert('TC-F06.03.4 Next due date advanced correctly for next cycle', $sub1Updated['next_due_date'] === $expectedNext);
 
+        echo "\n--- GROUP 5: Wallet/account regression coverage ---\n";
+        $wallet2BeforeFx = (string) $walletRepo->findByIdAndUser(2, $userId)['cached_balance'];
+        $crossTransfer = $ledgerService->postTransfer($userId, [
+            'fromWalletId' => 4,
+            'toWalletId' => 2,
+            'amount' => '100',
+            'destAmount' => '1',
+            'description' => 'Đổi USD sang VND',
+        ]);
+        $expectedDestination = bcmul('100', $fxService->getSnapshotRate('USD', 'VND'), 0);
+        $wallet2AfterFx = (string) $walletRepo->findByIdAndUser(2, $userId)['cached_balance'];
+        $this->assert('TC-WALLET-01 Destination amount is server-calculated and ignores client override',
+            bccomp((string) $crossTransfer['destAmount'], $expectedDestination, 8) === 0
+            && bccomp($wallet2AfterFx, bcadd($wallet2BeforeFx, $expectedDestination, 8), 8) === 0);
+
+        $destinationHistory = array_values(array_filter(
+            $walletRepo->listHistory(2, $userId),
+            static fn(array $item): bool => (int) ($item['id'] ?? 0) === (int) $crossTransfer['transactionId']
+        ));
+        $this->assert('TC-WALLET-02 Destination history shows original USD and credited VND',
+            count($destinationHistory) === 1
+            && $destinationHistory[0]['direction'] === 'IN'
+            && $destinationHistory[0]['display_currency'] === 'USD'
+            && bccomp((string) $destinationHistory[0]['display_amount'], '100', 8) === 0
+            && $destinationHistory[0]['display_equivalent_currency'] === 'VND'
+            && bccomp((string) $destinationHistory[0]['display_equivalent_amount'], $expectedDestination, 8) === 0);
+
+        $currencyMismatchRejected = false;
+        try {
+            $ledgerService->postIncome($userId, ['walletId' => 2, 'categoryId' => 6, 'amount' => '10', 'currency' => 'USD']);
+        } catch (InvalidArgumentException) {
+            $currencyMismatchRejected = true;
+        }
+        $this->assert('TC-WALLET-03 Transaction currency cannot override wallet currency', $currencyMismatchRejected);
+
+        $categoryMismatchRejected = false;
+        try {
+            $ledgerService->postIncome($userId, ['walletId' => 2, 'categoryId' => 1, 'amount' => '10']);
+        } catch (InvalidArgumentException) {
+            $categoryMismatchRejected = true;
+        }
+        $this->assert('TC-WALLET-04 Income rejects expense category', $categoryMismatchRejected);
+
+        $archived = $walletService->createWallet($userId, ['name' => 'Ví lưu trữ kiểm thử', 'walletType' => 'CASH', 'initialBalance' => '0']);
+        $walletService->archiveWallet((int) $archived['id'], $userId);
+        $archivedPostingRejected = false;
+        try {
+            $ledgerService->postIncome($userId, ['walletId' => (int) $archived['id'], 'categoryId' => 6, 'amount' => '10']);
+        } catch (InvalidArgumentException) {
+            $archivedPostingRejected = true;
+        }
+        $this->assert('TC-WALLET-05 Archived wallet cannot receive direct API posting', $archivedPostingRejected);
+
+        $credit = $walletService->createWallet($userId, [
+            'name' => 'Thẻ tín dụng kiểm thử', 'walletType' => 'CREDIT', 'currency' => 'VND', 'initialBalance' => '1000000'
+        ]);
+        $creditId = (int) $credit['id'];
+        $this->assert('TC-WALLET-06 Credit opening balance is stored as a liability',
+            bccomp((string) $credit['cached_balance'], '-1000000', 8) === 0);
+        $creditExpense = $ledgerService->postExpense($userId, [
+            'walletId' => $creditId, 'categoryId' => 4, 'amount' => '200000', 'description' => 'Mua sắm bằng thẻ'
+        ]);
+        $creditHistory = array_values(array_filter(
+            $walletRepo->listHistory($creditId, $userId),
+            static fn(array $item): bool => (int) ($item['id'] ?? 0) === (int) $creditExpense['transactionId']
+        ));
+        $this->assert('TC-WALLET-07 Credit expense increases debt and remains a red outflow',
+            bccomp((string) $walletRepo->findByIdAndUser($creditId, $userId)['cached_balance'], '-1200000', 8) === 0
+            && $creditHistory[0]['direction'] === 'OUT'
+            && $creditHistory[0]['tone'] === 'negative');
+        $creditIncomeRejected = false;
+        try {
+            $ledgerService->postIncome($userId, ['walletId' => $creditId, 'categoryId' => 6, 'amount' => '100000']);
+        } catch (InvalidArgumentException) {
+            $creditIncomeRejected = true;
+        }
+        $this->assert('TC-WALLET-08 Credit payment cannot be mislabeled as income', $creditIncomeRejected);
+
+        $expenseDashboard = (new \WealthFlow\Modules\Wealth\NetWorthAnalyticsService())->expenseDashboard($userId, date('Y-m'));
+        $this->assert('TC-WALLET-09 Expense dashboard is backend aggregated and category-scoped',
+            $expenseDashboard['currency'] === 'VND'
+            && count($expenseDashboard['trend']) === 6
+            && count($expenseDashboard['byCategory']) > 0);
+
         echo "\n====================================================================\n";
         echo "TEST SUMMARY: {$this->passed} PASSED, {$this->failed} FAILED\n";
         echo "====================================================================\n";

@@ -1,10 +1,10 @@
 /** Refactor SPA view aggregator: no demo fixtures, never return fabricated account data. */
 import { META } from './ui-core.js?v=wealth-ui-2';
-import { liveRender, liveTransactionTable } from './live-pages.js?v=wealth-ui-2';
+import { liveRender, liveTransactionTable } from './live-pages.js?v=finance-ui-1';
 import { renderWalletPage } from './wallets.js?v=wallet-ui-13';
-import { renderGoalsPage } from './goals.js?v=wealth-ui-2';
-import { renderGoldPage } from './gold.js?v=wealth-ui-2';
-import { renderLoansPage } from './loans.js?v=wealth-ui-2';
+import { renderGoalsPage } from './goals.js?v=finance-ui-1';
+import { renderGoldPage } from './gold.js?v=finance-ui-1';
+import { renderLoansPage } from './loans.js?v=finance-ui-1';
 import { renderReconciliationPage } from './reports.js';
 import { renderAdminCategoriesPage, renderAdminSettingsPage, renderAdminBroadcastPage, renderNotificationsPage } from './admin.js';
 

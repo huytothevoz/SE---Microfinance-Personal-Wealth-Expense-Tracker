@@ -1,11 +1,11 @@
 /** WealthFlow live, account-scoped page templates. No static financial figures. */
-import { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers, analytics, dataStatus, mutateLiveData, loadLiveData } from '../data/live-data.js?v=wealth-ui-2';
+import { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers, analytics, expenseAnalytics, dataStatus, mutateLiveData, loadLiveData } from '../data/live-data.js?v=finance-ui-1';
 import { icon, formatMoneyInput, moneyInputValue } from './ui-core.js?v=wealth-ui-2';
 import { httpClient } from '../services/http-client.js';
 import { GoalApi } from '../services/goal-api.js';
 
 const ITEMS = { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers };
-const TITLES = { wallets: 'Ví', transactions: 'Giao dịch', categories: 'Danh mục', budgets: 'Ngân sách', recurring: 'Giao dịch định kỳ', goals: 'Mục tiêu tiết kiệm', loans: 'Vay và cho vay', gold: 'Tài sản vàng', notifications: 'Thông báo', adminUsers: 'Người dùng' };
+const TITLES = { wallets: 'Ví', transactions: 'Giao dịch', categories: 'Danh mục', budgets: 'Ngân sách', recurring: 'Giao dịch định kỳ', goals: 'Mục tiêu tiết kiệm', loans: 'Vay và cho vay', gold: 'Tài sản vàng', notifications: 'Thông báo', adminUsers: 'Người dùng', expenseAnalytics: 'Dashboard chi tiêu' };
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const vnd = n => Number.isFinite(Number(n)) ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(n)) : '—';
 const val = (obj, ...keys) => keys.map(k => obj?.[k]).find(x => x !== null && x !== undefined && x !== '');
@@ -14,7 +14,7 @@ const sum = list => list.reduce((s, row) => s + Math.abs(Number(row.amount || 0)
 const ownMonth = iso => String(iso ?? '').slice(0, 7);
 const month = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}`; };
 const posted = () => transactions.filter(t => t.status === 'POSTED');
-const TRANSACTION_TYPE_LABELS = { income: 'Thu nhập', expense: 'Chi tiêu', transfer: 'Chuyển tiền', savings_goal: 'Mục tiêu tiết kiệm', other: 'Số dư' };
+const TRANSACTION_TYPE_LABELS = { income: 'Thu nhập', expense: 'Chi tiêu', transfer: 'Chuyển tiền', savings_goal: 'Mục tiêu tiết kiệm', loan_disbursement: 'Giải ngân khoản vay', loan_payment: 'Thanh toán khoản vay', gold_purchase: 'Mua vàng', gold_sale: 'Bán vàng', other: 'Số dư' };
 const stateOf = key => dataStatus[key]?.state || 'idle';
 const ready = key => stateOf(key) === 'ready';
 const loading = key => stateOf(key) === 'loading' || stateOf(key) === 'idle';
@@ -33,13 +33,22 @@ const baseStyle = `<style>
 .wf-bar.out{background:#ef9b71}.wf-bar-group small{position:absolute;top:100%;padding-top:5px;white-space:nowrap;font-size:10px}
 .wf-progress{height:9px;border-radius:8px;background:#d7e3e9;overflow:hidden}.wf-progress i{display:block;background:#16869e;height:100%}
 .wf-table-actions{white-space:nowrap}.wf-grid-actions{display:flex;flex-wrap:wrap;gap:8px}.wf-stat-note{font-size:12px;color:#68778a;margin-top:7px}
+.expense-dashboard-grid{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(420px,1.4fr);gap:18px}.expense-donut-layout{display:grid;grid-template-columns:210px 1fr;gap:20px;align-items:center}.expense-donut{width:210px;height:210px;transform:rotate(-90deg)}.expense-donut-bg{fill:none;stroke:var(--surface-soft,#e7eef2);stroke-width:18}.expense-donut-segment{fill:none;stroke-width:18}.expense-legend{display:grid;gap:10px}.expense-legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center}.expense-legend-dot{width:10px;height:10px;border-radius:50%}.expense-bars{height:250px;display:flex;gap:14px;align-items:flex-end;border-bottom:1px solid var(--border,#d7e0e5);padding:18px 8px 24px}.expense-month{flex:1;height:100%;display:flex;gap:5px;align-items:flex-end;justify-content:center;position:relative}.expense-column{width:min(32px,42%);min-height:2px;border-radius:7px 7px 2px 2px;background:#44c2c7}.expense-column.is-expense{background:#f08b65}.expense-month small{position:absolute;top:calc(100% + 7px);font-size:11px}.expense-chart-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px}.expense-chart-legend span{display:flex;align-items:center;gap:7px}.expense-chart-legend i{width:10px;height:10px;border-radius:50%;background:#44c2c7}.expense-chart-legend .is-expense{background:#f08b65}
 @media(max-width:640px){.wf-graph{height:150px;gap:3px}.wf-bar{min-width:5px}}
+@media(max-width:960px){.expense-dashboard-grid{grid-template-columns:1fr}.expense-donut-layout{grid-template-columns:1fr;justify-items:center}.expense-legend{width:100%}}
 </style>`;
 function table(key, columns, list = ITEMS[key]) {
   const issue = problem(key);
   if (issue) return issue;
   if (!list.length) return empty(key, TITLES[key]?.toLowerCase() || 'dữ liệu');
-  return `<div class="data-table-wrap"><table class="data-table"><thead><tr>${columns.map(([label]) => `<th>${esc(label)}</th>`).join('')}<th></th></tr></thead><tbody>${list.map(row => `<tr>${columns.map(([, field, fmt]) => `<td>${display(val(row, ...field.split('|')), fmt, key==='wallets'?row.currency:'VND')}</td>`).join('')}<td class="wf-table-actions"><button type="button" class="text-action" data-action="live:detail:${key}:${encodeURIComponent(String(row.id ?? ''))}">Chi tiết</button>${key === 'recurring' && row.id && ['ACTIVE','PAUSED'].includes(String(row.status).toUpperCase()) ? `<button type="button" class="text-action" data-action="live:${String(row.status).toUpperCase() === 'ACTIVE' ? 'pause' : 'resume'}:recurring:${encodeURIComponent(String(row.id))}">${String(row.status).toUpperCase() === 'ACTIVE' ? 'Tạm dừng' : 'Tiếp tục'}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="data-table-wrap"><table class="data-table"><thead><tr>${columns.map(([label]) => `<th>${esc(label)}</th>`).join('')}<th></th></tr></thead><tbody>${list.map(row => {
+    const moneyCurrency = key === 'wallets'
+      ? row.currency
+      : key === 'transactions'
+        ? (row.hasBaseAmount ? 'VND' : row.currency)
+        : 'VND';
+    return `<tr>${columns.map(([, field, fmt]) => `<td>${display(val(row, ...field.split('|')), fmt, moneyCurrency)}</td>`).join('')}<td class="wf-table-actions"><button type="button" class="text-action" data-action="live:detail:${key}:${encodeURIComponent(String(row.id ?? ''))}">Chi tiết</button>${key === 'recurring' && row.id && ['ACTIVE','PAUSED'].includes(String(row.status).toUpperCase()) ? `<button type="button" class="text-action" data-action="live:${String(row.status).toUpperCase() === 'ACTIVE' ? 'pause' : 'resume'}:recurring:${encodeURIComponent(String(row.id))}">${String(row.status).toUpperCase() === 'ACTIVE' ? 'Tạm dừng' : 'Tiếp tục'}</button>` : ''}</td></tr>`;
+  }).join('')}</tbody></table></div>`;
 }
 function card(label, value, caption) { return `<div class="kpi-card"><div class="kpi-top"><span class="kpi-label">${esc(label)}</span></div><div class="kpi-number">${esc(value)}</div><div class="kpi-desc">${esc(caption)}</div></div>`; }
 function monthStats() {
@@ -50,18 +59,27 @@ function monthStats() {
   return { income, expense, net: income - expense, rate: income > 0 ? (income - expense) / income * 100 : null };
 }
 function reports() {
-  const issue = problem('transactions');
+  const issue = problem('expenseAnalytics');
   if (issue) return issue;
-  const stats = monthStats();
-  const months = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (5 - i));
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    const list = posted().filter(t => ownMonth(t.date) === key);
-    return { key, income: sum(list.filter(t => t.type === 'income')), expense: sum(list.filter(t => t.type === 'expense')) };
-  });
-  const ceiling = Math.max(1, ...months.flatMap(m => [m.income, m.expense]));
-  return `<div class="kpi-grid">${card('Thu nhập tháng',vnd(stats.income),'Không tính chuyển ví')}${card('Chi tiêu tháng',vnd(stats.expense),'Không tính chuyển ví')}${card('Dòng tiền thuần',vnd(stats.net),'Thu nhập trừ chi tiêu')}${card('Tỷ lệ tiết kiệm',stats.rate === null ? '—' : stats.rate.toFixed(1) + '%',stats.rate === null ? 'Chưa có thu nhập để tính' : 'Tính từ giao dịch đã ghi sổ')}</div>
-  <section class="panel"><div class="panel-title"><h2>Thu nhập và chi tiêu · 6 tháng</h2></div><div class="wf-graph">${months.map(m => `<div class="wf-bar-group"><i class="wf-bar" style="height:${Math.max(0, m.income / ceiling * 100)}%" title="${esc(m.key)}: Thu ${vnd(m.income)}"></i><i class="wf-bar out" style="height:${Math.max(0, m.expense / ceiling * 100)}%" title="${esc(m.key)}: Chi ${vnd(m.expense)}"></i><small>${esc(m.key.slice(5))}</small></div>`).join('')}</div><p class="wf-stat-note">Xanh: thu nhập · Cam: chi tiêu. Dữ liệu lấy từ tài khoản đăng nhập, không phải dữ liệu mẫu.</p></section>`;
+  const byCategory = Array.isArray(expenseAnalytics.byCategory) ? expenseAnalytics.byCategory : [];
+  const months = Array.isArray(expenseAnalytics.trend) ? expenseAnalytics.trend : [];
+  const totalExpense = Number(expenseAnalytics.totalExpense || 0);
+  const palette = ['#31b9bd','#f08b65','#705cf6','#f2bd52','#4f8fdd','#cf67a4','#5caa72','#8c78c6'];
+  let offset = 0;
+  const segments = byCategory.map((item, index) => {
+    const ratio = totalExpense > 0 ? Number(item.amount || 0) / totalExpense * 100 : 0;
+    const segment = `<circle class="expense-donut-segment" cx="50" cy="50" r="38" pathLength="100" stroke="${palette[index % palette.length]}" stroke-dasharray="${ratio} ${100-ratio}" stroke-dashoffset="${-offset}"><title>${esc(item.category)}: ${esc(vnd(item.amount))}</title></circle>`;
+    offset += ratio;
+    return segment;
+  }).join('');
+  const categoryPanel = byCategory.length
+    ? `<div class="expense-donut-layout"><svg class="expense-donut" viewBox="0 0 100 100" role="img" aria-label="Cơ cấu chi tiêu theo danh mục"><circle class="expense-donut-bg" cx="50" cy="50" r="38"/>${segments}</svg><div class="expense-legend">${byCategory.map((item,index)=>`<div class="expense-legend-row"><i class="expense-legend-dot" style="background:${palette[index%palette.length]}"></i><span>${esc(item.category)}</span><strong>${vnd(item.amount)}</strong></div>`).join('')}</div></div>`
+    : empty('expenseAnalytics','chi tiêu trong tháng');
+  const ceiling = Math.max(1, ...months.flatMap(item => [Number(item.income || 0), Number(item.expense || 0)]));
+  const barPanel = months.length
+    ? `<div class="expense-bars">${months.map(item=>`<div class="expense-month"><i class="expense-column" style="height:${Math.max(1,Number(item.income||0)/ceiling*100)}%" title="${esc(item.month)} · Thu nhập: ${esc(vnd(item.income))}"></i><i class="expense-column is-expense" style="height:${Math.max(1,Number(item.expense||0)/ceiling*100)}%" title="${esc(item.month)} · Chi tiêu: ${esc(vnd(item.expense))}"></i><small>${esc(item.month.slice(5))}</small></div>`).join('')}</div><div class="expense-chart-legend"><span><i></i>Thu nhập</span><span><i class="is-expense"></i>Chi tiêu</span></div>`
+    : empty('expenseAnalytics','dữ liệu sáu tháng');
+  return `<div class="report-actions"><span class="wf-muted">Dữ liệu giao dịch đã ghi sổ từ MySQL</span><button type="button" class="btn btn--outline btn-sm" data-action="refresh-data">↻ Làm mới dữ liệu</button></div><div class="kpi-grid">${card('Tổng chi tiêu tháng',vnd(expenseAnalytics.totalExpense),`Tháng ${expenseAnalytics.month}`)}${card('Số danh mục phát sinh',String(byCategory.length),'Chỉ giao dịch chi phí đã ghi sổ')}${card('Tiền cơ sở',String(expenseAnalytics.currency || 'VND'),'Mọi số liệu đã được backend quy đổi')}${card('Nguồn dữ liệu','MySQL','Không dùng dữ liệu mẫu hoặc localStorage')}</div><div class="expense-dashboard-grid"><section class="panel"><div class="panel-title"><div><h2>Chi tiêu theo danh mục</h2><p>Biểu đồ tròn · tháng ${esc(expenseAnalytics.month)}</p></div></div>${categoryPanel}</section><section class="panel"><div class="panel-title"><div><h2>Thu nhập và chi tiêu</h2><p>Biểu đồ cột · 6 tháng gần nhất</p></div></div>${barPanel}</section></div>`;
 }
 function overview() {
   const issue = problem('analytics');
@@ -302,9 +320,10 @@ export function liveRender(page, { state, heading, currentUser }) {
 const field = (name,label,type='text',extra='') => `<div class="field"><label for="live-${esc(name)}">${esc(label)}</label><input id="live-${esc(name)}" name="${esc(name)}" type="${type}" ${extra} required></div>`;
 const moneyField = (name,label,extra='') => field(name,label,'text',`inputmode="numeric" data-money-input maxlength="24" ${extra}`);
 const select = (name,label,options,optional=false) => `<div class="field"><label for="live-${esc(name)}">${esc(label)}</label><select id="live-${esc(name)}" name="${esc(name)}" ${optional?'':'required'}>${optional?'<option value="">Không chọn</option>':''}${options.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select></div>`;
-const walletOptions = () => wallets.filter(w => String(w.status||'ACTIVE').toUpperCase()==='ACTIVE').map(w=>[w.id,`${w.name} (${w.currency})`]);
+const walletOptions = (includeCredit = true) => wallets.filter(w => String(w.status||'ACTIVE').toUpperCase()==='ACTIVE'
+  && (includeCredit || String(w.type ?? w.wallet_type).toUpperCase() !== 'CREDIT')).map(w=>[w.id,`${w.name} (${w.currency})`]);
 const categoryOptions = (type='EXPENSE') => categories.filter(c => !type || c.type === type).map(c=>[c.id,c.name]);
-const goalWalletOptions = () => walletOptions().filter(([id]) => String(wallets.find(w => String(w.id) === String(id))?.currency).toUpperCase() === 'VND');
+const goalWalletOptions = () => walletOptions(false).filter(([id]) => String(wallets.find(w => String(w.id) === String(id))?.currency).toUpperCase() === 'VND');
 const goalOptions = (action='DEPOSIT') => goals.filter(g => action === 'WITHDRAWAL' ? ['ACTIVE','COMPLETED'].includes(String(g.status).toUpperCase()) && Number(g.current) > 0 : String(g.status).toUpperCase() === 'ACTIVE').map(g=>[g.id,`${g.name} · ${vnd(g.current)} / ${vnd(g.target)}`]);
 const needReferenceData = name => name === 'transactions' ? (!ready('wallets') || !walletOptions().length)
  : name === 'recurring' ? (!ready('wallets') || !walletOptions().length || !ready('categories'))
@@ -378,7 +397,7 @@ export function liveAction(action, { dialog, toast, reload }) {
       e.preventDefault(); if (!form.reportValidity()) return;
       const submit = form.querySelector('[type=submit]');
       const feedback = form.querySelector('#live-form-feedback');
-      const limitAmount = Number(moneyInputValue(form.elements.namedItem('limitAmount').value));
+      const limitAmount = moneyInputValue(form.elements.namedItem('limitAmount').value);
       submit.disabled = true; feedback.textContent = 'Đang cập nhật hạn mức…';
       try {
         await mutateLiveData('budgets', 'PUT', { limitAmount }, id);
@@ -465,10 +484,18 @@ export function liveAction(action, { dialog, toast, reload }) {
       fromWallet.closest('.field').hidden = !isTransfer;
       toWallet.closest('.field').hidden = !isTransfer;
       wallet.closest('.field').querySelector('label').textContent = isGoal && goalAction.value === 'DEPOSIT' ? 'Ví chuyển' : isGoal ? 'Ví nhận' : 'Ví sử dụng';
-      const walletChoices = isGoal ? goalWalletOptions() : walletOptions();
+      const walletChoices = isGoal ? goalWalletOptions() : walletOptions(types.value !== 'INCOME');
       const previousWallet = wallet.value;
       wallet.innerHTML = walletChoices.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');
       if (walletChoices.some(([v]) => String(v) === String(previousWallet))) wallet.value = previousWallet;
+      if (isTransfer) {
+        const previousFrom = fromWallet.value;
+        const previousTo = toWallet.value;
+        fromWallet.innerHTML = walletOptions(false).map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');
+        toWallet.innerHTML = walletOptions(true).map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');
+        if ([...fromWallet.options].some(option => option.value === previousFrom)) fromWallet.value = previousFrom;
+        if ([...toWallet.options].some(option => option.value === previousTo)) toWallet.value = previousTo;
+      }
       const availableGoals = isGoal ? goalOptions(goalAction.value) : [];
       const previousGoal = goal.value;
       if (isGoal) goal.innerHTML = availableGoals.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('');
@@ -499,7 +526,7 @@ export function liveAction(action, { dialog, toast, reload }) {
     const submit = form.querySelector('[type=submit]');
     const feedback = document.querySelector('#live-form-feedback');
     const record = Object.fromEntries(new FormData(form));
-    for (const key of ['amount','limitAmount']) if (record[key] !== undefined && record[key] !== '') record[key] = Number(moneyInputValue(record[key]));
+    for (const key of ['amount','limitAmount']) if (record[key] !== undefined && record[key] !== '') record[key] = moneyInputValue(record[key]);
     for (const key of ['walletId','goalId','fromWalletId','toWalletId','categoryId','dayOfMonth']) if (record[key] !== undefined && record[key] !== '') record[key] = Number(record[key]);
     if (record.categoryId === '') delete record.categoryId;
     const isTransfer = name === 'transactions' && record.type === 'TRANSFER';

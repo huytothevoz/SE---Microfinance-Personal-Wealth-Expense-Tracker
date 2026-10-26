@@ -145,6 +145,7 @@ try {
     $analyticsController = new AnalyticsDashboardController();
     $router->get('/analytics/net-worth', [$analyticsController, 'netWorth']);
     $router->get('/analytics/net-worth/history', [$analyticsController, 'history']);
+    $router->get('/analytics/expenses', [$analyticsController, 'expenses']);
 
     $reportController = new ReportController();
     $router->get('/reports/reconcile', [$reportController, 'reconcile']);

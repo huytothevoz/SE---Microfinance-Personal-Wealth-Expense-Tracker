@@ -70,21 +70,31 @@ final class ExchangeRateService
             'now',
             new DateTimeZone('Asia/Ho_Chi_Minh')
         ))->format('Y-m-d H:i:s');
-        $usdVnd = $snapshot['rates']['USD'];
-        $eurVnd = $snapshot['rates']['EUR'];
+        $buyRates = $snapshot['buyRates'] ?? $snapshot['rates'];
+        $sellRates = $snapshot['sellRates'] ?? $snapshot['rates'];
+        $usdVnd = $buyRates['USD'];
+        $eurVnd = $buyRates['EUR'];
         $pairs = [
             'USD_VND' => $usdVnd,
             'EUR_VND' => $eurVnd,
-            'VND_USD' => bcdiv('1', $usdVnd, 10),
-            'VND_EUR' => bcdiv('1', $eurVnd, 10),
-            'USD_EUR' => bcdiv($usdVnd, $eurVnd, 10),
-            'EUR_USD' => bcdiv($eurVnd, $usdVnd, 10),
+            'VND_USD' => bcdiv('1', $sellRates['USD'], 10),
+            'VND_EUR' => bcdiv('1', $sellRates['EUR'], 10),
+            'USD_EUR' => bcdiv($usdVnd, $sellRates['EUR'], 10),
+            'EUR_USD' => bcdiv($eurVnd, $sellRates['USD'], 10),
         ];
-        foreach ($pairs as $pair => $rate) {
-            [$from, $to] = explode('_', $pair, 2);
-            $this->recordRate($from, $to, $rate, $snapshot['provider'], $snapshot['effectiveAt']);
+        $ownsTransaction = !$this->pdo->inTransaction();
+        if ($ownsTransaction) $this->pdo->beginTransaction();
+        try {
+            foreach ($pairs as $pair => $rate) {
+                [$from, $to] = explode('_', $pair, 2);
+                $this->recordRate($from, $to, $rate, $snapshot['provider'], $snapshot['effectiveAt']);
+            }
+            $this->recordLastSyncAt($snapshot['fetchedAt']);
+            if ($ownsTransaction) $this->pdo->commit();
+        } catch (\Throwable $error) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
         }
-        $this->recordLastSyncAt($snapshot['fetchedAt']);
         return $snapshot;
     }
 

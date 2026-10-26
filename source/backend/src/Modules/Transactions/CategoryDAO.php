@@ -30,6 +30,18 @@ final class CategoryDAO
         return $res ?: null;
     }
 
+    /** @return array<string, mixed>|null */
+    public function findActiveByIdAndUserAndType(int $id, int $userId, string $type): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT * FROM categories
+             WHERE id = ? AND user_id = ? AND category_type = ? AND archived_at IS NULL'
+        );
+        $stmt->execute([$id, $userId, strtoupper($type)]);
+        $res = $stmt->fetch();
+        return $res ?: null;
+    }
+
     /** @return array<int, array<string, mixed>> */
     public function findAllByUser(int $userId, ?string $type = null): array
     {

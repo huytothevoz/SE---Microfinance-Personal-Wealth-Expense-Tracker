@@ -3,7 +3,7 @@
  * Handles transaction filtering, search query updates, detail modal data, CSV export, and category cards.
  */
 import { loadView } from './view-loader.js';
-import { transactions, categories } from '../data/live-data.js?v=wealth-ui-2';
+import { transactions, categories } from '../data/live-data.js?v=finance-ui-1';
 import { safe, money } from './ui-core.js?v=wealth-ui-2';
 
 export function txTable(items = transactions) {

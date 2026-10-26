@@ -39,6 +39,18 @@ final class AnalyticsDashboardController
         }
     }
 
+    public function expenses(Request $request): void
+    {
+        $userId = AuthContext::requirePersonalUser(AuthContext::getUserId($request));
+        try {
+            JsonResponse::success([
+                'dashboard' => $this->analytics()->expenseDashboard($userId, $request->getQuery('month')),
+            ]);
+        } catch (Throwable $error) {
+            $this->error($error);
+        }
+    }
+
     private function analytics(): NetWorthAnalyticsService
     {
         return $this->service ?? new NetWorthAnalyticsService();

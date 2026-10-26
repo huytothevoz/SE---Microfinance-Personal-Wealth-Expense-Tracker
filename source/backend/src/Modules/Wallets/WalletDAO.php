@@ -168,9 +168,26 @@ final class WalletDAO
         $openingCondition = $this->openingTransactionCondition('t');
         $sql = "SELECT t.id, t.transaction_type, t.status, t.description, t.currency,
                        t.amount, t.fx_rate_snapshot, t.occurred_on, t.posted_at, t.created_at,
+                       t.original_transaction_id,
                        c.name AS category_name, we.entry_side AS wallet_entry_side,
                        we.amount_original AS wallet_amount_original,
-                       we.amount_base AS wallet_amount_base
+                       we.amount_base AS wallet_amount_base,
+                       (SELECT se.amount_original FROM ledger_entries se
+                        JOIN ledger_accounts sa ON sa.id = se.ledger_account_id
+                        WHERE se.transaction_id = t.id AND sa.wallet_id IS NOT NULL AND se.entry_side = 'CREDIT'
+                        ORDER BY se.id ASC LIMIT 1) AS source_amount,
+                       (SELECT se.currency FROM ledger_entries se
+                        JOIN ledger_accounts sa ON sa.id = se.ledger_account_id
+                        WHERE se.transaction_id = t.id AND sa.wallet_id IS NOT NULL AND se.entry_side = 'CREDIT'
+                        ORDER BY se.id ASC LIMIT 1) AS source_currency,
+                       (SELECT de.amount_original FROM ledger_entries de
+                        JOIN ledger_accounts da ON da.id = de.ledger_account_id
+                        WHERE de.transaction_id = t.id AND da.wallet_id IS NOT NULL AND de.entry_side = 'DEBIT'
+                        ORDER BY de.id ASC LIMIT 1) AS destination_amount,
+                       (SELECT de.currency FROM ledger_entries de
+                        JOIN ledger_accounts da ON da.id = de.ledger_account_id
+                        WHERE de.transaction_id = t.id AND da.wallet_id IS NOT NULL AND de.entry_side = 'DEBIT'
+                        ORDER BY de.id ASC LIMIT 1) AS destination_currency
                 FROM financial_transactions t
                 JOIN ledger_entries we ON we.transaction_id = t.id
                 JOIN ledger_accounts wa ON wa.id = we.ledger_account_id
@@ -185,6 +202,17 @@ final class WalletDAO
         $history = array_map(static function (array $row): array {
             $row['kind'] = 'TRANSACTION';
             $row['counts_as_usage'] = true;
+            $incoming = (string) $row['wallet_entry_side'] === 'DEBIT';
+            $row['direction'] = $incoming ? 'IN' : 'OUT';
+            $row['tone'] = $incoming ? 'positive' : 'negative';
+            $row['sign'] = $incoming ? '+' : '-';
+            $isConvertedIncoming = (string) $row['transaction_type'] === 'TRANSFER'
+                && $incoming
+                && strtoupper((string) ($row['source_currency'] ?? '')) !== strtoupper((string) ($row['destination_currency'] ?? ''));
+            $row['display_amount'] = $isConvertedIncoming ? (string) $row['source_amount'] : (string) $row['wallet_amount_original'];
+            $row['display_currency'] = $isConvertedIncoming ? (string) $row['source_currency'] : (string) $row['currency'];
+            $row['display_equivalent_amount'] = $isConvertedIncoming ? (string) $row['wallet_amount_original'] : null;
+            $row['display_equivalent_currency'] = $isConvertedIncoming ? (string) $row['destination_currency'] : null;
             return $row;
         }, $rows);
 
@@ -213,6 +241,13 @@ final class WalletDAO
             'wallet_amount_base' => null,
             'wallet_entry_side' => null,
             'category_name' => null,
+            'direction' => 'NEUTRAL',
+            'tone' => 'neutral',
+            'sign' => '',
+            'display_amount' => $openingAmount,
+            'display_currency' => (string) $wallet['currency'],
+            'display_equivalent_amount' => null,
+            'display_equivalent_currency' => null,
             'occurred_on' => substr((string) $wallet['created_at'], 0, 10),
             'posted_at' => (string) $wallet['created_at'],
             'created_at' => (string) $wallet['created_at'],
@@ -318,7 +353,7 @@ final class WalletDAO
         $deltaStr = is_string($delta) ? $delta : number_format((float) $delta, 8, '.', '');
         $isNegative = bccomp($deltaStr, '0', 8) < 0;
 
-        $sql = 'UPDATE wallets SET cached_balance = cached_balance + ? WHERE id = ?';
+        $sql = "UPDATE wallets SET cached_balance = cached_balance + ? WHERE id = ? AND status = 'ACTIVE'";
         $params = [$deltaStr, $walletId];
 
         if ($isNegative && !$allowNegative) {
