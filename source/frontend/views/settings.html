@@ -69,13 +69,6 @@
     </div>
     <div class="settings-row">
       <div>
-        <strong>Yêu cầu xóa dữ liệu</strong>
-        <p>Quản lý thông tin và quyền riêng tư của tài khoản.</p>
-      </div>
-      <button class="btn btn--outline btn-sm" data-action="account-delete">Xem quy trình</button>
-    </div>
-    <div class="settings-row">
-      <div>
         <strong>Đăng xuất</strong>
         <p>Kết thúc phiên và quay về trang đăng nhập.</p>
       </div>
@@ -83,3 +76,18 @@
     </div>
   </section>
 </div>
+
+<section class="danger-zone">
+  <div class="danger-zone__heading">
+    <span class="danger-zone__icon" aria-hidden="true">!</span>
+    <div><h2>Vùng thao tác nguy hiểm</h2><p>Các thao tác này ảnh hưởng trực tiếp đến dữ liệu và trạng thái tài khoản.</p></div>
+  </div>
+  <div class="danger-zone__actions">
+    <div><h3>Tải toàn bộ dữ liệu</h3><p>Tải hồ sơ và dữ liệu tài chính thuộc tài khoản dưới dạng JSON. Thông tin xác thực và token không được đưa vào tệp.</p></div>
+    <button class="btn btn--outline btn-sm" data-action="export-all-data">Tải JSON</button>
+  </div>
+  <div class="danger-zone__actions danger-zone__actions--close">
+    <div><h3>Đóng tài khoản</h3><p>Tài khoản sẽ bị khóa và đăng xuất trên mọi thiết bị. Dữ liệu tài chính được giữ lại phục vụ kiểm toán; thao tác này không thể tự hoàn tác.</p></div>
+    <button class="btn btn--danger btn-sm" data-action="close-account">Đóng tài khoản</button>
+  </div>
+</section>

@@ -102,6 +102,7 @@ final class Database
             role TEXT NOT NULL DEFAULT 'USER',
             status TEXT NOT NULL DEFAULT 'ACTIVE',
             base_currency TEXT NOT NULL DEFAULT 'VND',
+            closed_at DATETIME NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         );

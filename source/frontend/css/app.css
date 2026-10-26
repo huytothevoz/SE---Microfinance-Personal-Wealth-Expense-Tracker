@@ -1959,8 +1959,99 @@
   white-space: normal;
 }
 
+.danger-zone {
+  grid-column: 1 / -1;
+  padding: 22px 24px;
+  border: 1px solid #f1b8b8;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fff7f6 0%, #fff 78%);
+  box-shadow: 0 8px 24px rgba(156, 45, 45, .07);
+}
+
+.danger-zone__heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f2d1cf;
+}
+
+.danger-zone__icon {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  color: #a83232;
+  background: #fee2e2;
+  font-size: 19px;
+  font-weight: 850;
+}
+
+.danger-zone__heading h2,
+.danger-zone__actions h3 {
+  margin: 0;
+  color: #8e2929;
+}
+
+.danger-zone__heading p,
+.danger-zone__actions p {
+  margin: 5px 0 0;
+  color: #7e6060;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.danger-zone__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 17px 0;
+  border-bottom: 1px solid #f2d1cf;
+}
+
+.danger-zone__actions h3 {
+  font-size: 12px;
+}
+
+.danger-zone__actions > div {
+  max-width: 740px;
+}
+
+.danger-zone__actions--close {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.danger-zone .btn--outline {
+  border-color: #db9a9a;
+  color: #8e2929;
+}
+
+.danger-zone .btn--outline:hover {
+  border-color: #b84d55;
+  background: #fff1f1;
+}
+
+.danger-zone .btn--danger {
+  flex: 0 0 auto;
+}
+
 .app-mobile-label {
   display: none;
+}
+
+@media (max-width: 620px) {
+  .danger-zone {
+    padding: 17px;
+  }
+
+  .danger-zone__actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 @keyframes toastIn {

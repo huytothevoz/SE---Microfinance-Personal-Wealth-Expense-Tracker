@@ -68,6 +68,16 @@ final class UserDAO
         return $stmt->execute([strtoupper($status), $userId]);
     }
 
+    public function closeAccount(int $userId): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE users SET status = 'LOCKED', closed_at = CURRENT_TIMESTAMP
+             WHERE id = ? AND status = 'ACTIVE' AND closed_at IS NULL"
+        );
+        $stmt->execute([$userId]);
+        return $stmt->rowCount() === 1;
+    }
+
     public function copyDefaultCategories(int $userId): void
     {
         $stmt = $this->pdo->prepare(

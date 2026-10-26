@@ -79,6 +79,9 @@ final class AuthService
             if ($user['status'] !== 'ACTIVE') {
                 $this->userDao->recordSecurityAudit('LOGIN_LOCKED', (int) $user['id']);
                 $this->db->commit();
+                if (!empty($user['closed_at'])) {
+                    throw new ApiException('ACCOUNT_CLOSED', 'Tài khoản này đã được đóng. Các phiên đăng nhập đã bị thu hồi.', 403);
+                }
                 throw new ApiException('ACCOUNT_LOCKED', 'Tài khoản của bạn đã bị tạm khóa bởi Quản trị viên.', 403);
             }
             $session = $this->newSession((int) $user['id']);
@@ -175,6 +178,49 @@ final class AuthService
             return ['message' => 'Đã đổi mật khẩu và đăng xuất các phiên cũ trên mọi thiết bị.'];
         } catch (\Throwable $error) {
             $this->db->rollBack();
+            throw $error;
+        }
+    }
+
+    public function closeAccount(array $input): array
+    {
+        $user = $this->authenticate();
+        $this->limit('close-account:' . $user['id'], 5, 3600);
+        if ($this->string($input, 'confirmation') !== 'DONG TAI KHOAN') {
+            throw new ApiException(
+                'VALIDATION_ERROR',
+                'Cụm từ xác nhận không chính xác.',
+                422,
+                ['confirmation' => 'Nhập chính xác DONG TAI KHOAN để xác nhận.']
+            );
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $lockedUser = $this->userDao->findById((int) $user['id'], true);
+            if (!$lockedUser || $lockedUser['status'] !== 'ACTIVE' || !empty($lockedUser['closed_at'])) {
+                throw new ApiException('ACCOUNT_CLOSED', 'Tài khoản đã được đóng hoặc không còn hoạt động.', 409);
+            }
+            $currentPassword = $this->string($input, 'currentPassword');
+            if (strlen($currentPassword) > 72 || str_contains($currentPassword, "\0")
+                || !password_verify($currentPassword, (string) $lockedUser['password_hash'])) {
+                throw new ApiException(
+                    'INVALID_PASSWORD',
+                    'Mật khẩu hiện tại không chính xác.',
+                    422,
+                    ['currentPassword' => 'Mật khẩu hiện tại không chính xác.']
+                );
+            }
+            if (!$this->userDao->closeAccount((int) $user['id'])) {
+                throw new ApiException('ACCOUNT_CLOSED', 'Tài khoản đã được đóng hoặc không còn hoạt động.', 409);
+            }
+            $this->userDao->deleteSessionsByUser((int) $user['id']);
+            $this->userDao->recordSecurityAudit('ACCOUNT_CLOSED', (int) $user['id']);
+            $this->db->commit();
+            $this->tokens->clearCookies();
+            return ['message' => 'Tài khoản đã được đóng. Các phiên đã đăng xuất; dữ liệu tài chính được giữ lại theo chính sách lưu trữ.'];
+        } catch (\Throwable $error) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
             throw $error;
         }
     }

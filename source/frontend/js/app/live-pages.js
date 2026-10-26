@@ -303,13 +303,23 @@ function settingsPage(user) {
     ${row('Đăng xuất', 'Kết thúc phiên đăng nhập hiện tại.', '<button class="btn btn--outline btn-sm" data-action="logout">Đăng xuất</button>')}
   </section>
   <section class="panel"><h2>Dữ liệu và quyền riêng tư</h2>
-    ${row('Xuất dữ liệu giao dịch', 'Xuất các giao dịch đã tải từ API ra CSV. Danh sách có thể bị giới hạn theo phân trang.', '<button class="btn btn--outline btn-sm" data-action="export">Xuất CSV</button>')}
-    ${row('Xóa tài khoản / tải toàn bộ dữ liệu', 'Chưa có API thực hiện. WealthFlow không tự ý xóa hoặc ghi đè dữ liệu.')}
+    ${row('Xuất dữ liệu giao dịch', 'Tải các giao dịch từ máy chủ ra tệp CSV.', '<button class="btn btn--outline btn-sm" data-action="export">Xuất CSV</button>')}
   </section>
   <section class="panel"><h2>Thông báo và trải nghiệm</h2>
     ${row('Cảnh báo ngân sách', 'Được tính theo các ngưỡng 80% và 100% từ dữ liệu chi tiêu đã ghi sổ.')}
     ${row('Quản lý thông báo', 'Xem thông báo được đồng bộ từ máy chủ.', '<button class="btn btn--outline btn-sm" data-page="notifications">Xem thông báo</button>')}
     ${row('Tùy chỉnh giao diện', 'Chưa có API lưu tùy chọn giao diện theo tài khoản. Không hiển thị tùy chỉnh giả.')}
+  </section>
+  <section class="danger-zone">
+    <div class="danger-zone__heading"><span class="danger-zone__icon" aria-hidden="true">!</span><div><h2>Vùng nguy hiểm</h2><p>Các thao tác này ảnh hưởng trực tiếp đến dữ liệu và trạng thái tài khoản.</p></div></div>
+    <div class="danger-zone__actions">
+      <div><h3>Tải toàn bộ dữ liệu</h3><p>Tạo bản xuất JSON gồm hồ sơ và các dữ liệu tài chính, lịch sử thuộc tài khoản. Mật khẩu, token và thông tin xác thực không được đưa vào tệp.</p></div>
+      <button class="btn btn--outline btn-sm" data-action="export-all-data">Tải JSON</button>
+    </div>
+    <div class="danger-zone__actions danger-zone__actions--close">
+      <div><h3>Đóng tài khoản</h3><p>Tài khoản sẽ bị khóa và đăng xuất khỏi mọi thiết bị. Dữ liệu tài chính được giữ lại để phục vụ kiểm toán; thao tác này không thể tự hoàn tác.</p></div>
+      <button class="btn btn--danger btn-sm" data-action="close-account">Đóng tài khoản</button>
+    </div>
   </section></div>`;
 }
 export function liveRender(page, { state, heading, currentUser }) {

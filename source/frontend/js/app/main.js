@@ -1,8 +1,8 @@
 import '../i18n.js?v=finance-ui-2';
 import { icon, safe, money, USER_NAV, ADMIN_NAV, META, formatMoneyInput, heading, btn, panel } from './ui-core.js?v=wealth-ui-2';
-import { createPages } from './pages.js?v=finance-ui-2';
+import { createPages } from './pages.js?v=finance-ui-3';
 import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=finance-ui-1';
-import { liveAction } from './live-pages.js?v=finance-ui-2';
+import { liveAction } from './live-pages.js?v=finance-ui-3';
 // WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';
@@ -16,6 +16,7 @@ import { handleAdminAction } from './admin.js';
 import { checkUrgentBroadcasts } from './urgent-broadcast.js';
 import { showTransactionDetails, applyTransactionSearch, openTransactionFilter, handleTransactionFilterChange, handleTransactionFilterSubmit } from './transactions.js';
 import { handleSecurityAction } from './profile-security.js';
+import { PrivacyApi } from '../services/privacy-api.js';
 import { handleStubAction, handleStubSubmit } from './stub-actions.js';
 
 let currentUser;
@@ -159,6 +160,18 @@ function handleAction(action, trigger) {
         toast('Tải xuống tệp CSV thành công!');
       } catch (err) {
         toast(err.message || 'Lỗi khi tải xuất tệp CSV.', 'error');
+      }
+    })();
+    return;
+  }
+  if (action === 'export-all-data') {
+    void (async () => {
+      try {
+        toast('Đang chuẩn bị bản xuất dữ liệu từ máy chủ…');
+        await PrivacyApi.downloadAccountData();
+        toast('Đã tải toàn bộ dữ liệu tài khoản.');
+      } catch (err) {
+        toast(err.message || 'Không thể xuất dữ liệu tài khoản.', 'error');
       }
     })();
     return;
