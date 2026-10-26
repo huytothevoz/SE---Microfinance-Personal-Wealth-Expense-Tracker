@@ -1,8 +1,8 @@
-import '../i18n.js?v=finance-ui-1';
+import '../i18n.js?v=finance-ui-2';
 import { icon, safe, money, USER_NAV, ADMIN_NAV, META, formatMoneyInput, heading, btn, panel } from './ui-core.js?v=wealth-ui-2';
-import { createPages } from './pages.js?v=finance-ui-1';
+import { createPages } from './pages.js?v=finance-ui-2';
 import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=finance-ui-1';
-import { liveAction } from './live-pages.js?v=finance-ui-1';
+import { liveAction } from './live-pages.js?v=finance-ui-2';
 // WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';

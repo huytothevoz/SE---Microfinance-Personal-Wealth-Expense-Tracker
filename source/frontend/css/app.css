@@ -1537,8 +1537,10 @@
 .loan-meta strong { font-size:11px;overflow-wrap:anywhere; }
 .loan-actions { display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap; }
 .report-actions { display:flex;justify-content:space-between;align-items:center;gap:12px;margin:-4px 0 16px;flex-wrap:wrap; }
+.report-kpi-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
 
 @media(max-width:900px){.loan-page-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.report-kpi-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.loan-kpi-grid{grid-template-columns:1fr}.loan-meta{grid-template-columns:1fr}.report-actions .btn{width:100%}}
 
 .notification-item {
