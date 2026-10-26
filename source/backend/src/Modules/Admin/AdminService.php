@@ -18,11 +18,15 @@ final class AdminService
     public function __construct(
         ?AdminDAO $adminDao = null,
         ?AuditLogDAO $auditLogDao = null,
-        ?NotificationDAO $notifDao = null
+        mixed $notifDaoOrService = null
     ) {
         $this->adminDao = $adminDao ?? new AdminDAO();
         $this->auditLogDao = $auditLogDao ?? new AuditLogDAO();
-        $this->notifDao = $notifDao ?? new NotificationDAO();
+        if ($notifDaoOrService instanceof NotificationDAO) {
+            $this->notifDao = $notifDaoOrService;
+        } else {
+            $this->notifDao = new NotificationDAO();
+        }
     }
 
     /**
@@ -362,5 +366,187 @@ final class AdminService
     {
         AuthContext::requireAdmin($adminUserId);
         return $this->auditLogDao->getBroadcastLogs($limit);
+    }
+
+    /**
+     * Macro overview dashboard statistics (FR14.01, FR14.02, BR11).
+     *
+     * @return array<string, mixed>
+     */
+    public function getOverview(): array
+    {
+        $stats = $this->adminDao->getOverviewStats();
+        $stats['recentAuditLogs'] = $this->getAuditLogs(10, 0);
+        return $stats;
+    }
+
+    /**
+     * List users with macro status/role metadata (FR14.01, FR14.02, BR11).
+     *
+     * @param array<string, mixed> $filters
+     * @return array<int, array<string, mixed>>
+     */
+    public function listUsers(array $filters = []): array
+    {
+        $rows = $this->adminDao->listUsers($filters);
+        return array_map(fn(array $row): array => $this->presentUser($row), $rows);
+    }
+
+    /**
+     * Lock a user account, immediately revoke all active sessions, and record audit log (FR14.03, SQ08).
+     *
+     * @return array<string, mixed>
+     */
+    public function lockUser(int $adminId, int $targetUserId, string $reason): array
+    {
+        $cleanReason = trim(preg_replace('/\s+/u', ' ', $reason) ?? '');
+        if ($cleanReason === '' || mb_strlen($cleanReason, 'UTF-8') < 10) {
+            throw new ApiException(
+                'LOCK_REASON_REQUIRED',
+                'Lý do khóa tài khoản là bắt buộc và phải có ít nhất 10 ký tự.',
+                422,
+                ['reason' => 'Vui lòng nhập lý do khóa tài khoản tối thiểu 10 ký tự.']
+            );
+        }
+
+        if ($adminId === $targetUserId) {
+            throw new ApiException(
+                'CANNOT_LOCK_LAST_ADMIN',
+                'Quản trị viên không thể tự khóa tài khoản của chính mình.',
+                400
+            );
+        }
+
+        $target = $this->adminDao->findUserById($targetUserId);
+        if ($target === null) {
+            throw new ApiException('USER_NOT_FOUND', 'Không tìm thấy tài khoản người dùng.', 404);
+        }
+
+        if (strtoupper((string) $target['role']) === 'ADMIN') {
+            $otherActiveAdmins = $this->adminDao->countActiveAdminsExcept($targetUserId);
+            if ($otherActiveAdmins < 1) {
+                throw new ApiException(
+                    'CANNOT_LOCK_LAST_ADMIN',
+                    'Không thể khóa tài khoản Quản trị viên đang hoạt động cuối cùng của hệ thống.',
+                    400
+                );
+            }
+        }
+
+        $pdo = $this->adminDao->getPdo();
+        $ownsTx = !$pdo->inTransaction();
+        if ($ownsTx) {
+            $pdo->beginTransaction();
+        }
+
+        try {
+            $this->adminDao->updateUserStatus($targetUserId, 'LOCKED');
+            $revokedSessions = $this->adminDao->revokeUserSessions($targetUserId);
+            $auditId = $this->auditLogDao->logAdminAction($adminId, 'LOCK_USER', $targetUserId, $cleanReason);
+
+            if ($ownsTx) {
+                $pdo->commit();
+            }
+
+            $updated = $this->adminDao->findUserById($targetUserId) ?? $target;
+            return [
+                'user' => $this->presentUser($updated),
+                'revokedSessions' => $revokedSessions,
+                'auditLogId' => $auditId,
+                'reason' => $cleanReason,
+            ];
+        } catch (\Throwable $e) {
+            if ($ownsTx && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Unlock a locked user account and record audit log (FR14.04).
+     *
+     * @return array<string, mixed>
+     */
+    public function unlockUser(int $adminId, int $targetUserId, ?string $reason = null): array
+    {
+        $target = $this->adminDao->findUserById($targetUserId);
+        if ($target === null) {
+            throw new ApiException('USER_NOT_FOUND', 'Không tìm thấy tài khoản người dùng.', 404);
+        }
+
+        $cleanReason = trim((string) ($reason ?? ''));
+        if ($cleanReason === '') {
+            $cleanReason = 'Mở khóa tài khoản theo quyết định của Quản trị viên.';
+        }
+
+        $pdo = $this->adminDao->getPdo();
+        $ownsTx = !$pdo->inTransaction();
+        if ($ownsTx) {
+            $pdo->beginTransaction();
+        }
+
+        try {
+            $this->adminDao->updateUserStatus($targetUserId, 'ACTIVE');
+            $auditId = $this->auditLogDao->logAdminAction($adminId, 'UNLOCK_USER', $targetUserId, $cleanReason);
+
+            if ($ownsTx) {
+                $pdo->commit();
+            }
+
+            $updated = $this->adminDao->findUserById($targetUserId) ?? $target;
+            return [
+                'user' => $this->presentUser($updated),
+                'auditLogId' => $auditId,
+                'reason' => $cleanReason,
+            ];
+        } catch (\Throwable $e) {
+            if ($ownsTx && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * List administrative audit logs (FR13.02, FR13.03, FR14.03, FR14.04).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getAuditLogs(int $limit = 50, int $offset = 0): array
+    {
+        $rows = $this->auditLogDao->listLogs($limit, $offset);
+        return array_map(static fn(array $r): array => [
+            'id' => (int) $r['id'],
+            'adminUserId' => (int) $r['admin_user_id'],
+            'adminName' => (string) ($r['admin_name'] ?? 'Admin'),
+            'adminEmail' => (string) ($r['admin_email'] ?? ''),
+            'targetUserId' => $r['target_user_id'] !== null ? (int) $r['target_user_id'] : null,
+            'targetName' => $r['target_name'] !== null ? (string) $r['target_name'] : null,
+            'targetEmail' => $r['target_email'] !== null ? (string) $r['target_email'] : null,
+            'action' => (string) $r['action'],
+            'reason' => $r['reason'] !== null ? (string) $r['reason'] : null,
+            'createdAt' => (string) $r['created_at'],
+        ], $rows);
+    }
+
+    /**
+     * Present user account strictly with macro metadata (no personal balances/transactions per BR11).
+     *
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function presentUser(array $row): array
+    {
+        return [
+            'id' => (int) $row['id'],
+            'fullName' => (string) $row['full_name'],
+            'email' => (string) $row['email'],
+            'role' => (string) $row['role'],
+            'status' => (string) $row['status'],
+            'baseCurrency' => (string) $row['base_currency'],
+            'createdAt' => (string) $row['created_at'],
+            'updatedAt' => (string) ($row['updated_at'] ?? $row['created_at']),
+        ];
     }
 }

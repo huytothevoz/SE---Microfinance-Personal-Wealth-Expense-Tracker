@@ -165,4 +165,113 @@ final class AdminController
             JsonResponse::error('INTERNAL_ERROR', $e->getMessage(), 500);
         }
     }
+
+    /**
+     * GET /api/admin/overview (FR14.01, BR11)
+     */
+    public function overview(Request $request): void
+    {
+        try {
+            $adminUserId = AuthContext::getUserId($request);
+            AuthContext::requireAdmin($adminUserId);
+            $data = $this->adminService->getOverview();
+
+            JsonResponse::success($data);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
+        } catch (Throwable $e) {
+            JsonResponse::error('INTERNAL_ERROR', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * GET /api/admin/users (FR14.01, BR11)
+     */
+    public function listUsers(Request $request): void
+    {
+        try {
+            $adminUserId = AuthContext::getUserId($request);
+            AuthContext::requireAdmin($adminUserId);
+            $filters = [
+                'role' => $request->getQuery('role'),
+                'status' => $request->getQuery('status'),
+                'search' => $request->getQuery('search') ?? $request->getQuery('q'),
+            ];
+            $users = $this->adminService->listUsers($filters);
+            $overview = $this->adminService->getOverview();
+
+            JsonResponse::success([
+                'users' => $users,
+                'count' => count($users),
+                'stats' => $overview,
+            ]);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
+        } catch (Throwable $e) {
+            JsonResponse::error('INTERNAL_ERROR', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * PUT /api/admin/users/{id}/lock (FR14.03, SQ08)
+     */
+    public function lockUser(Request $request, int $id): void
+    {
+        try {
+            $adminUserId = AuthContext::getUserId($request);
+            AuthContext::requireAdmin($adminUserId);
+            $body = $request->getBody();
+            $reason = (string) ($body['reason'] ?? '');
+            $result = $this->adminService->lockUser($adminUserId, $id, $reason);
+
+            JsonResponse::success($result);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
+        } catch (Throwable $e) {
+            JsonResponse::error('INTERNAL_ERROR', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * PUT /api/admin/users/{id}/unlock (FR14.04)
+     */
+    public function unlockUser(Request $request, int $id): void
+    {
+        try {
+            $adminUserId = AuthContext::getUserId($request);
+            AuthContext::requireAdmin($adminUserId);
+            $body = $request->getBody();
+            $reason = isset($body['reason']) ? (string) $body['reason'] : null;
+            $result = $this->adminService->unlockUser($adminUserId, $id, $reason);
+
+            JsonResponse::success($result);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
+        } catch (Throwable $e) {
+            JsonResponse::error('INTERNAL_ERROR', $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * GET /api/admin/audit-logs (FR14.03, FR14.04)
+     */
+    public function listAuditLogs(Request $request): void
+    {
+        try {
+            $adminUserId = AuthContext::getUserId($request);
+            AuthContext::requireAdmin($adminUserId);
+            $limit = max(1, min(200, (int) $request->getQuery('limit', 50)));
+            $offset = max(0, (int) $request->getQuery('offset', 0));
+            $logs = $this->adminService->getAuditLogs($limit, $offset);
+
+            JsonResponse::success([
+                'auditLogs' => $logs,
+                'count' => count($logs),
+            ]);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
+        } catch (Throwable $e) {
+            JsonResponse::error('INTERNAL_ERROR', $e->getMessage(), 500);
+        }
+    }
 }

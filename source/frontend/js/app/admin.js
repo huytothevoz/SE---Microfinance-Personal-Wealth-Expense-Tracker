@@ -3,7 +3,7 @@
  * Manages admin dashboard, user locks, default categories, broadcasts, notifications, and profile settings.
  */
 import { loadView } from './view-loader.js';
-import { adminUsers, categories, notifications } from '../data/live-data.js?v=wealth-ui-2';
+import { adminUsers, adminOverview, categories, notifications } from '../data/live-data.js?v=wealth-ui-2';
 import { icon, safe } from './ui-core.js';
 import { reportBarChart } from './reports.js';
 
@@ -11,6 +11,17 @@ export async function renderAdminOverviewPage() {
   const rawHtml = await loadView('admin-overview');
   const temp = document.createElement('div');
   temp.innerHTML = rawHtml;
+
+  if (adminOverview && typeof adminOverview.totalUsers === 'number') {
+    const totalEl = temp.querySelector('#admin-total-users');
+    if (totalEl) totalEl.textContent = Number(adminOverview.totalUsers).toLocaleString('vi-VN');
+    const activeEl = temp.querySelector('#admin-active-users');
+    if (activeEl) activeEl.textContent = Number(adminOverview.activeUsers).toLocaleString('vi-VN');
+    const newEl = temp.querySelector('#admin-new-users');
+    if (newEl) newEl.textContent = Number(adminOverview.newUsersThisMonth).toLocaleString('vi-VN');
+    const lockedEl = temp.querySelector('#admin-locked-users');
+    if (lockedEl) lockedEl.textContent = Number(adminOverview.lockedUsers).toLocaleString('vi-VN');
+  }
 
   const chartContainer = temp.querySelector('#admin-activity-chart');
   if (chartContainer) {
@@ -27,26 +38,34 @@ export async function renderAdminUsersPage() {
 
   const tbody = temp.querySelector('#admin-users-table-body');
   if (tbody) {
-    tbody.innerHTML = adminUsers.map(u => `
-      <tr>
-        <td>
-          <div class="table-name">
-            <span class="table-icon">${icon('user')}</span>
-            <span>${u.name}<small>${u.email} · ${u.id}</small></span>
-          </div>
-        </td>
-        <td>${u.created}</td>
-        <td>${u.currency}</td>
-        <td>
-          <span class="badge ${u.status === 'Active' ? '' : 'danger'}">${u.status}</span>
-        </td>
-        <td>
-          <button class="text-action" data-action="admin-user-${u.status === 'Active' ? 'lock' : 'unlock'}">
-            ${u.status === 'Active' ? 'Khóa tài khoản' : 'Mở khóa'}
-          </button>
-        </td>
-      </tr>
-    `).join('');
+    if (!adminUsers.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:#68778a;">Chưa có tài khoản người dùng nào hoặc đang tải dữ liệu…</td></tr>`;
+    } else {
+      tbody.innerHTML = adminUsers.map(u => {
+        const isLocked = String(u.status).toUpperCase() === 'LOCKED';
+        const idEnc = encodeURIComponent(String(u.id));
+        return `
+        <tr>
+          <td>
+            <div class="table-name">
+              <span class="table-icon">${icon('user')}</span>
+              <span>${safe(u.fullName || u.name)}<small>${safe(u.email)} · #${safe(u.id)}</small></span>
+            </div>
+          </td>
+          <td>${safe(String(u.createdAt || '').slice(0, 10))}</td>
+          <td>${safe(u.baseCurrency || 'VND')}</td>
+          <td>
+            <span class="badge ${isLocked ? 'danger' : 'success'}">${safe(u.status)}</span>
+          </td>
+          <td>
+            <button class="text-action" data-action="live:${isLocked ? 'unlock' : 'lock'}:adminUsers:${idEnc}">
+              ${isLocked ? 'Mở khóa' : 'Khóa tài khoản'}
+            </button>
+          </td>
+        </tr>
+      `;
+      }).join('');
+    }
   }
 
   return temp.innerHTML;

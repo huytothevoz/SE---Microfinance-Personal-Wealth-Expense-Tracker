@@ -176,4 +176,168 @@ final class AdminDAO
         $insert = $this->pdo->prepare('INSERT INTO system_config (config_key, config_value) VALUES (?, ?)');
         return $insert->execute([$trimmedKey, $trimmedValue]);
     }
+
+    /**
+     * Macro overview dashboard statistics (FR14.01, FR14.02, BR11).
+     *
+     * @return array<string, mixed>
+     */
+    public function getOverviewStats(): array
+    {
+        $monthPrefix = date('Y-m') . '%';
+
+        $summarySql = "SELECT COUNT(*) AS total_users,
+                              SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) AS active_users,
+                              SUM(CASE WHEN status = 'LOCKED' THEN 1 ELSE 0 END) AS locked_users,
+                              SUM(CASE WHEN role = 'ADMIN' THEN 1 ELSE 0 END) AS admin_users,
+                              SUM(CASE WHEN role = 'USER' THEN 1 ELSE 0 END) AS personal_users,
+                              SUM(CASE WHEN CAST(created_at AS CHAR) LIKE ? THEN 1 ELSE 0 END) AS new_users_this_month
+                       FROM users";
+        if ($this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $summarySql = "SELECT COUNT(*) AS total_users,
+                                  SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) AS active_users,
+                                  SUM(CASE WHEN status = 'LOCKED' THEN 1 ELSE 0 END) AS locked_users,
+                                  SUM(CASE WHEN role = 'ADMIN' THEN 1 ELSE 0 END) AS admin_users,
+                                  SUM(CASE WHEN role = 'USER' THEN 1 ELSE 0 END) AS personal_users,
+                                  SUM(CASE WHEN CAST(created_at AS TEXT) LIKE ? THEN 1 ELSE 0 END) AS new_users_this_month
+                           FROM users";
+        }
+        $stmt = $this->pdo->prepare($summarySql);
+        $stmt->execute([$monthPrefix]);
+        $row = $stmt->fetch() ?: [];
+
+        $currencyStmt = $this->pdo->query(
+            'SELECT base_currency, COUNT(*) AS user_count
+             FROM users
+             GROUP BY base_currency
+             ORDER BY user_count DESC, base_currency ASC'
+        );
+        $currencyDistribution = [];
+        if ($currencyStmt) {
+            foreach ($currencyStmt->fetchAll() as $cRow) {
+                $currencyDistribution[] = [
+                    'currency' => (string) $cRow['base_currency'],
+                    'count' => (int) $cRow['user_count'],
+                ];
+            }
+        }
+
+        $monthExpr = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite'
+            ? 'substr(CAST(created_at AS TEXT), 1, 7)'
+            : 'LEFT(CAST(created_at AS CHAR), 7)';
+        $trendStmt = $this->pdo->query(
+            "SELECT {$monthExpr} AS month_key, COUNT(*) AS signups
+             FROM users
+             GROUP BY {$monthExpr}
+             ORDER BY month_key DESC
+             LIMIT 6"
+        );
+        $monthlyRegistrations = [];
+        if ($trendStmt) {
+            $monthlyRegistrations = array_reverse(array_map(static fn(array $r): array => [
+                'month' => (string) $r['month_key'],
+                'count' => (int) $r['signups'],
+            ], $trendStmt->fetchAll()));
+        }
+
+        $catCountStmt = $this->pdo->query('SELECT COUNT(*) FROM default_categories WHERE is_active = 1');
+        $activeDefaultCategories = $catCountStmt ? (int) $catCountStmt->fetchColumn() : 0;
+
+        $broadcastCountStmt = $this->pdo->query(
+            "SELECT COUNT(*) FROM admin_audit_logs WHERE action = 'BROADCAST_ANNOUNCEMENT'"
+        );
+        $totalBroadcasts = $broadcastCountStmt ? (int) $broadcastCountStmt->fetchColumn() : 0;
+
+        return [
+            'totalUsers' => (int) ($row['total_users'] ?? 0),
+            'activeUsers' => (int) ($row['active_users'] ?? 0),
+            'lockedUsers' => (int) ($row['locked_users'] ?? 0),
+            'adminUsers' => (int) ($row['admin_users'] ?? 0),
+            'personalUsers' => (int) ($row['personal_users'] ?? 0),
+            'newUsersThisMonth' => (int) ($row['new_users_this_month'] ?? 0),
+            'activeDefaultCategories' => $activeDefaultCategories,
+            'totalBroadcasts' => $totalBroadcasts,
+            'currencyDistribution' => $currencyDistribution,
+            'monthlyRegistrations' => $monthlyRegistrations,
+        ];
+    }
+
+    /**
+     * List user accounts with macro metadata only (strictly no personal wallet or transaction amounts per BR11).
+     *
+     * @param array<string, mixed> $filters
+     * @return array<int, array<string, mixed>>
+     */
+    public function listUsers(array $filters = []): array
+    {
+        $sql = 'SELECT id, full_name, email, role, status, base_currency, created_at, updated_at
+                FROM users
+                WHERE 1 = 1';
+        $params = [];
+
+        if (!empty($filters['role'])) {
+            $sql .= ' AND role = ?';
+            $params[] = strtoupper((string) $filters['role']);
+        }
+        if (!empty($filters['status'])) {
+            $sql .= ' AND status = ?';
+            $params[] = strtoupper((string) $filters['status']);
+        }
+        $search = trim((string) ($filters['search'] ?? $filters['q'] ?? ''));
+        if ($search !== '') {
+            $sql .= ' AND (LOWER(full_name) LIKE ? OR LOWER(email) LIKE ?)';
+            $kw = '%' . mb_strtolower($search, 'UTF-8') . '%';
+            $params[] = $kw;
+            $params[] = $kw;
+        }
+
+        $sql .= ' ORDER BY id ASC';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findUserById(int $userId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id, full_name, email, role, status, base_currency, created_at, updated_at
+             FROM users
+             WHERE id = ?'
+        );
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public function countActiveAdminsExcept(int $excludeUserId): int
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM users WHERE role = 'ADMIN' AND status = 'ACTIVE' AND id <> ?"
+        );
+        $stmt->execute([$excludeUserId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function updateUserStatus(int $userId, string $status): bool
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE users SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+        );
+        return $stmt->execute([strtoupper($status), $userId]);
+    }
+
+    /**
+     * Revoke all active refresh/access sessions of a user upon account lock (FR14.03, SQ08).
+     */
+    public function revokeUserSessions(int $userId): int
+    {
+        try {
+            $stmt = $this->pdo->prepare('DELETE FROM auth_sessions WHERE user_id = ?');
+            $stmt->execute([$userId]);
+            return $stmt->rowCount();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
 }

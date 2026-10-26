@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/bootstrap.php';
 
+use WealthFlow\Core\ApiException;
 use WealthFlow\Core\Database;
+use WealthFlow\Modules\Admin\AdminDAO;
+use WealthFlow\Modules\Admin\AdminService;
+use WealthFlow\Modules\Admin\AuditLogDAO;
 use WealthFlow\Modules\Budgets\BudgetDAO;
 use WealthFlow\Modules\Budgets\BudgetService;
 use WealthFlow\Modules\Notifications\NotificationDAO;
@@ -624,6 +628,83 @@ final class TestRunner
         $sub1Updated = $recRepo->findByIdAndUser((int) $sub1['id'], $userId);
         $expectedNext = RecurringService::calculateNextMonthlyDueDate(5, $today);
         $this->assert('TC-F06.03.4 Next due date advanced correctly for next cycle', $sub1Updated['next_due_date'] === $expectedNext);
+
+        // -------------------------------------------------------------
+        echo "\n--- GROUP 5: FR14 - Admin Macro Overview, Governance & User Lock (BR11, SQ08) ---\n";
+        // -------------------------------------------------------------
+
+        $adminDao = new AdminDAO($pdo);
+        $auditLogDao = new AuditLogDAO($pdo);
+        $adminService = new AdminService($adminDao, $auditLogDao, $notifService);
+        $adminUserId = 3; // Seeded ADMIN user
+
+        // 5.1: TC-F14.01 Admin Macro Overview Isolation (BR11)
+        $overview = $adminService->getOverview();
+        $overviewJson = json_encode($overview, JSON_UNESCAPED_UNICODE);
+        $this->assert(
+            'TC-F14.01.1 Admin macro overview returns aggregate metrics without exposing personal wallet balances (BR11)',
+            isset($overview['totalUsers'], $overview['activeUsers'], $overview['lockedUsers'], $overview['newUsersThisMonth'])
+                && (int) $overview['totalUsers'] >= 3
+                && !str_contains((string) $overviewJson, 'cached_balance')
+                && !str_contains((string) $overviewJson, 'earmarked_balance')
+        );
+
+        // 5.2: TC-F14.02 User List Isolation
+        $userList = $adminService->listUsers();
+        $this->assert(
+            'TC-F14.02.1 Admin listUsers presents users with role and status without leaking balance/financial data',
+            count($userList) >= 3
+                && isset($userList[0]['role'], $userList[0]['status'], $userList[0]['fullName'])
+                && !isset($userList[0]['cached_balance'])
+        );
+
+        // 5.3: TC-F14.03 User Lock with Session Revocation & Audit Logging (SQ08)
+        // Seed an active auth session for User 2 (Wallet Test User)
+        $pdo->exec("INSERT INTO auth_sessions (user_id, refresh_token_hash, expires_at) VALUES (2, 'hash_u2_session_token', '2099-01-01 00:00:00')");
+
+        $shortReasonRejected = false;
+        try {
+            $adminService->lockUser($adminUserId, 2, 'Ngắn'); // 4 chars < 10
+        } catch (ApiException $e) {
+            $shortReasonRejected = ($e->status === 422 && $e->errorCode === 'LOCK_REASON_REQUIRED');
+        }
+        $this->assert('TC-F14.03.1 Locking user with reason < 10 chars is rejected with 422 LOCK_REASON_REQUIRED', $shortReasonRejected);
+
+        $selfLockRejected = false;
+        try {
+            $adminService->lockUser($adminUserId, $adminUserId, 'Tự khóa tài khoản quản trị viên hệ thống');
+        } catch (ApiException $e) {
+            $selfLockRejected = ($e->status === 400 && $e->errorCode === 'CANNOT_LOCK_LAST_ADMIN');
+        }
+        $this->assert('TC-F14.03.2 Admin cannot lock their own account', $selfLockRejected);
+
+        $lockReason = 'Tài khoản có dấu hiệu gian lận và phát sinh giao dịch bất thường';
+        $lockedRes = $adminService->lockUser($adminUserId, 2, $lockReason);
+        $activeSessionsU2 = (int) $pdo->query("SELECT COUNT(*) FROM auth_sessions WHERE user_id = 2 AND revoked_at IS NULL")->fetchColumn();
+        $this->assert(
+            'TC-F14.03.3 Locking user sets status = LOCKED, revokes active sessions and records audit log',
+            $lockedRes['user']['status'] === 'LOCKED'
+                && $lockedRes['revokedSessions'] >= 1
+                && $activeSessionsU2 === 0
+                && (int) $lockedRes['auditLogId'] > 0
+        );
+
+        // 5.4: TC-F14.04 User Unlock
+        $unlockedRes = $adminService->unlockUser($adminUserId, 2, 'Đã xác minh danh tính chủ tài khoản thành công');
+        $this->assert(
+            'TC-F14.04.1 Unlocking user restores status = ACTIVE and records audit log',
+            $unlockedRes['user']['status'] === 'ACTIVE'
+                && (int) $unlockedRes['auditLogId'] > 0
+        );
+
+        // 5.5: TC-F14.05 Audit Logs Verification
+        $auditLogs = $adminService->getAuditLogs(20, 0);
+        $this->assert(
+            'TC-F14.05.1 Admin audit log lists recorded LOCK_USER and UNLOCK_USER actions with actor names',
+            count($auditLogs) >= 2
+                && in_array('LOCK_USER', array_column($auditLogs, 'action'), true)
+                && in_array('UNLOCK_USER', array_column($auditLogs, 'action'), true)
+        );
 
         echo "\n====================================================================\n";
         echo "TEST SUMMARY: {$this->passed} PASSED, {$this->failed} FAILED\n";

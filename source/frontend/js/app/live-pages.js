@@ -3,6 +3,7 @@ import { wallets, transactions, budgets, recurring, goals, loans, gold, notifica
 import { icon, formatMoneyInput, moneyInputValue } from './ui-core.js?v=wealth-ui-2';
 import { httpClient } from '../services/http-client.js';
 import { GoalApi } from '../services/goal-api.js';
+import { AdminApi } from '../services/admin-api.js';
 
 const ITEMS = { wallets, transactions, budgets, recurring, goals, loans, gold, notifications, categories, adminUsers };
 const TITLES = { wallets: 'Ví', transactions: 'Giao dịch', categories: 'Danh mục', budgets: 'Ngân sách', recurring: 'Giao dịch định kỳ', goals: 'Mục tiêu tiết kiệm', loans: 'Vay và cho vay', gold: 'Tài sản vàng', notifications: 'Thông báo', adminUsers: 'Người dùng' };
@@ -429,6 +430,58 @@ export function liveAction(action, { dialog, toast, reload }) {
     void httpClient(`api/recurring/${encodeURIComponent(id)}/${verb}`, { method: 'POST', data: {} })
       .then(async () => { await loadLiveData(); reload(); toast(verb === 'pause' ? 'Đã tạm dừng khoản định kỳ.' : 'Đã kích hoạt lại khoản định kỳ.'); })
       .catch(error => toast(`Không thể cập nhật khoản định kỳ: ${error.message}`));
+    return true;
+  }
+  // UC12 / FR14.03 & FR14.04: Admin Lock / Unlock User
+  if (name === 'adminUsers' && (verb === 'lock' || verb === 'unlock')) {
+    const id = decodeURIComponent(encodedId || '');
+    const user = adminUsers.find(u => String(u.id) === id);
+    if (!user || !/^\d+$/.test(id)) {
+      toast('Không tìm thấy tài khoản người dùng.');
+      return true;
+    }
+    const isLock = verb === 'lock';
+    document.querySelector('#modal-overline').textContent = isLock ? 'KHÓA TÀI KHOẢN & THU HỒI PHIÊN (FR14.03)' : 'MỞ KHÓA TÀI KHOẢN (FR14.04)';
+    document.querySelector('#modal-title').textContent = `${isLock ? 'Khóa' : 'Mở khóa'}: ${user.fullName || user.name || user.email}`;
+    document.querySelector('#modal-content').innerHTML = `<p class="form-hint">${isLock
+      ? 'Khi bị khóa, toàn bộ phiên đăng nhập (Refresh/Access Token) của tài khoản này sẽ bị hủy hiệu lực ngay lập tức và được ghi vào nhật ký kiểm toán.'
+      : 'Khôi phục trạng thái ACTIVE để người dùng có thể đăng nhập lại vào hệ thống.'}</p>
+    <form id="live-admin-user-status-form">
+      <div class="form-grid">
+        <div class="field">
+          <label for="live-admin-reason">${isLock ? 'Lý do khóa tài khoản (bắt buộc tối thiểu 10 ký tự) *' : 'Ghi chú mở khóa'}</label>
+          <textarea id="live-admin-reason" name="reason" rows="3" ${isLock ? 'minlength="10" required' : ''} placeholder="${isLock ? 'Nhập lý do vi phạm hoặc yêu cầu bảo mật (tối thiểu 10 ký tự)...' : 'Đã xác minh và mở khóa tài khoản'}">${isLock ? '' : 'Đã xác minh và khôi phục quyền truy cập.'}</textarea>
+        </div>
+      </div>
+      <p id="live-form-feedback" role="status" aria-live="polite"></p>
+      <div class="modal-footer">
+        <button type="button" class="btn btn--outline" data-close-modal>Hủy</button>
+        <button type="submit" class="btn ${isLock ? 'btn--danger' : 'btn--primary'}">${isLock ? 'Xác nhận khóa & thu hồi phiên' : 'Xác nhận mở khóa'}</button>
+      </div>
+    </form>`;
+    const form = document.querySelector('#live-admin-user-status-form');
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!form.reportValidity()) return;
+      const submit = form.querySelector('[type=submit]');
+      const feedback = form.querySelector('#live-form-feedback');
+      const reason = form.elements.namedItem('reason').value.trim();
+      submit.disabled = true;
+      feedback.textContent = 'Đang cập nhật trạng thái tài khoản…';
+      try {
+        if (isLock) await AdminApi.lockUser(id, reason);
+        else await AdminApi.unlockUser(id, reason);
+        dialog.close();
+        await loadLiveData({ admin: true });
+        reload();
+        toast(isLock ? `Đã khóa tài khoản ${user.email} và thu hồi phiên đăng nhập.` : `Đã mở khóa tài khoản ${user.email}.`);
+      } catch (error) {
+        feedback.textContent = `Không thể thực hiện: ${error.message}`;
+      } finally {
+        submit.disabled = false;
+      }
+    });
+    dialog.showModal();
     return true;
   }
   if (verb !== 'create' || !['transactions','categories','budgets','recurring'].includes(name)) { toast('Thao tác chưa có API được xác nhận. Không ghi dữ liệu giả.'); return true; }

@@ -5,6 +5,10 @@
 import { httpClient } from './http-client.js';
 
 export const AdminApi = {
+  getOverview() {
+    return httpClient('admin/overview', { method: 'GET' });
+  },
+
   getUsers(params = {}) {
     return httpClient('admin/users', { params });
   },
@@ -16,9 +20,10 @@ export const AdminApi = {
     });
   },
 
-  unlockUser(userId) {
+  unlockUser(userId, reason = null) {
     return httpClient(`admin/users/${userId}/unlock`, {
-      method: 'PUT'
+      method: 'PUT',
+      data: reason ? { reason } : {}
     });
   },
 
