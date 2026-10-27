@@ -80,7 +80,15 @@
   }
 }
 
-@media(max-width:700px) {
+@media(max-width:760px) {
+  html,body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .app-shell,.app-main {
+    width: 100%;
+    min-width: 0;
+  }
   .container {
     width: min(100% - 34px,1180px);
   }
@@ -216,12 +224,15 @@
     top: 0;
     width: 258px;
     height: 100dvh;
+    box-sizing: border-box;
     transform: translateX(-100%);
+    visibility: hidden;
     transition: transform .25s;
     z-index: 50;
   }
   .sidebar.is-open {
     transform: translateX(0);
+    visibility: visible;
   }
   .mobile-overlay.is-open {
     display: block;
@@ -237,6 +248,13 @@
     height: 65px;
     padding: 0 16px;
     gap: 11px;
+  }
+  .top-actions {
+    min-width: 0;
+    margin-left: auto;
+  }
+  .user-chip>span:last-child {
+    display: none;
   }
   .breadcrumb {
     display: none;
@@ -258,18 +276,27 @@
   }
   .main-content {
     padding: 21px 16px 55px;
+    width: 100%;
+    min-width: 0;
   }
   .page-heading {
     display: block;
   }
   .page-actions {
     margin-top: 17px;
+    width: 100%;
+  }
+  .page-actions .btn {
+    min-height: 44px;
   }
   .page-heading h1 {
     font-size: 26px;
   }
 .kpi-grid {
     gap: 10px;
+  }
+  .kpi-grid>* {
+    min-width: 0;
   }
   .kpi-card {
     padding: 15px;
@@ -287,6 +314,9 @@
   }
   .kpi-number {
     font-size: 18px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
   }
   .kpi-desc {
     font-size: 9px;
@@ -294,6 +324,8 @@
   }
   .panel {
     padding: 18px;
+    max-width: 100%;
+    overflow: hidden;
   }
   .panel-title {
     flex-wrap: wrap;
@@ -301,8 +333,37 @@
   .card-grid,.info-grid {
     grid-template-columns: 1fr;
   }
+  .card-grid>* {
+    min-width: 0;
+  }
   .wallet-card {
     min-height: 160px;
+    padding: 18px;
+  }
+  .wallet-balance {
+    font-size: clamp(18px,6vw,23px);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+  .wallet-actions .btn,.goal-card-actions .btn,.loan-actions .btn {
+    min-height: 42px;
+  }
+  .wallet-detail-summary {
+    grid-template-columns: 1fr;
+  }
+  .wallet-history-list {
+    max-height: min(360px,46dvh);
+  }
+  .wallet-history-item {
+    grid-template-columns: 36px minmax(0,1fr);
+  }
+  .wallet-history-amount {
+    grid-column: 2;
+    justify-self: start;
+    white-space: normal;
+  }
+  .wallet-history-equivalent {
+    text-align: left;
   }
   .report-stats {
     grid-template-columns: 1fr;
@@ -313,10 +374,35 @@
   .form-grid {
     grid-template-columns: 1fr;
   }
+  .field input,.field select,.field textarea,.input-sm,.select-sm {
+    font-size: 16px;
+  }
+  .modal-head {
+    padding: 17px 18px;
+  }
+  .modal-content {
+    padding: 12px 18px 20px;
+  }
+  .app-dialog {
+    width: calc(100% - 20px);
+    max-height: calc(100dvh - 20px);
+    border-radius: 14px;
+  }
+  .modal-footer {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .modal-footer .btn {
+    width: 100%;
+    min-height: 44px;
+  }
   .goal-detail-summary {
     grid-template-columns: 1fr;
   }
   .filter-controls {
+    width: 100%;
+  }
+  .filter-controls>* {
     width: 100%;
   }
   .transaction-filter-button {
@@ -332,8 +418,29 @@
     grid-template-columns: 1fr;
   }
   .input-sm {
-    flex: 1;
-    width: 130px;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .data-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 5px;
+  }
+  .data-table {
+    min-width: 680px;
+  }
+  .data-table th,.data-table td {
+    padding: 12px 11px;
+  }
+  .tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .tab {
+    flex: 0 0 auto;
   }
   .doughnut-wrap {
     flex-direction: column;
@@ -344,6 +451,91 @@
   }
   .section-heading h2 {
     font-size: 36px;
+  }
+  #app-content .expense-dashboard-grid {
+    grid-template-columns: minmax(0,1fr);
+  }
+  #app-content .expense-donut-layout {
+    grid-template-columns: minmax(0,1fr);
+    justify-items: center;
+  }
+  #app-content .expense-donut {
+    width: min(190px,70vw);
+    height: min(190px,70vw);
+  }
+  #app-content .expense-legend {
+    width: 100%;
+  }
+  #app-content .expense-legend-row {
+    grid-template-columns: 12px minmax(0,1fr) auto;
+  }
+  #app-content .expense-bars {
+    height: 210px;
+    gap: 5px;
+    padding-inline: 1px;
+  }
+  #app-content .expense-month {
+    gap: 2px;
+  }
+  #app-content .expense-column {
+    width: min(18px,45%);
+  }
+  .goal-top,.loan-card-head,.status-row,.goal-footer {
+    flex-wrap: wrap;
+  }
+  .loan-balance strong,.goal-amount strong {
+    overflow-wrap: anywhere;
+  }
+  .loan-meta {
+    grid-template-columns: 1fr;
+  }
+  .goal-history-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .goal-history-row>b {
+    align-self: flex-start;
+  }
+  .toast-stack {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+  }
+}
+
+@media(max-width:520px) {
+  .kpi-grid,.goal-kpi-grid,.loan-kpi-grid,.report-kpi-grid {
+    grid-template-columns: minmax(0,1fr);
+  }
+  .kpi-card {
+    min-height: 118px;
+  }
+  .page-actions {
+    display: grid;
+    grid-template-columns: minmax(0,1fr);
+  }
+  .page-actions .btn,.report-actions .btn,.wf-grid-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .report-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .wallet-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .wallet-type {
+    margin-left: 53px;
+  }
+  .panel-title {
+    display: block;
+  }
+  .panel-tools {
+    margin-top: 12px;
+    width: 100%;
   }
 }
 
@@ -393,6 +585,30 @@
   }
   .topbar {
     padding: 0 10px;
+  }
+  .app-mobile-label {
+    display: none;
+  }
+  .top-actions {
+    gap: 2px;
+  }
+  .language-toggle,.top-icon,.avatar,.sidebar-toggle {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+  }
+  .main-content {
+    padding-inline: 12px;
+  }
+  .panel,.wallet-card,.goal-card,.loan-card,.gold-card {
+    padding: 15px;
+  }
+  .page-heading h1 {
+    font-size: 24px;
+    overflow-wrap: anywhere;
+  }
+  .expense-legend-row strong {
+    font-size: 11px;
   }
   .footer-inner {
     flex-direction: column;
