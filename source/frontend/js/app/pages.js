@@ -2,7 +2,7 @@
 import { META } from './ui-core.js?v=wealth-ui-2';
 import { liveRender, liveTransactionTable } from './live-pages.js?v=wealth-ui-2';
 import { renderWalletPage } from './wallets.js?v=wallet-ui-13';
-import { renderGoalsPage } from './goals.js?v=wealth-ui-2';
+import { renderGoalsPage } from './goals.js?v=wealth-ui-3';
 import { renderGoldPage } from './gold.js?v=wealth-ui-2';
 import { renderLoansPage } from './loans.js?v=wealth-ui-2';
 import { renderReconciliationPage } from './reports.js';

@@ -10,7 +10,7 @@ if not defined XAMPP_ROOT (
     if exist "F:\xampp\php\php.exe" set "XAMPP_ROOT=F:\xampp"
 )
 if not defined XAMPP_ROOT (
-    echo XAMPP was not found at standard paths (C:\, D:\, E:\, F:\xampp). Set XAMPP_DIR first.
+    echo XAMPP was not found at standard paths [C:\, D:\, E:\, F:\xampp]. Set XAMPP_DIR first.
     echo Example: set "XAMPP_DIR=D:\xampp"
     pause
     exit /b 1

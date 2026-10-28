@@ -6,7 +6,7 @@ import { liveAction } from './live-pages.js?v=wealth-ui-2';
 import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';
 import { createWalletFeature } from './wallet-feature.js?v=wallet-ui-13';
-import { handleGoalAction } from './goals.js?v=wealth-ui-2';
+import { handleGoalAction } from './goals.js?v=wealth-ui-3';
 import { handleGoldAction } from './gold.js?v=wealth-ui-2';
 import { handleLoanAction } from './loans.js?v=wealth-ui-2';
 import { runReconciliationAudit } from './reports.js';

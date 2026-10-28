@@ -1,41 +1,100 @@
 <div class="page-heading goal-page-heading">
   <div>
     <h1>Mục tiêu tiết kiệm</h1>
-    <p>Chọn điều bạn muốn đạt được và theo dõi từng khoản đã để dành.</p>
+    <p>Chọn điều bạn muốn đạt được, lập lộ trình và chủ động tích lũy qua từng cột mốc tài chính.</p>
   </div>
   <div class="page-actions">
     <button type="button" class="btn btn--primary btn-sm" data-action="goal:create">
-      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
       Thêm mục tiêu
     </button>
   </div>
 </div>
 
 <div class="kpi-grid goal-kpi-grid">
-  <div class="kpi-card">
-    <div class="kpi-top"><span class="kpi-label">Đang thực hiện</span></div>
+  <div class="kpi-card is-clickable" data-action="goal:filter:ACTIVE" title="Nhấp để lọc các mục tiêu đang thực hiện">
+    <div class="kpi-top">
+      <span class="kpi-label">Đang thực hiện</span>
+      <div class="kpi-icon blue">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+      </div>
+    </div>
     <div class="kpi-number" id="goal-active-count">0 mục tiêu</div>
     <div class="kpi-desc">Những kế hoạch đang để dành</div>
   </div>
+
   <div class="kpi-card">
-    <div class="kpi-top"><span class="kpi-label">Muốn đạt</span></div>
+    <div class="kpi-top">
+      <span class="kpi-label">Muốn đạt</span>
+      <div class="kpi-icon orange">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l5 6-11 12L1 9zM1 9h22M6 3l2 6 4 12 4-12 2-6"/></svg>
+      </div>
+    </div>
     <div class="kpi-number" id="goal-target-total">0 đ</div>
-    <div class="kpi-desc">Tổng số tiền của các mục tiêu</div>
+    <div class="kpi-desc">Tổng số tiền theo kế hoạch</div>
   </div>
+
   <div class="kpi-card">
-    <div class="kpi-top"><span class="kpi-label">Đã để dành</span></div>
+    <div class="kpi-top">
+      <span class="kpi-label">Đã để dành</span>
+      <div class="kpi-icon green">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M7 10h.01M17 14h.01"/></svg>
+      </div>
+    </div>
     <div class="kpi-number" id="goal-allocated-total">0 đ</div>
-    <div class="kpi-desc">Tiền đang được dành cho các mục tiêu</div>
+    <div class="kpi-desc">Tiền đang được earmark trong ví</div>
   </div>
-  <div class="kpi-card">
-    <div class="kpi-top"><span class="kpi-label">Tiến độ chung</span></div>
+
+  <div class="kpi-card is-clickable" data-action="goal:filter:ALL" title="Nhấp để xem toàn bộ mục tiêu">
+    <div class="kpi-top">
+      <span class="kpi-label">Tiến độ chung</span>
+      <div class="kpi-icon teal">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M21 9h-6V3a9 9 0 0 1 6 6"/></svg>
+      </div>
+    </div>
     <div class="kpi-number" id="goal-progress-percent">0%</div>
-    <div class="kpi-desc">Mức đã đạt so với kế hoạch</div>
+    <div class="kpi-desc">Mức đã tích lũy so với kế hoạch</div>
+  </div>
+</div>
+
+<div class="goal-toolbar">
+  <div class="goal-filter-pills" role="tablist" aria-label="Lọc trạng thái mục tiêu">
+    <button type="button" class="goal-filter-pill is-active" data-action="goal:filter:ALL" role="tab" aria-selected="true">
+      Tất cả <span class="goal-pill-badge" id="goal-pill-all-count">0</span>
+    </button>
+    <button type="button" class="goal-filter-pill" data-action="goal:filter:ACTIVE" role="tab" aria-selected="false">
+      Đang để dành <span class="goal-pill-badge" id="goal-pill-active-count">0</span>
+    </button>
+    <button type="button" class="goal-filter-pill" data-action="goal:filter:COMPLETED" role="tab" aria-selected="false">
+      Đã hoàn thành <span class="goal-pill-badge" id="goal-pill-completed-count">0</span>
+    </button>
+    <button type="button" class="goal-filter-pill" data-action="goal:filter:CANCELLED" role="tab" aria-selected="false">
+      Đã dừng <span class="goal-pill-badge" id="goal-pill-cancelled-count">0</span>
+    </button>
+  </div>
+  <div class="goal-toolbar-right">
+    <div class="goal-search-wrap">
+      <svg class="search-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input type="search" id="goal-search-box" class="goal-search-input" placeholder="Tìm theo tên mục tiêu..." aria-label="Tìm theo tên mục tiêu">
+    </div>
+    <select id="goal-sort-dropdown" class="goal-sort-select" aria-label="Sắp xếp mục tiêu">
+      <option value="progress_desc">Tiến độ cao nhất</option>
+      <option value="progress_asc">Tiến độ thấp nhất</option>
+      <option value="deadline_asc">Hạn hoàn thành gần nhất</option>
+      <option value="priority_desc">Mức ưu tiên cao nhất</option>
+      <option value="target_desc">Số tiền mục tiêu lớn nhất</option>
+    </select>
   </div>
 </div>
 
 <div class="card-grid goal-page-grid" id="goal-card-list"></div>
 
 <div class="hint-box goal-note">
-  Thêm hoặc lấy tiền khỏi mục tiêu trong phần Giao dịch. Tiền vẫn thuộc số dư ví nên tổng tài sản không thay đổi.
+  <div class="goal-note-content">
+    <div class="goal-note-icon">💡</div>
+    <div>
+      <strong>Cơ chế bảo toàn tài sản (Earmarking):</strong>
+      Tiền tích lũy vào mục tiêu được phong tỏa an toàn trên số dư ví VND của bạn để theo dõi kế hoạch mà không cộng trùng vào Tổng tài sản ròng (Net Worth). Bạn có thể nạp thêm hoặc rút lại tiền vào ví bất cứ lúc nào ngay tại thẻ mục tiêu.
+    </div>
+  </div>
 </div>

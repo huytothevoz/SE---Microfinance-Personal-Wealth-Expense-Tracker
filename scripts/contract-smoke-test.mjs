@@ -90,7 +90,8 @@ const routesSource = await readFile(new URL('../source/backend/public/index.php'
 const ledgerDaoSource = await readFile(new URL('../source/backend/src/Modules/Transactions/LedgerDAO.php', import.meta.url), 'utf8');
 assert.match(uiCoreSource, /\['settings', 'Cài đặt & bảo mật', 'gear'\][\s\S]+settings: \['Cài đặt & bảo mật'/, 'Settings navigation and page title use one consistent label');
 assert.match(mainSource, /#user-menu'[\s\S]+navigate\(state\.admin \? 'admin-settings' : 'settings'\)/, 'Account button opens Settings & Security');
-assert.match(mainSource, /authApi\('change-password'/, 'Password form calls the real change-password API');
+const profileSecuritySource = await readFile(new URL('../source/frontend/js/app/profile-security.js', import.meta.url), 'utf8');
+assert.match(profileSecuritySource, /authApi\('change-password'/, 'Password form calls the real change-password API');
 assert.ok(/authApi\('logout'/.test(mainSource) && /post\('\/auth\/logout'/.test(routesSource), 'Logout control is connected to the backend route');
 assert.match(ledgerDaoSource, /listGoalTransactions[\s\S]+SAVINGS_GOAL[\s\S]+goal_allocations/, 'Transaction history includes goal allocations without extra ledger writes');
 assert.match(walletFeatureSource, /50000[\s\S]+CUSTOM/, 'Opening balance offers 50,000 VND presets and custom input');

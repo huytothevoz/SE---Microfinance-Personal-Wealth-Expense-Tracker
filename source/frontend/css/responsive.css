@@ -406,3 +406,733 @@
     transition: none !important;
   }
 }
+
+
+/* ==========================================================================
+   MOBILE & TABLET RESPONSIVE ENHANCEMENTS (ISOLATED TO AVOID MAIN CONFLICTS)
+   ========================================================================== */
+
+/* Shared Component Layouts (Loans Summary, Audit Table, Tabs, Actions) */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.summary-card {
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px #25496b06;
+  padding: 20px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.summary-card span {
+  font-size: 11px;
+  color: #7d90a5;
+  font-weight: 650;
+}
+
+.summary-card strong {
+  font-size: 22px;
+  font-weight: 840;
+  letter-spacing: -.7px;
+  color: #102e51;
+  overflow-wrap: anywhere;
+}
+
+#loan-card-list {
+  display: grid;
+  gap: 14px;
+}
+
+.wf-grid-actions {
+  margin-bottom: 16px;
+}
+
+.tabs button {
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  padding: 9px 15px;
+  color: #8192a4;
+  font-weight: 700;
+  font-size: 11px;
+  transition: background .2s, color .2s;
+}
+
+.tabs button.active {
+  background: #fff;
+  color: #1d4268;
+  box-shadow: 0 1px 5px #1f3b6317;
+}
+
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+#admin-audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+#admin-audit-table thead {
+  background: #f7f9fc;
+}
+
+#admin-audit-table th {
+  padding: 12px 14px;
+  font-size: 10px;
+  letter-spacing: .3px;
+  font-weight: 750;
+  color: #8b9bae;
+  white-space: nowrap;
+}
+
+#admin-audit-table td {
+  padding: 13px 14px;
+  border-top: 1px solid #edf1f5;
+  font-size: 11px;
+  color: #506781;
+}
+
+/* Tablet Landscape & Small Desktop (<= 900px) */
+@media(max-width:900px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  .goal-detail-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Tablet Portrait & Mobile Landscape / Portrait (<= 768px) */
+@media(max-width:768px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  body:has(.sidebar.is-open) {
+    overflow: hidden;
+  }
+
+  /* Off-canvas Sidebar Drawer */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: min(272px, 84vw);
+    height: 100dvh;
+    transform: translateX(-100%);
+    transition: transform .25s cubic-bezier(.4, 0, .2, 1);
+    z-index: 50;
+    padding: 22px 14px max(20px, env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+    box-shadow: 14px 0 40px rgba(10, 30, 56, 0.35);
+  }
+
+  .mobile-overlay.is-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: #00172f9a;
+    backdrop-filter: blur(2px);
+    z-index: 40;
+  }
+
+  .sidebar-toggle {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .nav-link {
+    min-height: 42px;
+    padding: 11px 14px;
+    font-size: 13px;
+  }
+
+  /* Topbar Mobile */
+  .topbar {
+    height: 62px;
+    padding: 0 14px;
+    gap: 10px;
+  }
+
+  .breadcrumb,
+  .top-search,
+  .user-chip small,
+  .user-chip strong {
+    display: none;
+  }
+
+  .app-mobile-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 820;
+    color: var(--navy);
+    margin-right: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .top-actions {
+    gap: 6px;
+    margin-left: auto;
+  }
+
+  .top-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Main Content & Page Headings */
+  .main-content {
+    padding: 18px 14px calc(56px + env(safe-area-inset-bottom));
+  }
+
+  .page-heading {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .page-heading h1 {
+    font-size: clamp(22px, 5.8vw, 26px);
+    margin: 4px 0 6px;
+    line-height: 1.25;
+  }
+
+  .page-actions,
+  .wf-grid-actions {
+    margin-top: 0;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .page-actions .btn,
+  .wf-grid-actions .btn {
+    flex: 1 1 auto;
+    min-height: 42px;
+    justify-content: center;
+  }
+
+  /* KPI & Summary Grids */
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .summary-card {
+    padding: 15px 16px;
+  }
+
+  .summary-card strong {
+    font-size: 19px;
+  }
+
+  .kpi-card {
+    padding: 14px;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .kpi-top {
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+
+  .kpi-number {
+    font-size: clamp(16px, 4.4vw, 19px);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+  }
+
+  .kpi-desc {
+    font-size: 10px;
+    flex-wrap: wrap;
+    line-height: 1.4;
+  }
+
+  /* Panels & Card Grids */
+  .panel {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .panel-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .panel-tools {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .card-grid,
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Filters, Search & Toolbars */
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .filter-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .wallet-filter-button,
+  .transaction-filter-button,
+  #wallet-toggle-btn,
+  .filter-controls .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
+  }
+
+  .input-sm,
+  .select-sm {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 42px;
+    font-size: 16px;
+  }
+
+  .tabs {
+    width: 100%;
+    display: flex;
+  }
+
+  .tabs .tab,
+  .tabs button {
+    flex: 1 1 0;
+    text-align: center;
+    justify-content: center;
+    padding: 10px 8px;
+  }
+
+  /* Wallets Mobile */
+  .wallet-card {
+    padding: 16px;
+    min-height: auto;
+    gap: 12px;
+  }
+
+  .wallet-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .wallet-balance {
+    font-size: clamp(19px, 5.5vw, 22px);
+    overflow-wrap: anywhere;
+  }
+
+  .wallet-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .wallet-actions .btn {
+    flex: 1 1 auto;
+    min-height: 38px;
+    justify-content: center;
+  }
+
+  .wallet-detail-summary {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* Goals Interactive Mobile */
+  .goal-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .goal-filter-pills {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    flex-wrap: nowrap;
+  }
+
+  .goal-filter-pill {
+    min-height: 36px;
+    padding: 7px 14px;
+    flex-shrink: 0;
+  }
+
+  .goal-toolbar-right {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .goal-search-wrap {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .goal-search-input,
+  .goal-sort-select {
+    width: 100%;
+    min-height: 42px;
+    font-size: 16px;
+  }
+
+  .goal-card {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .goal-amount-block {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  .goal-celebration-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .goal-celebration-banner .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .goal-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .goal-card-actions .btn {
+    flex: 1 1 auto;
+    min-height: 38px;
+    justify-content: center;
+  }
+
+  .goal-modal-summary {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .goal-detail-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .goal-calc-preview {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .goal-history-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .goal-chip {
+    min-height: 34px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .goal-chip--fill {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Loans & Gold Mobile */
+  .loan-card,
+  .gold-card {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .loan-card .status-row,
+  .gold-card .status-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .loan-card .status-row .goal-card-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .loan-card .status-row .goal-card-actions .btn {
+    flex: 1 1 auto;
+    min-height: 38px;
+    justify-content: center;
+  }
+
+  .loan-amount {
+    font-size: clamp(19px, 5.5vw, 22px);
+    overflow-wrap: anywhere;
+  }
+
+  /* Budgets, Settings, Notifications & Metrics */
+  .budget-info {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 0;
+  }
+
+  .settings-row .btn {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .metric-item {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .notification-item {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 0;
+  }
+
+  .notification-item .badge {
+    margin-left: 49px;
+  }
+
+  /* Data Tables Mobile */
+  .data-table-wrap,
+  .table-container {
+    margin: 0 -4px;
+    padding: 0 4px 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table th,
+  .data-table td,
+  #admin-audit-table th,
+  #admin-audit-table td {
+    padding: 11px 10px;
+    font-size: 11px;
+  }
+
+  .data-table td:first-child {
+    white-space: normal;
+    min-width: 145px;
+  }
+
+  /* Modals / Dialogs & Toasts Mobile */
+  .app-dialog {
+    width: calc(100% - 20px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 15px;
+  }
+
+  .modal-head {
+    padding: 16px 18px;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 5;
+  }
+
+  .modal-head h2 {
+    font-size: 16px;
+    line-height: 1.3;
+  }
+
+  .modal-content {
+    padding: 14px 18px 20px;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .detail-grid dd {
+    overflow-wrap: anywhere;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .urgent-dialog {
+    width: calc(100% - 20px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+
+  .urgent-modal-banner {
+    padding: 18px 18px 14px;
+  }
+
+  .urgent-modal-title {
+    font-size: 17px;
+  }
+
+  .urgent-modal-body {
+    padding: 16px 18px;
+  }
+
+  .urgent-modal-text {
+    font-size: 13.5px;
+  }
+
+  .urgent-modal-meta {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .urgent-modal-footer {
+    padding: 14px 18px 18px;
+  }
+
+  .urgent-modal-footer .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .toast-stack {
+    left: 12px;
+    right: 12px;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    width: auto;
+  }
+
+  /* Landing Page Mobile Refinements */
+  .preview-window {
+    transform: none;
+  }
+
+  .floating-note,
+  .floating-stat {
+    position: static;
+    transform: none;
+    margin-top: 10px;
+    width: 100%;
+    box-shadow: 0 8px 24px #24496312;
+  }
+
+  .landing-nav a {
+    width: 100%;
+    padding: 10px 4px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+  }
+
+  .landing-nav a:last-child {
+    border-bottom: 0;
+  }
+}
+
+/* Small Mobile Phones (<= 480px) */
+@media(max-width:480px) {
+  .wallet-history-item {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .wallet-history-amount {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 2px;
+  }
+
+  .step {
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .goal-current-amount {
+    font-size: 14px;
+  }
+
+  .goal-target-amount {
+    font-size: 12px;
+  }
+}
+
+/* Compact Mobile Phones (<= 360px) */
+@media(max-width:360px) {
+  .kpi-grid,
+  .goal-detail-summary {
+    grid-template-columns: 1fr;
+  }
+}
