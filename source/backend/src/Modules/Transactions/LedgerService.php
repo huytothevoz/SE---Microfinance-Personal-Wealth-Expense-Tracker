@@ -162,22 +162,19 @@ final class LedgerService
     {
         $walletId = (int) ($dto['walletId'] ?? 0);
         $categoryId = (int) ($dto['categoryId'] ?? 0);
-        $amount = (float) ($dto['amount'] ?? 0);
+        $amount = $this->positiveAmount($dto['amount'] ?? null, 'Số tiền chi tiêu');
         $description = trim((string) ($dto['description'] ?? 'Chi tiêu'));
         $occurredOn = $dto['occurredOn'] ?? date('Y-m-d');
 
-        if ($amount <= 0) {
-            throw new InvalidArgumentException('Số tiền chi tiêu phải lớn hơn 0.');
-        }
-
         $wallet = $this->walletDao->findByIdAndUser($walletId, $userId);
-        if (!$wallet) {
-            throw new InvalidArgumentException('Ví thanh toán không tồn tại hoặc không thuộc quyền sở hữu.');
+        if (!$wallet || (string) $wallet['status'] !== 'ACTIVE') {
+            throw new InvalidArgumentException('Ví thanh toán đang hoạt động không tồn tại hoặc không thuộc quyền sở hữu.');
         }
 
-        $currency = strtoupper($dto['currency'] ?? $wallet['currency']);
+        $currency = strtoupper((string) $wallet['currency']);
+        $this->rejectCurrencyMismatch($dto, $currency);
 
-        $category = $this->catDao->findByIdAndUser($categoryId, $userId);
+        $category = $this->catDao->findActiveByIdAndUserAndType($categoryId, $userId, 'EXPENSE');
         if (!$category) {
             throw new InvalidArgumentException('Danh mục chi tiêu không tồn tại hoặc không thuộc quyền sở hữu.');
         }
@@ -236,7 +233,7 @@ final class LedgerService
             // 4. Update cached balance
             $newBalance = $this->walletDao->adjustBalance(
                 $walletId,
-                -$amount,
+                bcmul($amount, '-1', 8),
                 $wallet['wallet_type'] === 'CREDIT'
             );
 
@@ -249,8 +246,8 @@ final class LedgerService
                 'type' => 'EXPENSE',
                 'amount' => $amount,
                 'currency' => $currency,
-                'amountBase' => (float) $amountBase,
-                'fxRateSnapshot' => (float) $fxRate,
+                'amountBase' => $amountBase,
+                'fxRateSnapshot' => $fxRate,
                 'walletId' => $walletId,
                 'newWalletBalance' => $newBalance,
                 'categoryId' => $categoryId,
@@ -284,22 +281,22 @@ final class LedgerService
     {
         $walletId = (int) ($dto['walletId'] ?? 0);
         $categoryId = (int) ($dto['categoryId'] ?? 0);
-        $amount = (float) ($dto['amount'] ?? 0);
+        $amount = $this->positiveAmount($dto['amount'] ?? null, 'Số tiền thu nhập');
         $description = trim((string) ($dto['description'] ?? 'Thu nhập'));
         $occurredOn = $dto['occurredOn'] ?? date('Y-m-d');
 
-        if ($amount <= 0) {
-            throw new InvalidArgumentException('Số tiền thu nhập phải lớn hơn 0.');
-        }
-
         $wallet = $this->walletDao->findByIdAndUser($walletId, $userId);
-        if (!$wallet) {
-            throw new InvalidArgumentException('Ví nhận tiền không tồn tại hoặc không thuộc quyền sở hữu.');
+        if (!$wallet || (string) $wallet['status'] !== 'ACTIVE') {
+            throw new InvalidArgumentException('Ví nhận tiền đang hoạt động không tồn tại hoặc không thuộc quyền sở hữu.');
+        }
+        if ((string) $wallet['wallet_type'] === 'CREDIT') {
+            throw new InvalidArgumentException('Thanh toán thẻ tín dụng phải dùng chuyển tiền, không được ghi là thu nhập.');
         }
 
-        $currency = strtoupper($dto['currency'] ?? $wallet['currency']);
+        $currency = strtoupper((string) $wallet['currency']);
+        $this->rejectCurrencyMismatch($dto, $currency);
 
-        $category = $this->catDao->findByIdAndUser($categoryId, $userId);
+        $category = $this->catDao->findActiveByIdAndUserAndType($categoryId, $userId, 'INCOME');
         if (!$category) {
             throw new InvalidArgumentException('Danh mục thu nhập không tồn tại hoặc không thuộc quyền sở hữu.');
         }
@@ -363,8 +360,8 @@ final class LedgerService
                 'type' => 'INCOME',
                 'amount' => $amount,
                 'currency' => $currency,
-                'amountBase' => (float) $amountBase,
-                'fxRateSnapshot' => (float) $fxRate,
+                'amountBase' => $amountBase,
+                'fxRateSnapshot' => $fxRate,
                 'walletId' => $walletId,
                 'newWalletBalance' => $newBalance,
                 'categoryId' => $categoryId,
@@ -399,22 +396,23 @@ final class LedgerService
     {
         $fromWalletId = (int) ($dto['fromWalletId'] ?? 0);
         $toWalletId = (int) ($dto['toWalletId'] ?? 0);
-        $amount = (float) ($dto['amount'] ?? 0);
+        $amount = $this->positiveAmount($dto['amount'] ?? null, 'Số tiền chuyển');
         $description = trim((string) ($dto['description'] ?? 'Chuyển tiền nội bộ'));
         $occurredOn = $dto['occurredOn'] ?? date('Y-m-d');
 
         if ($fromWalletId === $toWalletId) {
             throw new InvalidArgumentException('Ví nguồn và ví đích phải khác nhau.');
         }
-        if ($amount <= 0) {
-            throw new InvalidArgumentException('Số tiền chuyển phải lớn hơn 0.');
-        }
-
         $fromWallet = $this->walletDao->findByIdAndUser($fromWalletId, $userId);
         $toWallet = $this->walletDao->findByIdAndUser($toWalletId, $userId);
 
-        if (!$fromWallet || !$toWallet) {
-            throw new InvalidArgumentException('Ví nguồn hoặc ví đích không hợp lệ hoặc không thuộc quyền sở hữu.');
+        if (!$fromWallet || !$toWallet
+            || (string) $fromWallet['status'] !== 'ACTIVE'
+            || (string) $toWallet['status'] !== 'ACTIVE') {
+            throw new InvalidArgumentException('Ví nguồn hoặc ví đích đang hoạt động không hợp lệ hoặc không thuộc quyền sở hữu.');
+        }
+        if ((string) $fromWallet['wallet_type'] === 'CREDIT') {
+            throw new InvalidArgumentException('Không thể dùng thẻ tín dụng làm ví nguồn cho chuyển tiền nội bộ.');
         }
 
         $fromCurrency = $fromWallet['currency'];
@@ -425,13 +423,18 @@ final class LedgerService
             $destAmount = $amount;
             $fxRate = '1.00000000';
             $amountBase = $this->fxService->convertToBase($amount, $this->fxService->getSnapshotRate($fromCurrency, 'VND'));
+            $destinationFxRate = $this->fxService->getSnapshotRate($toCurrency, 'VND');
         } else {
-            // Cross-currency transfer
-            $destAmount = isset($dto['destAmount']) && (float) $dto['destAmount'] > 0
-                ? (float) $dto['destAmount']
-                : (float) bcmul((string) $amount, $this->fxService->getSnapshotRate($fromCurrency, $toCurrency), 4);
+            // The server is the sole authority for destination amount and rate snapshot.
+            $conversionRate = $this->fxService->getSnapshotRate($fromCurrency, $toCurrency);
+            $destAmount = bcmul($amount, $conversionRate, $toCurrency === 'VND' ? 0 : 8);
             $fxRate = $this->fxService->getSnapshotRate($fromCurrency, 'VND');
             $amountBase = $this->fxService->convertToBase($amount, $fxRate);
+            $destinationFxRate = bcdiv($amountBase, $destAmount, 10);
+        }
+        if ((string) $toWallet['wallet_type'] === 'CREDIT'
+            && bccomp(bcadd((string) $toWallet['cached_balance'], $destAmount, 8), '0', 8) === 1) {
+            throw new InvalidArgumentException('Số tiền thanh toán thẻ không được vượt quá dư nợ hiện tại.');
         }
 
         $pdo = $this->txDao->getPdo();
@@ -466,7 +469,7 @@ final class LedgerService
                 'amountOriginal' => $destAmount,
                 'currency' => $toCurrency,
                 'amountBase' => $amountBase,
-                'fxRateSnapshot' => $fxRate,
+                'fxRateSnapshot' => $destinationFxRate,
             ]);
 
             $this->txDao->createLedgerEntry([
@@ -481,7 +484,7 @@ final class LedgerService
 
             $newFromBalance = $this->walletDao->adjustBalance(
                 $fromWalletId,
-                -$amount,
+                bcmul($amount, '-1', 8),
                 $fromWallet['wallet_type'] === 'CREDIT'
             );
             $newToBalance = $this->walletDao->adjustBalance($toWalletId, $destAmount);
@@ -499,6 +502,8 @@ final class LedgerService
                 'currency' => $fromCurrency,
                 'destAmount' => $destAmount,
                 'destCurrency' => $toCurrency,
+                'conversionRate' => $fromCurrency === $toCurrency ? '1.00000000' : $conversionRate,
+                'amountBase' => $amountBase,
                 'newFromBalance' => $newFromBalance,
                 'newToBalance' => $newToBalance,
                 'status' => 'POSTED',
@@ -549,8 +554,8 @@ final class LedgerService
                 'status' => 'REVERSED',
                 'description' => '[ĐẢO] ' . $tx['description'] . ' - Lý do: ' . $reason,
                 'currency' => $tx['currency'],
-                'amount' => (float) $tx['amount'],
-                'fxRateSnapshot' => (float) $tx['fx_rate_snapshot'],
+                'amount' => (string) $tx['amount'],
+                'fxRateSnapshot' => (string) $tx['fx_rate_snapshot'],
                 'occurredOn' => date('Y-m-d'),
                 'postedAt' => date('Y-m-d H:i:s'),
                 'originalTransactionId' => $txId,
@@ -563,10 +568,10 @@ final class LedgerService
                     'transactionId' => $revTxId,
                     'ledgerAccountId' => (int) $entry['ledger_account_id'],
                     'entrySide' => $reversedSide,
-                    'amountOriginal' => (float) $entry['amount_original'],
+                    'amountOriginal' => (string) $entry['amount_original'],
                     'currency' => $entry['currency'],
-                    'amountBase' => (float) $entry['amount_base'],
-                    'fxRateSnapshot' => (float) $entry['fx_rate_snapshot'],
+                    'amountBase' => (string) $entry['amount_base'],
+                    'fxRateSnapshot' => (string) $entry['fx_rate_snapshot'],
                 ]);
 
                 // If account is linked to a wallet, adjust balance back
@@ -574,8 +579,8 @@ final class LedgerService
                     $walletId = (int) $entry['wallet_id'];
                     $wallet = $this->walletDao->findByIdAndUser($walletId, $userId);
                     if ($wallet) {
-                        $entryAmt = (float) $entry['amount_original'];
-                        $delta = $entry['entry_side'] === 'DEBIT' ? -$entryAmt : $entryAmt;
+                        $entryAmt = (string) $entry['amount_original'];
+                        $delta = $entry['entry_side'] === 'DEBIT' ? bcmul($entryAmt, '-1', 8) : $entryAmt;
                         $this->walletDao->adjustBalance($walletId, $delta, true);
                     }
                 }
@@ -601,6 +606,23 @@ final class LedgerService
                 $pdo->rollBack();
             }
             throw $e;
+        }
+    }
+
+    private function positiveAmount(mixed $value, string $label): string
+    {
+        $amount = trim((string) ($value ?? ''));
+        if (!preg_match('/^\d+(?:\.\d{1,8})?$/D', $amount) || bccomp($amount, '0', 8) !== 1) {
+            throw new InvalidArgumentException($label . ' phải là số thập phân hợp lệ lớn hơn 0.');
+        }
+        return bcadd($amount, '0', 8);
+    }
+
+    /** @param array<string, mixed> $dto */
+    private function rejectCurrencyMismatch(array $dto, string $walletCurrency): void
+    {
+        if (isset($dto['currency']) && strtoupper(trim((string) $dto['currency'])) !== $walletCurrency) {
+            throw new InvalidArgumentException('Đơn vị tiền của giao dịch phải trùng với đơn vị tiền của ví.');
         }
     }
 }

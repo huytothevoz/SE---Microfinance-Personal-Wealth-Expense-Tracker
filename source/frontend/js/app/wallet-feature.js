@@ -50,18 +50,20 @@ function historyMarkup(wallet, history) {
   if (!history.length) return '<p class="wallet-history-empty">Ví này chưa có lịch sử.</p>';
   return `<div class="wallet-history-list">${history.map(item => {
     const created = item.kind === 'WALLET_CREATED';
-    const currency = String(item.currency || wallet.currency || 'VND');
-    const isCredit = String(wallet.wallet_type) === 'CREDIT';
-    const increases = isCredit ? item.wallet_entry_side === 'CREDIT' : item.wallet_entry_side === 'DEBIT';
-    const sign = created ? '' : (increases ? '+' : '−');
+    const currency = String(item.display_currency || item.currency || wallet.currency || 'VND');
+    const increases = String(item.direction) === 'IN';
+    const sign = created ? '' : (String(item.sign) === '+' ? '+' : '−');
     const title = created ? 'Đã tạo ví' : (TRANSACTION_LABELS[item.transaction_type] || item.transaction_type || 'Giao dịch');
+    const equivalent = item.display_equivalent_amount !== null && item.display_equivalent_amount !== undefined
+      ? `<small class="wallet-history-equivalent">~ ${formatAmount(item.display_equivalent_amount, String(item.display_equivalent_currency || wallet.currency || 'VND'))}</small>`
+      : '';
     const detail = created
       ? `Số dư đầu kỳ: ${formatAmount(item.wallet_amount_original, currency)} · không tính là giao dịch sử dụng`
       : safe(item.description || item.category_name || 'Không có mô tả');
     return `<article class="wallet-history-item${created ? ' wallet-history-item--created' : ''}">
       <span class="wallet-history-icon">${icon(created ? 'plus' : 'arrows')}</span>
       <div class="wallet-history-copy"><strong>${safe(title)}</strong><small>${detail}</small><time>${safe(formatDate(item.posted_at || item.created_at || item.occurred_on))}</time></div>
-      <b class="wallet-history-amount${increases ? ' is-positive' : ''}">${sign}${formatAmount(item.wallet_amount_original ?? item.amount, currency)}</b>
+      <b class="wallet-history-amount${increases ? ' is-positive' : ''}">${sign}${formatAmount(item.display_amount ?? item.wallet_amount_original ?? item.amount, currency)}${equivalent}</b>
     </article>`;
   }).join('')}</div>`;
 }

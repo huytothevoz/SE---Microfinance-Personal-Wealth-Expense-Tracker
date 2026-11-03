@@ -66,6 +66,12 @@ final class AuthController
         JsonResponse::success($result, 200);
     }
 
+    public function closeAccount(Request $request): void
+    {
+        $result = $this->getAuthService()->closeAccount($request->getBody());
+        JsonResponse::success($result, 200);
+    }
+
     public function forgotPassword(Request $request): void
     {
         $result = $this->getAuthService()->requestPasswordReset($request->getBody());

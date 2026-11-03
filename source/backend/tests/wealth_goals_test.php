@@ -11,6 +11,7 @@ use WealthFlow\Modules\Goals\GoalService;
 use WealthFlow\Modules\Loans\LoanDAO;
 use WealthFlow\Modules\Loans\LoanService;
 use WealthFlow\Modules\Transactions\ExchangeRateService;
+use WealthFlow\Modules\Transactions\CategoryDAO;
 use WealthFlow\Modules\Transactions\LedgerDAO;
 use WealthFlow\Modules\Wallets\WalletDAO;
 use WealthFlow\Modules\Wealth\GoldAssetService;
@@ -58,6 +59,7 @@ final class WealthGoalsTest
         $goldDao = new GoldHoldingDAO($pdo);
         $loanDao = new LoanDAO($pdo);
         $goalDao = new FinancialGoalDAO($pdo);
+        $categoryDao = new CategoryDAO($pdo);
         $goldService = new GoldAssetService($goldDao, $walletDao, $ledgerDao);
         $goalService = new GoalService($goalDao, $walletDao, $ledgerDao);
         $loanService = new LoanService($loanDao, $walletDao, $ledgerDao);
@@ -69,6 +71,17 @@ final class WealthGoalsTest
             $goalDao,
             new ExchangeRateService($pdo)
         );
+
+        echo "--- Category notes and response privacy ---\n";
+        $categoryId = $categoryDao->create(2, 'Ghi chú kiểm thử', 'EXPENSE', 'Chi phí thiết yếu');
+        $listedCategories = $categoryDao->findAllByUser(2, 'EXPENSE');
+        $category = array_values(array_filter($listedCategories, static fn(array $row): bool => (int) $row['id'] === $categoryId))[0] ?? [];
+        $this->assert('TC-CATEGORY-01 Category note persists and category list omits owner id',
+            ($category['note'] ?? null) === 'Chi phí thiết yếu' && !array_key_exists('user_id', $category));
+        $categoryDao->update($categoryId, 2, 'Ghi chú kiểm thử', 'Chi phí cố định');
+        $updatedCategory = $categoryDao->findByIdAndUser($categoryId, 2);
+        $this->assert('TC-CATEGORY-02 Category note can be updated',
+            ($updatedCategory['note'] ?? null) === 'Chi phí cố định');
 
         echo "--- FR08 / FR10: Gold and Net Worth ---\n";
         $before = $analytics->summary(2);

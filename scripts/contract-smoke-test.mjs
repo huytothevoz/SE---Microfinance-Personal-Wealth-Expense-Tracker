@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const requests = [];
 const transactionFixtures = [
-  { id: 2, description: 'Gửi xe', transaction_type: 'EXPENSE', amount: 10000, currency: 'VND', occurred_on: '2026-10-18', category_name: 'Đi lại', status: 'POSTED' },
+  { id: 2, description: 'Đổi USD', transaction_type: 'TRANSFER', amount: 100, currency: 'USD', occurred_on: '2026-10-18', category_name: 'Chuyển tiền', status: 'POSTED' },
   ...Array.from({ length: 99 }, (_, index) => ({ id: 100 + index, description: `Giao dịch ${index + 1}`, transaction_type: 'EXPENSE', amount: 1000, currency: 'VND', occurred_on: '2026-10-17', category_name: 'Khác', status: 'POSTED' })),
   { id: 'goal-9', description: 'Chuyển vào mục tiêu: Mua xe', transaction_type: 'SAVINGS_GOAL', goal_action: 'DEPOSIT', goal_name: 'Mua xe', wallet_name: 'Ví chính', amount: 500000, currency: 'VND', occurred_on: '2026-10-16', category_name: 'Mục tiêu tiết kiệm', status: 'POSTED' }
 ];
@@ -25,6 +25,7 @@ globalThis.fetch = async (path, init = {}) => {
     '/api/gold': { gold: [{ id: 11, name: 'Vàng miếng SJC', goldType: 'SJC_BAR', quantityChi: '1.0000', valuationPerChi: '8500000.00000000', currentValue: '8500000.00000000', valuationDate: '2026-10-18', status: 'HELD' }] },
     '/api/loans': { loans: [{ id: 12, title: 'Khoản vay học tập', direction: 'BORROWED', currency: 'VND', remainingPrincipal: '10000000.00000000', nextDueDate: '2026-11-18', status: 'ACTIVE' }] },
     '/api/analytics/net-worth': { dashboard: { currency: 'VND', netWorth: '-1475000.00000000', assets: { wallets: '25000.00000000', gold: '8500000.00000000', receivableLoans: '0.00000000', totalAssets: '8525000.00000000', breakdown: { cash: '25000.00000000', bank: '0.00000000', eWallet: '0.00000000', savings: '0.00000000', gold: '8500000.00000000', receivableLoans: '0.00000000' } }, liabilities: { creditWallets: '0.00000000', payableLoans: '10000000.00000000', totalLiabilities: '10000000.00000000' }, cashFlow: { month: '2026-10', income: '25000000.00000000', expense: '1000000.00000000', net: '24000000.00000000', savingRate: '96.00' }, goals: { targetAmount: '50000000.00000000', currentAmount: '500000.00000000', activeCount: 1, items: [{ id: 9, name: 'Mua xe', targetAmount: '50000000.00000000', currentAmount: '500000.00000000', progressPercent: '1.00', deadline: '2027-10-18' }] } } },
+    '/api/analytics/expenses': { dashboard: { currency: 'VND', month: '2026-10', totalExpense: '1000000.00000000', byCategory: [{ categoryId: 5, category: 'Đi lại', amount: '1000000.00000000' }], trend: [{ month: '2026-10', income: '25000000.00000000', expense: '1000000.00000000' }] } },
   };
   if (['POST', 'PUT', 'DELETE'].includes(init.method)) {
     assert.equal(init.headers['X-WealthFlow'], '1');
@@ -33,7 +34,7 @@ globalThis.fetch = async (path, init = {}) => {
   if (paths[route]) return { status: 200, ok: true, headers: new Map([['content-type', 'application/json']]), json: async () => ({ success: true, data: paths[route] }) };
   return { status: 404, ok: false, headers: new Map([['content-type', 'application/json']]), json: async () => ({ success: false }) };
 };
-const data = await import('../source/frontend/js/data/live-data.js?v=wealth-ui-2');
+const data = await import('../source/frontend/js/data/live-data.js?v=finance-ui-1');
 const { liveRender } = await import('../source/frontend/js/app/live-pages.js');
 await data.loadLiveData();
 assert.equal(data.wallets[0].balance, 25000, 'FR02: wallet cached_balance mapping');
@@ -51,11 +52,16 @@ assert.equal(data.dataStatus.loans.state, 'ready', 'FR08: Loans API is the autho
 assert.equal(data.loans[0].remainingPrincipal, '10000000.00000000', 'FR08: remaining loan principal mapping');
 assert.equal(data.gold[0].currentValue, '8500000.00000000', 'FR08: current gold valuation mapping');
 assert.equal(data.analytics.netWorth, '-1475000.00000000', 'FR10: dashboard summary mapping');
+assert.equal(data.expenseAnalytics.totalExpense, '1000000.00000000', 'Expense dashboard uses backend aggregate');
 const render = (name, extraState = {}) => liveRender(name, { state: { search: '', txFilter: 'all', notifFilter: 'all', ...extraState }, heading: () => '<h1>test</h1>', currentUser: { fullName: 'Test', email: 'test@example.com', baseCurrency: 'VND', role: 'USER' } });
 assert.match(render('transactions'), /Chuyển vào mục tiêu: Mua xe/, 'All-transactions view includes savings-goal history');
 assert.match(render('wallets'), /25\.000/, 'Wallet value displayed from server only');
 assert.match(render('overview'), /1\.475\.000/, 'FR10: Dashboard renders backend-authoritative Net Worth');
 assert.match(render('overview'), /10\.000\.000/, 'FR10: Dashboard renders liabilities from Loans');
+assert.match(render('overview'), /100,00[^<]*US\$/, 'Recent transactions preserve non-VND currency instead of attaching a false VND symbol');
+assert.match(render('reports'), /expense-donut/, 'Expense dashboard renders the category pie chart');
+assert.match(render('reports'), /expense-column/, 'Expense dashboard renders the six-month bar chart');
+assert.match(render('reports'), /data-action="refresh-data"/, 'Expense dashboard exposes a real server refresh action');
 assert.match(render('loans'), /Khoản vay học tập/, 'FR08: Loans page renders server data without a fake create action');
 assert.doesNotMatch(render('loans'), /live:create:loans/, 'FR08: unsupported loan writes are not offered');
 assert.match(render('budgets'), /Cảnh báo Vàng/, 'PLAN-03/04: Budget YELLOW threshold badge displayed');
@@ -86,11 +92,12 @@ const walletViewSource = await readFile(new URL('../source/frontend/js/app/walle
 const appCssSource = await readFile(new URL('../source/frontend/css/app.css', import.meta.url), 'utf8');
 const uiCoreSource = await readFile(new URL('../source/frontend/js/app/ui-core.js', import.meta.url), 'utf8');
 const mainSource = await readFile(new URL('../source/frontend/js/app/main.js', import.meta.url), 'utf8');
+const securitySource = await readFile(new URL('../source/frontend/js/app/profile-security.js', import.meta.url), 'utf8');
 const routesSource = await readFile(new URL('../source/backend/public/index.php', import.meta.url), 'utf8');
 const ledgerDaoSource = await readFile(new URL('../source/backend/src/Modules/Transactions/LedgerDAO.php', import.meta.url), 'utf8');
 assert.match(uiCoreSource, /\['settings', 'Cài đặt & bảo mật', 'gear'\][\s\S]+settings: \['Cài đặt & bảo mật'/, 'Settings navigation and page title use one consistent label');
 assert.match(mainSource, /#user-menu'[\s\S]+navigate\(state\.admin \? 'admin-settings' : 'settings'\)/, 'Account button opens Settings & Security');
-assert.match(mainSource, /authApi\('change-password'/, 'Password form calls the real change-password API');
+assert.match(mainSource + securitySource, /authApi\('change-password'/, 'Password form calls the real change-password API');
 assert.ok(/authApi\('logout'/.test(mainSource) && /post\('\/auth\/logout'/.test(routesSource), 'Logout control is connected to the backend route');
 assert.match(ledgerDaoSource, /listGoalTransactions[\s\S]+SAVINGS_GOAL[\s\S]+goal_allocations/, 'Transaction history includes goal allocations without extra ledger writes');
 assert.match(walletFeatureSource, /50000[\s\S]+CUSTOM/, 'Opening balance offers 50,000 VND presets and custom input');

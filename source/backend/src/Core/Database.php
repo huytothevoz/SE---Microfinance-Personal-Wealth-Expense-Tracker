@@ -102,6 +102,7 @@ final class Database
             role TEXT NOT NULL DEFAULT 'USER',
             status TEXT NOT NULL DEFAULT 'ACTIVE',
             base_currency TEXT NOT NULL DEFAULT 'VND',
+            closed_at DATETIME NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
@@ -143,6 +144,7 @@ final class Database
             user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             category_type TEXT NOT NULL,
+            note TEXT NULL,
             archived_at DATETIME NULL,
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE (user_id, name, category_type)

@@ -76,6 +76,8 @@ final class WalletController
         try {
             $wallet = $this->walletService->updateWallet($id, $userId, $body);
             JsonResponse::success(['wallet' => $wallet, 'message' => 'Cập nhật ví thành công.']);
+        } catch (ApiException $e) {
+            JsonResponse::error($e->errorCode, $e->getMessage(), $e->status, $e->fields);
         } catch (InvalidArgumentException $e) {
             JsonResponse::error('VALIDATION_ERROR', $e->getMessage(), 422);
         }

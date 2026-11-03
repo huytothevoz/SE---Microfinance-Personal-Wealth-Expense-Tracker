@@ -1,6 +1,6 @@
 /** WealthFlow savings-goal page and actions backed by /api/goals. */
 import { loadView } from './view-loader.js';
-import { goals, dataStatus } from '../data/live-data.js?v=wealth-ui-2';
+import { goals, dataStatus } from '../data/live-data.js?v=finance-ui-1';
 import { GoalApi } from '../services/goal-api.js';
 import { money, safe, formatMoneyInput, moneyInputValue } from './ui-core.js?v=wealth-ui-2';
 

@@ -176,6 +176,23 @@ final class NetWorthAnalyticsService
         }, $this->snapshotDao->history($userId, $days));
     }
 
+    /** @return array<string, mixed> */
+    public function expenseDashboard(int $userId, ?string $month = null): array
+    {
+        if ($this->walletDao->getUserBaseCurrency($userId) === null) {
+            throw new RuntimeException('Không tìm thấy tài khoản đang hoạt động.');
+        }
+        $selectedMonth = $this->month($month);
+        $cashFlow = $this->snapshotDao->cashFlowForMonth($userId, $selectedMonth);
+        return [
+            'currency' => 'VND',
+            'month' => $selectedMonth,
+            'totalExpense' => $cashFlow['expense'],
+            'byCategory' => $this->snapshotDao->expenseByCategory($userId, $selectedMonth),
+            'trend' => $this->snapshotDao->cashFlowTrend($userId, $selectedMonth, 6),
+        ];
+    }
+
     private function toBase(string $amount, string $currency, string $baseCurrency): string
     {
         $currency = strtoupper($currency);

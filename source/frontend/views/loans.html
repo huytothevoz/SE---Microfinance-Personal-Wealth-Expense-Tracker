@@ -1,15 +1,16 @@
-<div class="page-heading">
+<div class="page-heading loan-page-heading">
   <div>
     <h1>Khoản vay &amp; nợ vi mô</h1>
     <p>Theo dõi đi vay, cho vay, dư gốc, lãi/phí và lịch thanh toán.</p>
   </div>
-  <div class="page-actions"><button type="button" class="btn btn--primary btn-sm" data-action="loan:create">+ Thêm khoản vay</button></div>
+  <div class="page-actions"><button type="button" class="btn btn--primary btn-sm" data-action="loan:create"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Thêm khoản vay</button></div>
 </div>
-<section class="summary-grid">
-  <article class="summary-card"><span>Tổng dư nợ đi vay</span><strong id="loan-borrowed-total">—</strong></article>
-  <article class="summary-card"><span>Tổng phải thu cho vay</span><strong id="loan-lent-total">—</strong></article>
-  <article class="summary-card"><span>Khoản đang hoạt động</span><strong id="loan-active-count">—</strong></article>
+<section class="kpi-grid loan-kpi-grid">
+  <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Tổng dư nợ đi vay</span><span class="loan-kpi-mark is-borrowed">↓</span></div><div class="kpi-number" id="loan-borrowed-total">—</div><div class="kpi-desc">Nghĩa vụ gốc còn phải trả</div></article>
+  <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Tổng phải thu cho vay</span><span class="loan-kpi-mark is-lent">↑</span></div><div class="kpi-number" id="loan-lent-total">—</div><div class="kpi-desc">Tiền gốc còn được nhận lại</div></article>
+  <article class="kpi-card"><div class="kpi-top"><span class="kpi-label">Khoản đang hoạt động</span><span class="loan-kpi-mark">#</span></div><div class="kpi-number" id="loan-active-count">—</div><div class="kpi-desc">Đi vay và cho vay chưa tất toán</div></article>
 </section>
-<section class="panel">
-  <div id="loan-card-list"><div class="empty-state"><strong>Đang tải khoản vay…</strong></div></div>
+<section class="panel loan-panel">
+  <div class="panel-title"><div><h2>Danh sách khoản vay</h2><p>Dư gốc, tiến độ và kỳ thanh toán kế tiếp</p></div></div>
+  <div class="card-grid loan-page-grid" id="loan-card-list"><div class="empty-state loan-state"><strong>Đang tải khoản vay…</strong></div></div>
 </section>

@@ -3,7 +3,7 @@
  * Manages category budget limits, warning progress bars, and recurring schedules.
  */
 import { loadView } from './view-loader.js';
-import { budgets, recurring } from '../data/live-data.js?v=wealth-ui-2';
+import { budgets, recurring } from '../data/live-data.js?v=finance-ui-1';
 import { safe, money, percent } from './ui-core.js';
 
 export function budgetsUI(limit = 5) {

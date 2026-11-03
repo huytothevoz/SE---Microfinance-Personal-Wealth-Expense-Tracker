@@ -20,6 +20,7 @@ use WealthFlow\Modules\Wealth\AnalyticsDashboardController;
 use WealthFlow\Modules\Reports\ReportController;
 use WealthFlow\Modules\Wealth\GoldController;
 use WealthFlow\Modules\Admin\AdminController;
+use WealthFlow\Modules\Privacy\PrivacyController;
 
 try {
     /** @var Config $config */
@@ -66,6 +67,7 @@ try {
     $router->post('/auth/refresh', [$authController, 'refresh']);
     $router->post('/auth/logout', [$authController, 'logout']);
     $router->post('/auth/change-password', [$authController, 'changePassword']);
+    $router->post('/auth/close-account', [$authController, 'closeAccount']);
     $router->post('/auth/password/forgot', [$authController, 'forgotPassword']);
     $router->post('/auth/password/reset', [$authController, 'resetPassword']);
 
@@ -145,11 +147,15 @@ try {
     $analyticsController = new AnalyticsDashboardController();
     $router->get('/analytics/net-worth', [$analyticsController, 'netWorth']);
     $router->get('/analytics/net-worth/history', [$analyticsController, 'history']);
+    $router->get('/analytics/expenses', [$analyticsController, 'expenses']);
 
     $reportController = new ReportController();
     $router->get('/reports/reconcile', [$reportController, 'reconcile']);
     $router->get('/reports/trial-balance', [$reportController, 'trialBalance']);
     $router->get('/reports/export/csv', [$reportController, 'exportCsv']);
+
+    $privacyController = new PrivacyController();
+    $router->get('/privacy/export', [$privacyController, 'exportAllData']);
 
     $adminController = new AdminController();
     $router->get('/admin/default-categories', [$adminController, 'listDefaultCategories']);

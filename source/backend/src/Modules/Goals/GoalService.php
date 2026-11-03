@@ -242,6 +242,9 @@ final class GoalService
         if (strtoupper((string) $wallet['currency']) !== 'VND') {
             throw new InvalidArgumentException('Mục tiêu tiết kiệm hiện dùng ví VND để số tiền luôn rõ ràng.');
         }
+        if ((string) $wallet['wallet_type'] === 'CREDIT') {
+            throw new InvalidArgumentException('Mục tiêu tiết kiệm chỉ được liên kết với ví tài sản, không dùng thẻ tín dụng.');
+        }
         return $wallet;
     }
 

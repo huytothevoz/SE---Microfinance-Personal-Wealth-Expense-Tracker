@@ -1,6 +1,6 @@
 /** WealthFlow gold holdings backed only by authenticated PHP APIs. */
 import { loadView } from './view-loader.js';
-import { gold, wallets, dataStatus } from '../data/live-data.js?v=wealth-ui-2';
+import { gold, wallets, dataStatus } from '../data/live-data.js?v=finance-ui-1';
 import { GoldApi } from '../services/gold-api.js';
 import { money, safe, formatMoneyInput, moneyInputValue } from './ui-core.js?v=wealth-ui-2';
 

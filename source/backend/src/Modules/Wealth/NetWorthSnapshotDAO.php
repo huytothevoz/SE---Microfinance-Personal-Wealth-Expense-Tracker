@@ -51,4 +51,40 @@ final class NetWorthSnapshotDAO
         $row = $stmt->fetch() ?: ['income' => '0', 'expense' => '0'];
         return ['income' => (string) $row['income'], 'expense' => (string) $row['expense']];
     }
+
+    /** @return array<int, array{categoryId:int, category:string, amount:string}> */
+    public function expenseByCategory(int $userId, string $month): array
+    {
+        $start = $month . '-01';
+        $end = date('Y-m-d', strtotime($start . ' +1 month'));
+        $stmt = $this->pdo->prepare(
+            "SELECT c.id AS category_id, c.name AS category_name,
+                    COALESCE(SUM(t.amount * t.fx_rate_snapshot), 0) AS amount
+             FROM financial_transactions t
+             JOIN categories c ON c.id = t.category_id AND c.user_id = t.user_id
+             WHERE t.user_id = ? AND t.status = 'POSTED' AND t.transaction_type = 'EXPENSE'
+               AND t.occurred_on >= ? AND t.occurred_on < ?
+             GROUP BY c.id, c.name
+             ORDER BY amount DESC, c.id ASC"
+        );
+        $stmt->execute([$userId, $start, $end]);
+        return array_map(static fn(array $row): array => [
+            'categoryId' => (int) $row['category_id'],
+            'category' => (string) $row['category_name'],
+            'amount' => (string) $row['amount'],
+        ], $stmt->fetchAll());
+    }
+
+    /** @return array<int, array{month:string, income:string, expense:string}> */
+    public function cashFlowTrend(int $userId, string $lastMonth, int $months = 6): array
+    {
+        $result = [];
+        $anchor = new \DateTimeImmutable($lastMonth . '-01');
+        for ($index = $months - 1; $index >= 0; $index--) {
+            $month = $anchor->modify("-{$index} months")->format('Y-m');
+            $cashFlow = $this->cashFlowForMonth($userId, $month);
+            $result[] = ['month' => $month] + $cashFlow;
+        }
+        return $result;
+    }
 }

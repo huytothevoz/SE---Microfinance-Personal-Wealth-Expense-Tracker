@@ -231,3 +231,6 @@ if (['login', 'register'].includes(requestedTab)) {
   setMode(requestedTab, { clear: true });
   dialog.showModal();
 }
+if (requestedTab === 'login' && new URLSearchParams(location.search).get('closed') === '1') {
+  feedback.textContent = 'Tài khoản đã được đóng. Các phiên đăng nhập đã bị thu hồi và dữ liệu được giữ lại theo chính sách lưu trữ.';
+}

@@ -1,21 +1,23 @@
-import '../i18n.js?v=i18n-4';
+import '../i18n.js?v=finance-ui-2';
 import { icon, safe, money, USER_NAV, ADMIN_NAV, META, formatMoneyInput, heading, btn, panel } from './ui-core.js?v=wealth-ui-2';
-import { createPages } from './pages.js?v=wealth-ui-2';
-import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=wealth-ui-2';
-import { liveAction } from './live-pages.js?v=wealth-ui-2';
+import { createPages } from './pages.js?v=finance-ui-4';
+import { transactions, notifications, loadLiveData } from '../data/live-data.js?v=finance-ui-1';
+import { liveAction } from './live-pages.js?v=finance-ui-4';
 // WealthFlow Live Frontend Patch v1 — no financial fixture fallback.
 import { authApi, errorMessage } from '../services/auth-api.js';
 import { preloadViews } from './view-loader.js';
 import { createWalletFeature } from './wallet-feature.js?v=wallet-ui-13';
-import { handleGoalAction } from './goals.js?v=wealth-ui-2';
-import { handleGoldAction } from './gold.js?v=wealth-ui-2';
-import { handleLoanAction } from './loans.js?v=wealth-ui-2';
+import { handleGoalAction } from './goals.js?v=finance-ui-1';
+import { handleGoldAction } from './gold.js?v=finance-ui-1';
+import { handleLoanAction } from './loans.js?v=finance-ui-1';
 import { runReconciliationAudit } from './reports.js';
 import { ReportApi } from '../services/report-api.js';
 import { handleAdminAction } from './admin.js';
 import { checkUrgentBroadcasts } from './urgent-broadcast.js';
 import { showTransactionDetails, applyTransactionSearch, openTransactionFilter, handleTransactionFilterChange, handleTransactionFilterSubmit } from './transactions.js';
 import { handleSecurityAction } from './profile-security.js';
+import { PrivacyApi } from '../services/privacy-api.js';
+import { syncThemeSwitch, toggleTheme } from './theme-preference.js';
 import { handleStubAction, handleStubSubmit } from './stub-actions.js';
 
 let currentUser;
@@ -95,6 +97,7 @@ async function navigate(page) {
   if (page === 'wallets') await walletFeature.load();
   if (thisNavigation !== navigateVersion) return;
   app.innerHTML = await PAGES[page]();
+  syncThemeSwitch();
   closeSidebar();
   const hash = '#' + page;
   if (location.hash !== hash) history.replaceState(null, '', hash);
@@ -130,6 +133,10 @@ function handleAction(action, trigger) {
   if (handleLoanAction(action, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (handleAdminAction(action, trigger, { dialog, toast, reload: () => navigate(state.page) })) return;
   if (handleSecurityAction(action, { dialog, toast })) return;
+  if (action === 'refresh-data') {
+    void navigate(state.page).then(() => toast('Đã làm mới dữ liệu từ máy chủ.'));
+    return;
+  }
   if (action === 'transaction-filter') { openTransactionFilter({ state, dialog }); return; }
   if (action === 'logout') {
     authApi('logout', {}).then(() => location.replace('index.html?auth=login')).catch(error => toast(errorMessage(error)));
@@ -159,6 +166,25 @@ function handleAction(action, trigger) {
     })();
     return;
   }
+  if (action === 'export-all-data') {
+    void (async () => {
+      try {
+        toast('Đang chuẩn bị bản xuất dữ liệu từ máy chủ…');
+        await PrivacyApi.downloadAccountData();
+        toast('Đã tải toàn bộ dữ liệu tài khoản.');
+      } catch (err) {
+        toast(err.message || 'Không thể xuất dữ liệu tài khoản.', 'error');
+      }
+    })();
+    return;
+  }
+  if (action === 'toggle-theme') {
+    const result = toggleTheme();
+    toast(result.saved
+      ? `Đã ${result.theme === 'dark' ? 'bật' : 'tắt'} chế độ tối. Tùy chọn đã lưu trên trình duyệt này.`
+      : 'Đã đổi giao diện, nhưng trình duyệt không cho phép lưu tùy chọn.');
+    return;
+  }
   if (action === 'reconcile') {
     void (async () => {
       try {
@@ -179,6 +205,11 @@ function handleAction(action, trigger) {
 }
 
 document.addEventListener('click', event => {
+  const themeToggle = event.target.closest('[data-theme-toggle]');
+  if (themeToggle) {
+    handleAction('toggle-theme', themeToggle);
+    return;
+  }
   const page = event.target.closest('[data-page]');
   if (page) {
     if (page.matches('a')) event.preventDefault();

@@ -96,14 +96,19 @@ final class LedgerDAO
     public function findByIdAndUser(int $txId, int $userId): ?array
     {
         $stmt = $this->pdo->prepare('SELECT t.*, c.name as category_name,
-                   tw.wallet_name, tw.source_wallet_name, tw.destination_wallet_name
+                   tw.wallet_name, tw.source_wallet_name, tw.destination_wallet_name,
+                   tw.source_amount, tw.source_currency, tw.destination_amount, tw.destination_currency
             FROM financial_transactions t
             LEFT JOIN categories c ON t.category_id = c.id
             LEFT JOIN (
                 SELECT e.transaction_id,
                        MAX(w.name) AS wallet_name,
                        MAX(CASE WHEN e.entry_side = \'CREDIT\' THEN w.name END) AS source_wallet_name,
-                       MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN w.name END) AS destination_wallet_name
+                       MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN w.name END) AS destination_wallet_name,
+                       MAX(CASE WHEN e.entry_side = \'CREDIT\' THEN e.amount_original END) AS source_amount,
+                       MAX(CASE WHEN e.entry_side = \'CREDIT\' THEN e.currency END) AS source_currency,
+                       MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN e.amount_original END) AS destination_amount,
+                       MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN e.currency END) AS destination_currency
                 FROM ledger_entries e
                 JOIN ledger_accounts a ON a.id = e.ledger_account_id
                 JOIN wallets w ON w.id = a.wallet_id
@@ -136,14 +141,19 @@ final class LedgerDAO
     public function listTransactions(int $userId, array $filters = []): array
     {
         $sql = 'SELECT t.*, c.name as category_name,
-                       tw.wallet_name, tw.source_wallet_name, tw.destination_wallet_name
+                       tw.wallet_name, tw.source_wallet_name, tw.destination_wallet_name,
+                       tw.source_amount, tw.source_currency, tw.destination_amount, tw.destination_currency
             FROM financial_transactions t
             LEFT JOIN categories c ON t.category_id = c.id
             LEFT JOIN (
                 SELECT e.transaction_id,
                        MAX(w.name) AS wallet_name,
                        MAX(CASE WHEN e.entry_side = \'CREDIT\' THEN w.name END) AS source_wallet_name,
-                       MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN w.name END) AS destination_wallet_name
+                       MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN w.name END) AS destination_wallet_name,
+                       MAX(CASE WHEN e.entry_side = \'CREDIT\' THEN e.amount_original END) AS source_amount,
+                       MAX(CASE WHEN e.entry_side = \'CREDIT\' THEN e.currency END) AS source_currency,
+                       MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN e.amount_original END) AS destination_amount,
+                       MAX(CASE WHEN e.entry_side = \'DEBIT\' THEN e.currency END) AS destination_currency
                 FROM ledger_entries e
                 JOIN ledger_accounts a ON a.id = e.ledger_account_id
                 JOIN wallets w ON w.id = a.wallet_id
