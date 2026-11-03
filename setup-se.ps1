@@ -1,10 +1,9 @@
-# WealthFlow/SE local runner. Non-destructive; does not modify XAMPP Apache,
-# XAMPP's primary MySQL datadir, or any other project in htdocs.
+# WealthFlow/SE local runner. It uses the MariaDB instance already started in XAMPP.
 [CmdletBinding()]
 param(
     [string]$XamppRoot = 'C:\xampp',
-    [int]$WebPort = 8080,
-    [int]$DbPort = 3307,
+    [int]$WebPort = 8070,
+    [int]$DbPort = 3306,
     [string]$DbName = 'wealthflow',
     [switch]$DbOnly
 )
@@ -19,6 +18,19 @@ function Test-File([string]$File, [string]$Hint) {
 function Get-Listener([int]$Port) {
     return @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue)
 }
+function Test-TcpPort([string]$HostName, [int]$Port) {
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $pending = $client.BeginConnect($HostName, $Port, $null, $null)
+        if (-not $pending.AsyncWaitHandle.WaitOne(3000, $false)) { return $false }
+        $client.EndConnect($pending)
+        return $true
+    } catch {
+        return $false
+    } finally {
+        $client.Close()
+    }
+}
 function Same-Path([string]$Left, [string]$Right) {
     try { return [IO.Path]::GetFullPath($Left).TrimEnd('\') -ieq [IO.Path]::GetFullPath($Right).TrimEnd('\') }
     catch { return $false }
@@ -29,13 +41,24 @@ function Assert-OwnedListener([int]$Port, [string]$ExpectedExecutable, [string]$
     $argBase = [IO.Path]::GetFileName($ExpectedArgument)
     foreach ($pidValue in @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)) {
         $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $pidValue" -ErrorAction SilentlyContinue
-        $isArgMatch = $proc -and $proc.CommandLine -and (
+        if (-not $proc -or -not $proc.ExecutablePath) {
+            $description = "PID $pidValue"
+            Fail "Port $Port is already occupied by $description. Nothing was stopped or overwritten."
+        }
+        if (-not (Same-Path $proc.ExecutablePath $ExpectedExecutable)) {
+            if ($Port -eq 3306 -and (Same-Path $proc.ExecutablePath (Join-Path $XamppRoot 'mysql\bin\mysqld.exe'))) {
+                continue
+            }
+            $description = if ($proc) { "$($proc.Name), PID $pidValue" } else { "PID $pidValue" }
+            Fail "Port $Port is already occupied by $description. Nothing was stopped or overwritten."
+        }
+        $isArgMatch = $proc.CommandLine -and (
             ($proc.CommandLine.IndexOf($ExpectedArgument, [StringComparison]::OrdinalIgnoreCase) -ge 0) -or
             ($proc.CommandLine.IndexOf("router.php", [StringComparison]::OrdinalIgnoreCase) -ge 0) -or
             ($argBase -and $proc.CommandLine.IndexOf($argBase, [StringComparison]::OrdinalIgnoreCase) -ge 0)
         )
-        if (-not $proc -or -not $proc.ExecutablePath -or -not (Same-Path $proc.ExecutablePath $ExpectedExecutable) -or -not $isArgMatch) {
-            $description = if ($proc) { "$($proc.Name), PID $pidValue" } else { "PID $pidValue" }
+        if (-not $isArgMatch -and -not ($Port -eq 3306 -and (Same-Path $proc.ExecutablePath (Join-Path $XamppRoot 'mysql\bin\mysqld.exe')))) {
+            $description = "$($proc.Name), PID $pidValue"
             Fail "Port $Port is already occupied by $description. Nothing was stopped or overwritten."
         }
     }
@@ -59,6 +82,7 @@ function Quote-Win([string]$Path) { return '"' + $Path + '"' }
 try {
     Info '[1/7] Checking project and XAMPP...'
     if ($WebPort -lt 1 -or $WebPort -gt 65535 -or $DbPort -lt 1 -or $DbPort -gt 65535) { Fail 'Invalid port.' }
+    if ($DbPort -ne 3306) { Fail 'WealthFlow must use the XAMPP MariaDB port 3306. Do not use 3307.' }
     if ($WebPort -eq $DbPort) { Fail 'WebPort and DbPort cannot be equal.' }
     if ($DbName -notmatch '^wealthflow(?:_[A-Za-z0-9_]+)?$') { Fail 'DB name must be wealthflow or wealthflow_*.' }
     $XamppRoot = [IO.Path]::GetFullPath($XamppRoot)
@@ -68,11 +92,9 @@ try {
     $Router = Join-Path $Backend 'router.php'
     $Migrator = Join-Path $Backend 'bin\setup.php'
     $Php = Join-Path $XamppRoot 'php\php.exe'
-    $Mysqld = Join-Path $XamppRoot 'mysql\bin\mysqld.exe'
-    $BackupTemplate = Join-Path $XamppRoot 'mysql\backup'
     foreach ($item in @(
         @($Php, 'XAMPP PHP is missing.'),
-        @($Mysqld, 'XAMPP MySQL/MariaDB is missing.'),
+        @((Join-Path $XamppRoot 'mysql\bin\mysql.exe'), 'XAMPP MariaDB client is missing.'),
         @($Router, 'SE project is missing source\backend\router.php. Copy BOTH setup files into the SE root folder.'),
         @($Migrator, 'SE project is missing source\backend\bin\setup.php.'),
         @((Join-Path $Source 'index.html'), 'SE project is missing source\index.html.'),
@@ -82,119 +104,21 @@ try {
     if ($LASTEXITCODE -ne 0) { Fail 'PHP 8.2+ with pdo_mysql, mbstring, openssl is required. Check C:\xampp\php\php.ini.' }
 
     $InstanceRoot = Join-Path $XamppRoot 'se-instance'
-    $DbData = Join-Path $InstanceRoot 'mysql-data'
-    $Tmp = Join-Path $InstanceRoot 'tmp'
-    $MysqlConfig = Join-Path $InstanceRoot 'my-se.ini'
     $MysqlErrorLog = Join-Path $InstanceRoot 'mysql-error.log'
-    $PhpOut = Join-Path $InstanceRoot 'php-8080.log'
-    $PhpErr = Join-Path $InstanceRoot 'php-8080-error.log'
+    $PhpOut = Join-Path $InstanceRoot 'php-8070.log'
+    $PhpErr = Join-Path $InstanceRoot 'php-8070-error.log'
     $KeyFile = Join-Path $InstanceRoot 'app-key.txt'
 
-    # Fail closed when any unrelated process owns one of the two requested ports.
-    $dbRunning = Assert-OwnedListener $DbPort $Mysqld $MysqlConfig
+    # XAMPP owns the shared MariaDB service; this project gets its own database schema.
+    if (-not (Test-TcpPort '127.0.0.1' $DbPort)) {
+        Fail 'Cannot reach XAMPP MariaDB at 127.0.0.1:3306. Start MySQL in XAMPP and confirm its port is 3306.'
+    }
     $webRunning = Assert-OwnedListener $WebPort $Php $Router
     New-Item -ItemType Directory -Path $InstanceRoot -Force | Out-Null
-    New-Item -ItemType Directory -Path $Tmp -Force | Out-Null
-
-    Info '[2/7] Preparing an isolated MariaDB/MySQL directory (3307)...'
-    if (-not (Test-Path -LiteralPath $DbData)) {
-        if (-not (Test-Path -LiteralPath (Join-Path $BackupTemplate 'mysql') -PathType Container)) {
-            Fail "XAMPP database template not found: $BackupTemplate\mysql. No databases were changed. Please share a screenshot of C:\xampp\mysql\backup."
-        }
-        $Staging = Join-Path $InstanceRoot ('mysql-data-new-' + [guid]::NewGuid().ToString('N'))
-        New-Item -ItemType Directory -Path $Staging | Out-Null
-        try {
-            Get-ChildItem -LiteralPath $BackupTemplate -Force | Copy-Item -Destination $Staging -Recurse -Force -ErrorAction Stop
-            if (-not (Test-Path -LiteralPath (Join-Path $Staging 'mysql') -PathType Container)) {
-                Fail 'MySQL backup template is incomplete; refusing to use it.'
-            }
-            Move-Item -LiteralPath $Staging -Destination $DbData -ErrorAction Stop
-            Write-Host "Created a SE-only database directory: $DbData"
-        } catch {
-            # An incomplete staged copy is not a real database; never touch the main data folder.
-            if (Test-Path -LiteralPath $Staging) { Remove-Item -LiteralPath $Staging -Recurse -Force -ErrorAction SilentlyContinue }
-            throw
-        }
-    } elseif (-not (Test-Path -LiteralPath (Join-Path $DbData 'mysql') -PathType Container)) {
-        Fail "Existing SE MySQL data directory looks incomplete: $DbData. Back it up and inspect it; setup will not delete it."
-    }
-
-    $BaseUnix = (Join-Path $XamppRoot 'mysql').Replace('\', '/')
-    $DataUnix = $DbData.Replace('\', '/')
-    $TmpUnix = $Tmp.Replace('\', '/')
-    $LogUnix = $MysqlErrorLog.Replace('\', '/')
-    $PidUnix = (Join-Path $InstanceRoot 'mysql-se.pid').Replace('\', '/')
-    if (-not (Test-Path -LiteralPath $MysqlConfig)) {
-        $myIni = @"
-[mysqld]
-basedir="$BaseUnix"
-datadir="$DataUnix"
-tmpdir="$TmpUnix"
-port=$DbPort
-bind-address=127.0.0.1
-log-error="$LogUnix"
-pid-file="$PidUnix"
-character-set-server=utf8mb4
-collation-server=utf8mb4_unicode_ci
-
-[client]
-host=127.0.0.1
-port=$DbPort
-"@
-        [IO.File]::WriteAllText($MysqlConfig, $myIni, [Text.Encoding]::ASCII)
-    } else {
-        $actualIni = [IO.File]::ReadAllText($MysqlConfig)
-        if ($actualIni -notmatch "(?m)^port=$DbPort\s*$" -or $actualIni -notlike "*$DataUnix*" -or $actualIni -notlike "*$BaseUnix*" -or $actualIni -notlike "*$TmpUnix*") {
-            Fail "Existing SE MySQL config needs inspection: $MysqlConfig. Nothing was overwritten."
-        }
-    }
-    if (-not $dbRunning) {
-        Info "[3/7] Starting the SE-only MySQL instance on 127.0.0.1:$DbPort..."
-        # Capture diagnostics: a failed mysqld.exe often exits immediately, not after 25s.
-        # A unique per-launch log prevents confusion with stale attempts.
-        $logStamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
-        $mysqlStartOut = Join-Path $InstanceRoot "mysql-start-$logStamp.stdout.log"
-        $mysqlStartErr = Join-Path $InstanceRoot "mysql-start-$logStamp.stderr.log"
-        $mysqlArgs = '--defaults-file=' + (Quote-Win $MysqlConfig) + ' --console'
-        $mysqlProc = Start-Process -FilePath $Mysqld -WorkingDirectory (Join-Path $XamppRoot 'mysql\bin') `
-            -ArgumentList $mysqlArgs -WindowStyle Hidden -PassThru `
-            -RedirectStandardOutput $mysqlStartOut -RedirectStandardError $mysqlStartErr
-
-        $listening = $false
-        $exitedEarly = $false
-        # Give cold Windows/XAMPP installations time, but report early exit immediately.
-        for ($i = 0; $i -lt 45; $i++) {
-            if (@(Get-Listener $DbPort).Count -gt 0) { $listening = $true; break }
-            $mysqlProc.Refresh()
-            if ($mysqlProc.HasExited) { $exitedEarly = $true; break }
-            Start-Sleep -Seconds 1
-        }
-        if (-not $listening) {
-            Write-Host ''
-            Write-Host 'MySQL did not become ready. Details from the actual process:' -ForegroundColor Red
-            if ($exitedEarly) {
-                Write-Host "mysqld.exe exited early (code: $($mysqlProc.ExitCode))." -ForegroundColor Red
-            } else {
-                Write-Host 'mysqld.exe is still not listening after 45 seconds.' -ForegroundColor Red
-            }
-            foreach ($log in @($mysqlStartErr, $mysqlStartOut, $MysqlErrorLog)) {
-                if (Test-Path -LiteralPath $log -PathType Leaf) {
-                    Write-Host "--- $log (last 35 lines) ---" -ForegroundColor Yellow
-                    try {
-                        @(Get-Content -LiteralPath $log -Tail 35 -ErrorAction Stop) | ForEach-Object { Write-Host $_ }
-                    } catch {
-                        Write-Host "Unable to read log right now: $($_.Exception.Message)" -ForegroundColor Yellow
-                    }
-                }
-            }
-            Write-Host 'The existing SE database directory was NOT reset or deleted.' -ForegroundColor Yellow
-            Fail "SE MySQL failed to start on port $DbPort. Read log: $MysqlErrorLog. Send the last 35 lines to debug the root cause."
-        }
-        $null = Assert-OwnedListener $DbPort $Mysqld $MysqlConfig
-    } else { Info '[3/7] SE MySQL is already running; reusing it.' }
+    Info "[2/7] XAMPP MariaDB is reachable on 127.0.0.1:$DbPort; project database: $DbName."
 
     if ($DbOnly) {
-        Write-Host "SE-only MySQL is listening on 127.0.0.1:$DbPort. No migrations or web server started." -ForegroundColor Green
+        Write-Host "XAMPP MariaDB is listening on 127.0.0.1:$DbPort. No migrations or web server started." -ForegroundColor Green
         exit 0
     }
 
@@ -244,7 +168,7 @@ port=$DbPort
     Write-Host ''
     Write-Host "SE URL:       http://localhost:$WebPort/" -ForegroundColor Green
     Write-Host "SE MySQL:     127.0.0.1:$DbPort (database: $DbName)" -ForegroundColor Green
-    Write-Host 'LTW / port 3306 / Apache settings were not modified.' -ForegroundColor Green
+    Write-Host 'Used the existing XAMPP MariaDB; no second database instance was started.' -ForegroundColor Green
     Write-Host "Logs:         $InstanceRoot"
     Start-Process "http://localhost:$WebPort/" | Out-Null
     exit 0
