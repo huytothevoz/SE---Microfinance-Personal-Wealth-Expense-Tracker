@@ -24,16 +24,7 @@ final class Database
         $password = $config->get('DB_PASSWORD');
         $isLocal = ($config->get('APP_ENV') === 'local');
 
-        // On production/staging: strictly respect configured port (fail-fast, secure).
-        // On local dev: auto-try standard MySQL ports (e.g. 3306 for XAMPP, 3307 for isolated SE Docker)
         $candidatePorts = [$primaryPort];
-        if ($isLocal) {
-            foreach (['3306', '3307'] as $port) {
-                if (!in_array($port, $candidatePorts, true)) {
-                    $candidatePorts[] = $port;
-                }
-            }
-        }
 
         $lastException = null;
         foreach ($candidatePorts as $port) {

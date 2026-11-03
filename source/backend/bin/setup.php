@@ -58,6 +58,7 @@ try {
     echo 'Ready: ' . rtrim($config->get('APP_URL'), '/') . "/\n";
 } catch (Throwable $error) {
     // Do not print connection strings or credentials.
-    fwrite(STDERR, 'Setup failed (' . get_class($error) . '). Check PHP 8.2+, Composer, MySQL, DB settings and permissions in config.local.php.' . PHP_EOL);
+    fwrite(STDERR, 'Setup failed (' . get_class($error) . '): ' . $error->getMessage() . PHP_EOL);
+    fwrite(STDERR, 'Check PHP 8.2+, Composer, XAMPP MariaDB on port 3306, and permissions for database wealthflow.' . PHP_EOL);
     exit(1);
 }

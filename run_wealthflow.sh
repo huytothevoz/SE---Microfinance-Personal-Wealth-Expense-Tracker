@@ -8,7 +8,7 @@ ROUTER_PHP="$BACKEND_DIR/router.php"
 MIGRATOR_PHP="$BACKEND_DIR/bin/setup.php"
 STORAGE_DIR="$BACKEND_DIR/storage"
 
-WEB_PORT="${WEB_PORT:-8080}"
+WEB_PORT="${WEB_PORT:-8070}"
 DB_PORT="${DB_PORT:-3306}"
 DB_NAME="${DB_NAME:-wealthflow}"
 
