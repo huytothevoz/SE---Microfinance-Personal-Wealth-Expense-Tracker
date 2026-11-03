@@ -527,24 +527,6 @@ Hàng đợi phục vụ gửi email chào mừng bất đồng bộ cho ngườ
 | `sent_at` | `DATETIME` | YES | `NULL` | | Thời điểm email gửi thành công tới hòm thư người dùng. |
 | `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | | Thời điểm đẩy vào hàng đợi (khi đăng ký hoàn tất). |
 
+
 ---
-
-## 4. Chiến Lược Tiến Hóa Lược Đồ Hướng Thực Tiễn (Agile Schema Evolution Rationale)
-
-### 4.1. Nguyên Lý Bất Biến Của Tệp Di Chuyển CSDL (Migration Immutability)
-Trong quy trình phát triển phần mềm chuẩn mực (Agile / Unified Process), khi hệ thống đã chuyển từ pha Thiết kế (Elaboration) sang pha Thi công (Construction), việc **tuyệt đối không chỉnh sửa các tệp migration đã phát hành (`001_` đến `028_`)** là một nguyên tắc sống còn nhằm:
-1. Đảm bảo tính lặp lại (Reproducibility) và toàn vẹn của cơ sở dữ liệu trên mọi môi trường phát triển và máy chủ kiểm thử CI/CD.
-2. Tránh làm hỏng lịch sử chạy migration (`schema_migrations`), loại trừ nguy cơ mất dữ liệu hiện hữu của người dùng.
-3. Tuân thủ mô hình **Roll-Forward Migration**: Mọi thay đổi, bổ sung trường dữ liệu hoặc tinh chỉnh nghiệp vụ đều phải được đóng gói thành các tệp migration mới với số thứ tự tăng dần.
-
-### 4.2. Bảng Theo Dõi Các Bản Tinh Chỉnh Schema Trong Construction (`029_` → `032_`)
-
-Bốn tệp migration tuần tự được bổ sung trong pha Construction nhằm đáp ứng các yêu cầu nghiệp vụ chuyên sâu và tuân thủ pháp lý:
-
-| STT | Tệp Migration SQL | Phân Hệ Liên Quan | Tác Vụ Cập Nhật Lược Đồ & Lý Do Kỹ Thuật |
-| :---: | :--- | :--- | :--- |
-| **029** | `029_repair_goal_allocations.sql` | **Goals (FR07)** | Bổ sung `wallet_id` và `allocation_type ENUM('DEPOSIT','WITHDRAWAL')` cho bảng `goal_allocations`. Hỗ trợ luồng rút ngược tiền mục tiêu về ví nguồn khi người dùng thay đổi kế hoạch tài chính. |
-| **030** | `030_repair_analytics_schema.sql` | **Wealth & Net Worth (FR08, FR10)** | Bổ sung `wallet_id` cho `micro_loans` để truy vết dòng tiền giải ngân; bổ sung `wallet_id`, `current_amount`, `priority` cho `financial_goals`; bổ sung `breakdown_json` cho `net_worth_snapshots` nhằm lưu trữ cấu trúc tỷ trọng tài sản phục vụ biểu đồ phân tích. |
-| **031** | `031_categories_note.sql` | **Transactions (FR03)** | Bổ sung cột `note VARCHAR(500)` vào bảng `categories` cho phép người dùng cá nhân hóa ghi chú chi tiết mục đích chi tiêu cho từng danh mục. |
-| **032** | `032_account_closure.sql` | **Privacy & Auth (FR01, FR15)** | Bổ sung cột `closed_at TIMESTAMP NULL` vào bảng `users` nhằm hiện thực hóa quyền đóng tài khoản tự nguyện theo Nghị định 13/2023/NĐ-CP, phân biệt rạch ròi với tài khoản bị Admin cưỡng chế khóa (`status = 'LOCKED'`). |
-
+**KẾT THÚC TÀI LIỆU THIẾT KẾ CƠ SỞ DỮ LIỆU VẬT LÝ - WEALTHFLOW**

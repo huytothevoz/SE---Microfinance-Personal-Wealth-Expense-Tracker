@@ -1470,19 +1470,4 @@ Toàn bộ các yêu cầu phi chức năng được chuẩn hóa và lượng h
 4. **Chất lượng kiểm thử:** Bộ kiểm thử tự động (Unit Test & Integration Test) bao phủ tối thiểu $80\%$ mã nguồn nghiệp vụ cốt lõi; $100\%$ các ca kiểm thử sổ kép, rollback và bảo mật đều đạt kết quả Pass.
 
 ---
-
-### 6.4 Danh mục quyết định kiến trúc và kỹ thuật đã chốt (Architectural Decisions)
-
-| Hạng mục quyết định | Phương án lựa chọn pha Elaboration | Cơ sở lý luận & Ràng buộc kỹ thuật |
-| :--- | :--- | :--- |
-| **Phong cách kiến trúc** | Layered Architecture + Modular Monolith | Phù hợp quy mô đồ án 4 sinh viên, dễ triển khai, dễ kiểm thử toàn diện, tránh sự phức tạp phân tán không cần thiết của Microservices. |
-| **Hệ quản trị CSDL** | PostgreSQL (hoặc MySQL 8.0+) | Hỗ trợ chuẩn giao dịch ACID mạnh mẽ, khóa mức dòng (Row-level lock), kiểu dữ liệu `DECIMAL` chính xác cho tiền tệ và hỗ trợ lưu trữ JSON. |
-| **Chiến lược tính số dư** | Hybrid: Sổ cái bất biến + Số dư bộ đệm đối soát | Giao dịch ghi vào sổ cái Nợ/Có bất biến; duy trì số dư lưu đệm trên bảng Ví để phản hồi tức thì dưới 200ms; đối soát định kỳ để bảo đảm tính toàn vẹn. |
-| **Cơ chế chống trùng lặp** | Idempotency Key trên Header HTTP | Bắt buộc client gửi khóa UUID cho mỗi yêu cầu ghi sổ; lưu trạng thái khóa trong cùng transaction của giao dịch. |
-| **Quy định tỷ giá ngoại tệ** | Snapshot tại thời điểm giao dịch | Khóa tỷ giá quy đổi tại thời điểm commit; không đánh giá lại sổ sách tự động theo giá thị trường hàng ngày; tách riêng lãi/lỗ tỷ giá khi tất toán. |
-| **Phân định nợ vi mô** | Phân rã dòng tiền Trả nợ gốc vs Lãi/phí | Bảo đảm tuân thủ nguyên lý kế toán: tiền trả nợ gốc không được tính vào chi phí chi tiêu cá nhân để tránh làm sai lệch báo cáo dòng tiền và ngân sách. |
-| **Phạm vi tài sản ngoài ví** | Giới hạn theo dõi Vàng tích trữ | Loại bỏ bất động sản và xe cộ để tránh bài toán khấu hao và định giá bất khả thi; giữ lại vàng nhẫn/SJC có thị giá rõ ràng và thanh khoản cao. |
-| **Phạm vi quản trị Admin** | Quản lý người dùng, Dashboard vĩ mô & Broadcast | Cắt giảm hoàn toàn tính năng Backup/Restore trên Web UI (chuyển sang DevOps script); tập trung vào quản lý tài khoản và phát thông báo vận hành. |
-
----
 **KẾT THÚC TÀI LIỆU ĐẶC TẢ SRS PHA ELABORATION - NHÓM VOZ**
