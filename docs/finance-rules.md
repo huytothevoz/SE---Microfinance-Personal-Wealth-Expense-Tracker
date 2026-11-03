@@ -149,3 +149,52 @@ $$\text{NetWorth} = \text{TotalAssets} - \text{TotalLiabilities}$$
 | `POST /api/goals/{id}/allocate` | Phân bổ tiền vào mục tiêu (`DEPOSIT`) hoặc hoàn trả (`WITHDRAWAL`) — chỉ earmark, không tăng Net Worth | `{ "allocationType": "DEPOSIT\|WITHDRAWAL", "amount", "walletId", "allocatedOn", "note" }` | `{ "goal": {...}, "allocation": {...} }` |
 | `PUT /api/goals/{id}` | Cập nhật thông tin hoặc trạng thái mục tiêu (`ACTIVE`, `COMPLETED`, `CANCELLED`) | `{ "name", "targetAmount", "deadline", "priority", "status" }` | `{ "goal": {...} }` |
 | `DELETE /api/goals/{id}` | Hủy mục tiêu tiết kiệm (`status = 'CANCELLED'`) | Path param `{id}` | `{ "message": "Đã hủy mục tiêu tiết kiệm." }` |
+
+
+---
+
+## 6. Chuẩn Mực Hệ Thống Tài Khoản Kế Toán (COA) & Xử Lý Nghiệp Vụ Ngoại Lệ
+
+Nhằm đảm bảo tính tường minh học thuật và khả năng giải trình trước các chuyên gia kiểm toán tài chính, hệ thống WealthFlow xác lập các chuẩn mực hạch toán kế toán áp dụng cho toàn bộ dự án:
+
+### 6.1. Mô Hình 5 Nhóm Tài Khoản Kế Toán Rút Gọn (5-Class Personal Ledger Model)
+Thay vì áp dụng toàn bộ Hệ thống Tài khoản Kế toán Doanh nghiệp (VAS 200/Thông tư 133 với hàng trăm tiểu khoản) gây quá tải và không phù hợp với người dùng cá nhân/vi mô, WealthFlow chuẩn hóa động cơ sổ cái kép xoay quanh **5 Nhóm Tài Khoản Cốt Lõi**:
+
+| Nhóm Tài Khoản | Phân Loại CSDL (`type`) | Bản Chất Kế Toán | Số Dư Thông Thường | Ví Dụ Điển Hình Trong Hệ Thống |
+| :---: | :---: | :---: | :---: | :--- |
+| **Class 1** | `ASSET` | **Tài sản** | Dư Nợ (`DEBIT`) | Ví tiền mặt, tài khoản ngân hàng, ví điện tử, sổ tiết kiệm, danh mục vàng tích lũy, khoản cho vay phải thu (`LENT`). |
+| **Class 2** | `LIABILITY` | **Nợ phải trả** | Dư Có (`CREDIT`) | Dư nợ thẻ tín dụng, khoản đi vay cá nhân/vi mô (`BORROWED`). |
+| **Class 3** | `EQUITY` | **Vốn chủ sở hữu** | Dư Có (`CREDIT`) | Vốn khởi tạo đầu kỳ (Opening Balance), tài khoản đối ứng kiểm kê sai lệch (`EQUITY_SYSTEM_RECON`). |
+| **Class 4** | `REVENUE` | **Doanh thu / Thu nhập** | Dư Có (`CREDIT`) | Lương, thưởng, thu nhập phụ, lãi cho vay vi mô nhận được, lợi nhuận thanh lý bán vàng. |
+| **Class 5** | `EXPENSE` | **Chi phí / Chi tiêu** | Dư Nợ (`DEBIT`) | Ăn uống, nhà ở, mua sắm, giải trí, chi phí lãi vay vi mô, lỗ thanh lý bán vàng. |
+
+### 6.2. Hạch Toán Bút Toán Điều Chỉnh Số Dư Kiểm Kê (`/api/wallets/{id}/adjustments`)
+Khi người dùng kiểm kê thực tế ví và phát hiện sai lệch so với số dư sổ sách (do quên ghi chép giao dịch tiền lẻ hoặc thất thoát nhỏ), hệ thống **tuyệt đối không sửa đè trực tiếp số dư**. Thay vào đó, hệ thống tạo một bút toán điều chỉnh kế toán kép đối ứng với tài khoản Vốn chủ sở hữu điều chỉnh kiểm kê (`EQUITY_SYSTEM_RECON`):
+1. **Trường hợp thừa quỹ thực tế ($Balance_{new} > Balance_{old}$):**
+   - $\Delta = Balance_{new} - Balance_{old} > 0$.
+   - **Bút toán Nợ (`DEBIT`):** Tài khoản Ví tài sản tương ứng (`ASSET`) tăng thêm $\Delta$.
+   - **Bút toán Có (`CREDIT`):** Tài khoản Vốn chủ sở hữu điều chỉnh (`EQUITY_SYSTEM_RECON`) tăng thêm $\Delta$.
+   - **Ý nghĩa:** Tăng tài sản ví và ghi tăng vốn tự có do phát hiện thừa tiền kiểm kê.
+2. **Trường hợp hao hụt quỹ thực tế ($Balance_{new} < Balance_{old}$):**
+   - $\Delta = Balance_{old} - Balance_{new} > 0$.
+   - **Bút toán Nợ (`DEBIT`):** Tài khoản Vốn chủ sở hữu điều chỉnh (`EQUITY_SYSTEM_RECON`) ghi giảm $\Delta$.
+   - **Bút toán Có (`CREDIT`):** Tài khoản Ví tài sản tương ứng (`ASSET`) giảm $\Delta$.
+   - **Ý nghĩa:** Giảm tài sản ví và ghi giảm vốn tự có do hao hụt kiểm kê.
+- **Ràng buộc:** Bắt buộc nhập lý do điều chỉnh (`reason`); kiểm tra số dư mới $\ge 0$; luôn bảo toàn phương trình kép $\sum 	ext{DebitBase} = \sum 	ext{CreditBase}$.
+
+### 6.3. Chuẩn Mực Tỷ Giá Ngoại Tệ & Hạch Toán Chênh Lệch Lãi/Lỗ
+1. **Nguyên tắc Giá Gốc Thời Điểm (Historical Cost) cho Tiền Mặt Đa Tệ:**
+   - Để tránh làm phức tạp hóa báo cáo tài chính cá nhân, hệ thống áp dụng tỷ giá snapshot tại thời điểm phát sinh (`fx_rate_snapshot`) và bảo lưu bất biến. Hệ thống không tự động tính lãi/lỗ tỷ giá chưa thực hiện (Unrealized FX Gain/Loss) hàng ngày cho các ví tiền mặt, giữ cho dòng tiền sinh hoạt hàng ngày rõ ràng và không bị biến động ảo theo thị trường hối đoái.
+2. **Hạch toán Lãi/Lỗ Thanh Lý Vàng Tích Lũy (Realized Gain/Loss):**
+   - Với tài sản vàng tích lũy (`gold_assets`), khi người dùng bán vàng, hệ thống tính giá vốn xuất sổ theo phương pháp Bình Quân Gia Quyền (WAC).
+   - Khoản chênh lệch giữa Giá Bán Thực Tế và Giá Vốn WAC được tự động phân bổ vào:
+     - Nếu có lãi: `REVENUE` (Lợi nhuận kinh doanh vàng) $ightarrow$ Tăng Net Worth.
+     - Nếu bị lỗ: `EXPENSE` (Chi phí lỗ bán vàng) $ightarrow$ Giảm Net Worth.
+     - Kiểm chứng tự động: Đã vượt qua kiểm thử `TC-WEALTH-12` trong `wealth_goals_test.php`.
+
+### 6.4. Hài Hòa Giữa Luật Kế Toán 2015 và Quyền Xóa Dữ Liệu Cá Nhân (Nghị Định 13/2023/NĐ-CP)
+* **Xung đột chuẩn mực:** Điều 15 Nghị định 13/2023/NĐ-CP trao quyền cho người dùng yêu cầu xóa bỏ dữ liệu cá nhân (Right to Erasure). Tuy nhiên, Điều 41 Luật Kế toán Việt Nam 2015 quy định bắt buộc lưu trữ chứng từ kế toán tối thiểu 5 năm để phục vụ đối soát và kiểm tra thuế.
+* **Giải pháp thiết kế của WealthFlow (Soft Closure & Credential Scrubbing):**
+  - Khi người dùng gửi yêu cầu `POST /api/auth/close-account`:
+    1. **Tầng Danh Tính & Xác Thực:** Thu hồi 100% Access Token và Refresh Token; xóa sạch Session Cookie; đánh dấu timestamp `closed_at = NOW()`. Tài khoản bị vô hiệu hóa vĩnh viễn, không ai có thể đăng nhập hoặc mạo danh.
+    2. **Tầng Dữ Liệu Sổ Cái Kép:** Các bản ghi giao dịch trong quá khứ được giữ nguyên trạng thái đóng băng bất biến (`Immutable Frozen Ledger`), ngắt kết nối khỏi mọi API công khai của người dùng hoạt động, đáp ứng trọn vẹn yêu cầu lưu vết kế toán mà không xâm phạm quyền riêng tư của chủ thể dữ liệu.

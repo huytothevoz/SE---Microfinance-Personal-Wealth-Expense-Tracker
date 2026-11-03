@@ -571,3 +571,48 @@ Bảng dưới đây quy định chi tiết lộ trình di chuyển, tái tổ c
      - Tuyệt đối không gọi `parseFloat()` trên các biến số dư để cộng/trừ trực tiếp trong code giao diện.
      - Chỉ chuyển đổi định dạng hiển thị sang chuỗi tiền tệ người dùng đọc được (Ví dụ: `15,000,000 VND`) tại thời điểm đưa vào DOM qua hàm dùng chung `formatCurrency()` trong `ui-core.js`.
 
+
+
+---
+
+### 5.6. Quyết Định Thiết Kế Kiến Trúc Thực Tế (ADR) & Chiến Lược Kiểm Thử Hai Tầng
+
+Nhằm bảo đảm tính tường minh tối đa trước các yêu cầu thẩm định kỹ thuật khắt khe, dự án thiết lập 3 Quyết định Thiết kế Kiến trúc (Architectural Decision Records - ADR) làm cơ sở cho toàn bộ pha Construction:
+
+#### ADR-01: Lựa Chọn Pragmatic Modular Monolith với Singleton Connection Provider Thay Vì Heavyweight DI Container
+* **Bối cảnh & Vấn đề:** Trong kiến trúc hướng đối tượng truyền thống, việc áp dụng Dependency Injection (DI) Container kết hợp Interface/Repository trừu tượng thường được đề xuất để tách rời mã nguồn. Tuy nhiên, trong môi trường PHP hiện đại (Shared-Nothing Process Architecture), mỗi HTTP request được thực thi độc lập và bị hủy giải phóng bộ nhớ ngay sau khi gửi phản hồi.
+* **Quyết định thiết kế:**
+  1. WealthFlow chọn mô hình **Pragmatic Modular Monolith**: chia tách mã nguồn theo các Module nghiệp vụ độc lập (`src/Modules/*`), mỗi module gồm Boundary Controller, Business Service/DAO và Entity, giao tiếp qua hợp đồng dữ liệu rõ ràng.
+  2. Tầng hạ tầng sử dụng `Database::getConnection()` làm **Singleton Connection Provider & Environment Adapter**:
+     - Trong môi trường sản xuất: Duy trì đúng 01 đối tượng `PDO MySQL` kết nối bền vững xuyên suốt vòng đời của request HTTP, loại bỏ hoàn toàn chi phí tạo kết nối lặp lại.
+     - Trong môi trường kiểm thử tự động: Phương thức `Database::initSqliteSchema()` tự động khởi tạo và nạp toàn bộ cấu trúc bảng vào bộ nhớ RAM (`:memory:`), cho phép chạy toàn bộ bộ test hồi quy mà không cần cài đặt hoặc khởi động dịch vụ MySQL bên ngoài.
+* **Đánh đổi & Lý do chấp thuận:** Chấp nhận liên kết tĩnh ở mức hạ tầng cơ sở dữ liệu để đạt **thời gian phản hồi cực nhanh (< 10ms)**, triệt tiêu 100% sự phụ thuộc vào các thư viện framework cồng kềnh của bên thứ ba, và bảo đảm tính linh hoạt khi chạy kiểm thử tự động tức thì trên mọi môi trường CI/CD.
+
+#### ADR-02: Mô Hình 5 Nhóm Tài Khoản Kế Toán Rút Gọn Cho Cá Nhân & Tài Chính Vi Mô
+* **Bối cảnh & Vấn đề:** Hệ thống tài khoản kế toán doanh nghiệp (như VAS 200 hoặc Thông tư 133 với hàng trăm mã tài khoản 111, 112, 138, 331, 411, 511, 642, 811...) quá phức tạp và không phù hợp với nhận thức của người dùng cá nhân hoặc hộ kinh doanh tài chính vi mô.
+* **Quyết định thiết kế:**
+  1. Hệ thống chuẩn hóa động cơ sổ cái kép xoay quanh **5 Nhóm Tài Khoản Cốt Lõi (5-Class Ledger Model)**:
+     - `ASSET` (Tài sản: Tiền mặt, tài khoản ngân hàng, ví điện tử, vàng tích lũy).
+     - `LIABILITY` (Nợ phải trả: Khoản vay vi mô, công nợ cá nhân, dư nợ thẻ tín dụng).
+     - `EQUITY` (Vốn chủ sở hữu: Số dư khởi tạo ban đầu, tài khoản đối ứng kiểm kê sai lệch).
+     - `REVENUE` (Thu nhập: Lương, thưởng, lợi nhuận thanh lý bán vàng).
+     - `EXPENSE` (Chi phí: Chi tiêu sinh hoạt, lãi suất vay, phí quản lý).
+  2. **Xử lý Bút toán Kiểm kê Điều chỉnh Số dư (`/adjustments`):**
+     - Khi số dư thực tế khác với số dư sổ sách, hệ thống tự động sinh bút toán kép đối ứng với tài khoản Vốn chủ sở hữu điều chỉnh kiểm kê (`EQUITY_SYSTEM_RECON`):
+       - Thừa quỹ kiểm kê ($Actual > Book$): `DEBIT` Ví tài sản / `CREDIT` Vốn chủ sở hữu.
+       - Hụt quỹ kiểm kê ($Actual < Book$): `DEBIT` Vốn chủ sở hữu / `CREDIT` Ví tài sản.
+     - Cơ chế này bảo đảm phương trình kế toán luôn cân bằng tuyệt đối $\sum 	ext{Debit} = \sum 	ext{Credit}$ mà không vi phạm nguyên tắc bất biến sổ cái.
+  3. **Chính sách Tỷ giá Ngoại tệ & Giá gốc Snapshot:**
+     - Giữ nguyên tắc **Giá gốc thời điểm (Historical Cost)** kết hợp **Snapshot tỷ giá bất biến** (`fx_rate_snapshot`) tại thời điểm tạo bút toán.
+     - Không tự động đánh giá lại chênh lệch tỷ giá chưa thực hiện (Unrealized FX Gain/Loss) hàng ngày trên các ví tiền mặt ngoại tệ để giữ cho báo cáo tài chính cá nhân tinh gọn, dễ hiểu.
+     - Đối với danh mục Vàng tích lũy, hệ thống hỗ trợ định giá lại thị trường định kỳ và hạch toán chênh lệch Lãi/Lỗ thực tế khi thanh lý bán vàng vào Thu nhập/Chi phí theo kiểm chứng `TC-WEALTH-12`.
+
+#### ADR-03: Chiến Lược Kiểm Thử Hai Tầng (Two-Tier Verification Strategy)
+* **Bối cảnh & Vấn đề:** SQLite in-memory là công cụ xuất sắc để chạy unit test nhanh, nhưng không hỗ trợ cơ chế khóa dòng cấp độ hàng (`SELECT ... FOR UPDATE`) như engine InnoDB của MySQL.
+* **Quyết định thiết kế:** Dự án phân định rạch ròi chiến lược kiểm chứng thành hai tầng độc lập:
+  1. **Tầng 1 (In-Memory Contract & Logic Verification - SQLite `:memory:`):**
+     - Thực thi toàn bộ 170 ca kiểm thử tự động (87 PHP backend, 32 wealth/goals, 2 privacy, 10 smoke, 39 PyTest) trong thời gian chưa đầy **2 giây**.
+     - Trọng tâm kiểm chứng: Tính bất biến sổ cái kép ($\sum Debit = \sum Credit$), công thức tính Net Worth và Saving Rate, phát hiện và ngăn chặn lỗ hổng IDOR, tuân thủ nguyên tắc bảo vệ quyền riêng tư BR11 của Admin, và tính Idempotency replay.
+  2. **Tầng 2 (Production Concurrency & Row-Locking Contract - MySQL 8.0 InnoDB):**
+     - Trên môi trường sản xuất thực tế, mã nguồn tại các lớp `WalletDAO` và `TransactionDAO` trực tiếp kích hoạt câu lệnh khóa dòng `SELECT ... FOR UPDATE` bên trong khối giao dịch `beginTransaction()` $ightarrow$ `commit()`.
+     - Mức cô lập giao dịch (Transaction Isolation Level) được thiết lập là `REPEATABLE READ`, đảm bảo cơ chế xếp hàng tuần tự các yêu cầu chi tiêu đồng thời từ Web Server hoặc tiến trình cron worker, ngăn ngừa triệt để hiện tượng Race Condition và số dư âm ngoài hạn mức.

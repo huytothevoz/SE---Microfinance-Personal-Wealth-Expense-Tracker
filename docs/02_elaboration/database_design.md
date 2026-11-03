@@ -253,7 +253,10 @@ Các dòng bút toán chi tiết của giao dịch (Double-Entry Detail Records)
 | `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | | Thời điểm ghi nhận dòng bút toán. |
 
 #### 12. Bảng `idempotency_keys`
-Ngăn chặn ghi trùng lặp dữ liệu do gửi request 2 lần (Network Retry, Double Submit).
+Ngăn chặn ghi trùng lặp dữ liệu do gửi request 2 lần (Network Retry, Double Submit) theo quy định [BR13](./SRS.md#br13).
+- **Phạm vi khóa duy nhất:** Ràng buộc `uk_idempotency(user_id, request_key)` bảo đảm mỗi khóa chỉ thuộc về một người dùng duy nhất.
+- **Thời gian sống hiệu lực (TTL):** Khóa có hiệu lực kiểm tra trùng lặp trong vòng **24 giờ** kể từ thời điểm `created_at`.
+- **Chiến lược dọn dẹp (Garbage Collection):** Tác vụ bảo trì định kỳ chạy ngầm thực thi lệnh `DELETE FROM idempotency_keys WHERE created_at < NOW() - INTERVAL 7 DAY;` để thu hồi không gian lưu trữ và duy trì kích thước bảng ổn định.
 
 | Tên Cột | Kiểu Dữ Liệu | Nullable | Mặc Định | Khóa / Chỉ Mục | Ràng Buộc & Diễn Giải Nghiệp Vụ |
 | :--- | :--- | :---: | :---: | :---: | :--- |
@@ -526,14 +529,22 @@ Hàng đợi phục vụ gửi email chào mừng bất đồng bộ cho ngườ
 
 ---
 
-## 4. Quá Trình Tiến Hóa Lược Đồ CSDL Trong Pha Construction (Migrations `029_` → `032_`)
+## 4. Chiến Lược Tiến Hóa Lược Đồ Hướng Thực Tiễn (Agile Schema Evolution Rationale)
 
-Trong quá trình thi công thực tế (Construction), CSDL đã được mở rộng thêm 4 tệp migration tuần tự nhằm đảm bảo tương thích ngược và đáp ứng đầy đủ các yêu cầu nghiệp vụ chuyên sâu:
+### 4.1. Nguyên Lý Bất Biến Của Tệp Di Chuyển CSDL (Migration Immutability)
+Trong quy trình phát triển phần mềm chuẩn mực (Agile / Unified Process), khi hệ thống đã chuyển từ pha Thiết kế (Elaboration) sang pha Thi công (Construction), việc **tuyệt đối không chỉnh sửa các tệp migration đã phát hành (`001_` đến `028_`)** là một nguyên tắc sống còn nhằm:
+1. Đảm bảo tính lặp lại (Reproducibility) và toàn vẹn của cơ sở dữ liệu trên mọi môi trường phát triển và máy chủ kiểm thử CI/CD.
+2. Tránh làm hỏng lịch sử chạy migration (`schema_migrations`), loại trừ nguy cơ mất dữ liệu hiện hữu của người dùng.
+3. Tuân thủ mô hình **Roll-Forward Migration**: Mọi thay đổi, bổ sung trường dữ liệu hoặc tinh chỉnh nghiệp vụ đều phải được đóng gói thành các tệp migration mới với số thứ tự tăng dần.
 
-| STT | Tệp Migration SQL | Phân Hệ Liên Quan | Tác Vụ Cập Nhật Lược Đồ (Schema Patch) |
+### 4.2. Bảng Theo Dõi Các Bản Tinh Chỉnh Schema Trong Construction (`029_` → `032_`)
+
+Bốn tệp migration tuần tự được bổ sung trong pha Construction nhằm đáp ứng các yêu cầu nghiệp vụ chuyên sâu và tuân thủ pháp lý:
+
+| STT | Tệp Migration SQL | Phân Hệ Liên Quan | Tác Vụ Cập Nhật Lược Đồ & Lý Do Kỹ Thuật |
 | :---: | :--- | :--- | :--- |
-| **029** | `029_repair_goal_allocations.sql` | **Goals (FR07)** | Bổ sung cột `wallet_id` (ví liên kết) và `allocation_type ENUM('DEPOSIT','WITHDRAWAL')` cho bảng `goal_allocations` để hỗ trợ nghiệp vụ nạp và rút tiền linh hoạt. |
-| **030** | `030_repair_analytics_schema.sql` | **Wealth & Net Worth (FR08, FR10)** | Bổ sung `wallet_id` cho `micro_loans`; bổ sung `wallet_id`, `current_amount`, `priority` cho `financial_goals`; bổ sung cột lưu trữ chi tiết tỷ trọng `breakdown_json` cho `net_worth_snapshots`. |
-| **031** | `031_categories_note.sql` | **Transactions (FR03)** | Bổ sung cột `note VARCHAR(500)` vào bảng `categories` cho phép người dùng cá nhân hóa ghi chú từng danh mục thu chi. |
-| **032** | `032_account_closure.sql` | **Privacy & Auth (FR01, FR15)** | Bổ sung cột `closed_at TIMESTAMP` vào bảng `users` nhằm phân biệt rõ trạng thái tài khoản bị Admin khóa cưỡng chế với tài khoản do chính người dùng tự nguyện đóng. |
+| **029** | `029_repair_goal_allocations.sql` | **Goals (FR07)** | Bổ sung `wallet_id` và `allocation_type ENUM('DEPOSIT','WITHDRAWAL')` cho bảng `goal_allocations`. Hỗ trợ luồng rút ngược tiền mục tiêu về ví nguồn khi người dùng thay đổi kế hoạch tài chính. |
+| **030** | `030_repair_analytics_schema.sql` | **Wealth & Net Worth (FR08, FR10)** | Bổ sung `wallet_id` cho `micro_loans` để truy vết dòng tiền giải ngân; bổ sung `wallet_id`, `current_amount`, `priority` cho `financial_goals`; bổ sung `breakdown_json` cho `net_worth_snapshots` nhằm lưu trữ cấu trúc tỷ trọng tài sản phục vụ biểu đồ phân tích. |
+| **031** | `031_categories_note.sql` | **Transactions (FR03)** | Bổ sung cột `note VARCHAR(500)` vào bảng `categories` cho phép người dùng cá nhân hóa ghi chú chi tiết mục đích chi tiêu cho từng danh mục. |
+| **032** | `032_account_closure.sql` | **Privacy & Auth (FR01, FR15)** | Bổ sung cột `closed_at TIMESTAMP NULL` vào bảng `users` nhằm hiện thực hóa quyền đóng tài khoản tự nguyện theo Nghị định 13/2023/NĐ-CP, phân biệt rạch ròi với tài khoản bị Admin cưỡng chế khóa (`status = 'LOCKED'`). |
 

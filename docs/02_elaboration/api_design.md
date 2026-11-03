@@ -74,7 +74,7 @@ Toàn bộ các Endpoints của hệ thống WealthFlow đều tuân thủ cấu
 | `Authorization` | Có (các API bảo vệ) | `Bearer <JWT_ACCESS_TOKEN>` | Mã xác thực JWT của người dùng (thời hạn 15 phút). |
 | `Content-Type` | Có (POST, PUT, PATCH) | `application/json` | Định dạng dữ liệu tải lên máy chủ. |
 | `Accept` | Có | `application/json` | Định dạng Client mong muốn nhận về. |
-| `Idempotency-Key`| Bắt buộc cho POST giao dịch | `UUID v4` | Khóa chống trùng lặp giao dịch (Idempotency Key - BR13, FR03.04). |
+| `Idempotency-Key`| Bắt buộc cho POST giao dịch | `UUID v4` | Khóa chống trùng lặp giao dịch (TTL 24 giờ, định kỳ dọn dẹp sau 7 ngày theo BR13, FR03.04). |
 | `X-WealthFlow` | Có (trên Web Client) | `1` | Header phòng vệ tấn công giả mạo yêu cầu (CSRF Prevention). |
 | `X-Request-Id` | Tùy chọn | `UUID v4` | Mã truy vết log xuyên suốt giữa Client và Server (Distributed Tracing). |
 
@@ -774,7 +774,8 @@ Dưới đây là ma trận phân bổ danh mục **81 RESTful API Endpoints** t
 
 #### 3.12.2. `POST /api/auth/close-account` - Đóng Tài Khoản Người Dùng & Thu Hồi Phiên
 - **Xác thực:** Yêu cầu người dùng đăng nhập (`USER`).
-- **Mô tả nghiệp vụ:** Người dùng chủ động yêu cầu ngừng sử dụng dịch vụ. Hệ thống cập nhật `status = 'LOCKED'` và ghi nhận thời điểm `closed_at = CURRENT_TIMESTAMP`, đồng thời hủy hiệu lực toàn bộ phiên làm việc trong `auth_sessions` và ghi nhận sự kiện `ACCOUNT_CLOSED` vào `security_audit_logs`.
+- **Mô tả nghiệp vụ:** Người dùng chủ động yêu cầu ngừng sử dụng dịch vụ theo Điều 15 Nghị định 13/2023/NĐ-CP (Right to Erasure). Hệ thống cập nhật `status = 'LOCKED'` và ghi nhận thời điểm `closed_at = CURRENT_TIMESTAMP`, đồng thời hủy hiệu lực toàn bộ phiên làm việc trong `auth_sessions`, thu hồi cookie HttpOnly và ghi nhận sự kiện `ACCOUNT_CLOSED` vào `security_audit_logs`.
+- **Hài hòa Pháp lý & Kế toán:** Tuân thủ nguyên tắc bảo toàn chứng từ kiểm toán tối thiểu 5 năm theo Luật Kế toán 2015: Hệ thống thực hiện Soft Closure & Credential Scrubbing (xóa bỏ danh tính đăng nhập, hủy token phiên) thay vì Hard Delete bảng sổ cái; dữ liệu giao dịch tài chính quá khứ được giữ ở trạng thái đóng băng bất biến (Frozen Ledger) và ngắt hoàn toàn khỏi mọi API truy vấn người dùng hoạt động.
 
 ## 4. Ma Trận Truy Vết API, Use Cases & Kiến Trúc BCE+D
 
