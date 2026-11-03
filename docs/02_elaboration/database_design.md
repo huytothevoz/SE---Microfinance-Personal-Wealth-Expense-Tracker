@@ -120,6 +120,7 @@ Lưu trữ hồ sơ tài khoản người dùng và quản trị viên hệ th�
 | `password_hash` | `VARCHAR(255)` | NO | None | | Chuỗi băm mật khẩu bảo mật (Argon2id hoặc Bcrypt cost 12). |
 | `role` | `ENUM('USER','ADMIN')` | NO | `'USER'` | | Vai trò phân quyền người dùng (`USER` hoặc `ADMIN`). |
 | `status` | `ENUM('ACTIVE','LOCKED')` | NO | `'ACTIVE'` | | Trạng thái tài khoản (`ACTIVE`: hoạt động, `LOCKED`: bị khóa bởi Admin). |
+| `closed_at` | `TIMESTAMP` | YES | `NULL` | | Thời điểm người dùng chủ động yêu cầu đóng/hủy tài khoản (`032_account_closure.sql`). |
 | `base_currency` | `CHAR(3)` | NO | `'VND'` | | Mã tiền tệ gốc ISO 4217 (VND, USD, EUR, v.v.). |
 | `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | | Thời điểm đăng ký tài khoản. |
 | `updated_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP ON UPDATE` | | Thời điểm cập nhật thông tin gần nhất. |
@@ -193,6 +194,7 @@ Phân loại các khoản thu, chi cá nhân của từng người dùng.
 | `user_id` | `BIGINT UNSIGNED` | NO | None | **FK**, `uk_user_category` | Tham chiếu tới `users(id)` (`ON DELETE RESTRICT`). |
 | `name` | `VARCHAR(100)` | NO | None | `uk_user_category` | Tên danh mục (ví dụ: "Ăn uống", "Xăng xe", "Tiền lương"). |
 | `category_type` | `ENUM('INCOME','EXPENSE')` | NO | None | `uk_user_category` | Loại danh mục (Thu nhập hoặc Chi phí). |
+| `note` | `VARCHAR(500)` | YES | `NULL` | | Ghi chú diễn giải cá nhân cho danh mục (`031_categories_note.sql`). |
 | `archived_at` | `TIMESTAMP` | YES | `NULL` | | Đánh dấu thời điểm xóa mềm/lưu trữ danh mục. |
 
 #### 8. Bảng `default_categories`
@@ -509,3 +511,29 @@ Theo dõi việc tải xuống dữ liệu báo cáo tài chính nhằm đảm b
 | `file_hash` | `CHAR(64)` | YES | `NULL` | | Mã băm SHA-256 của file xuất nhằm xác thực tính nguyên vẹn. |
 | `ip_address` | `VARCHAR(45)` | YES | `NULL` | | Địa chỉ IP của Client tại thời điểm yêu cầu xuất dữ liệu. |
 | `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | | Thời điểm hoàn tất tải xuống. |
+
+#### 29. Bảng `registration_emails`
+Hàng đợi phục vụ gửi email chào mừng bất đồng bộ cho người dùng mới đăng ký (`002_auth_sessions.sql`).
+
+| Tên Cột | Kiểu Dữ Liệu | Nullable | Mặc Định | Khóa / Chỉ Mục | Ràng Buộc & Diễn Giải Nghiệp Vụ |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| `id` | `BIGINT UNSIGNED` | NO | AUTO_INCREMENT | **PK** | Khóa chính hàng đợi gửi email. |
+| `user_id` | `BIGINT UNSIGNED` | NO | None | **FK**, **UK** (`uk_welcome_user`) | Tham chiếu tới `users(id)` (`ON DELETE CASCADE`). |
+| `status` | `ENUM('PENDING','SENT')` | NO | `'PENDING'` | | Trạng thái gửi email chào mừng. |
+| `attempts` | `INT UNSIGNED` | NO | `0` | | Số lần đã thử gửi lại khi gặp sự cố SMTP. |
+| `sent_at` | `DATETIME` | YES | `NULL` | | Thời điểm email gửi thành công tới hòm thư người dùng. |
+| `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | | Thời điểm đẩy vào hàng đợi (khi đăng ký hoàn tất). |
+
+---
+
+## 4. Quá Trình Tiến Hóa Lược Đồ CSDL Trong Pha Construction (Migrations `029_` → `032_`)
+
+Trong quá trình thi công thực tế (Construction), CSDL đã được mở rộng thêm 4 tệp migration tuần tự nhằm đảm bảo tương thích ngược và đáp ứng đầy đủ các yêu cầu nghiệp vụ chuyên sâu:
+
+| STT | Tệp Migration SQL | Phân Hệ Liên Quan | Tác Vụ Cập Nhật Lược Đồ (Schema Patch) |
+| :---: | :--- | :--- | :--- |
+| **029** | `029_repair_goal_allocations.sql` | **Goals (FR07)** | Bổ sung cột `wallet_id` (ví liên kết) và `allocation_type ENUM('DEPOSIT','WITHDRAWAL')` cho bảng `goal_allocations` để hỗ trợ nghiệp vụ nạp và rút tiền linh hoạt. |
+| **030** | `030_repair_analytics_schema.sql` | **Wealth & Net Worth (FR08, FR10)** | Bổ sung `wallet_id` cho `micro_loans`; bổ sung `wallet_id`, `current_amount`, `priority` cho `financial_goals`; bổ sung cột lưu trữ chi tiết tỷ trọng `breakdown_json` cho `net_worth_snapshots`. |
+| **031** | `031_categories_note.sql` | **Transactions (FR03)** | Bổ sung cột `note VARCHAR(500)` vào bảng `categories` cho phép người dùng cá nhân hóa ghi chú từng danh mục thu chi. |
+| **032** | `032_account_closure.sql` | **Privacy & Auth (FR01, FR15)** | Bổ sung cột `closed_at TIMESTAMP` vào bảng `users` nhằm phân biệt rõ trạng thái tài khoản bị Admin khóa cưỡng chế với tài khoản do chính người dùng tự nguyện đóng. |
+

@@ -106,27 +106,28 @@ Toàn bộ các Endpoints của hệ thống WealthFlow đều tuân thủ cấu
 
 ---
 
-## 2. Danh Mục Tổng Hợp 11 Nhóm API Endpoints
+## 2. Danh Mục Tổng Hợp 12 Nhóm API Endpoints
 
-Dưới đây là ma trận phân bổ toàn bộ danh mục **42 RESTful API Endpoints** theo 11 phân hệ chức năng, ánh xạ 1-1 với [class_diagram.md](./uml_modeling/class_diagram.md) và [sequence_diagram.md](./uml_modeling/sequence_diagram.md):
+Dưới đây là ma trận phân bổ danh mục **81 RESTful API Endpoints** thực tế theo 12 phân hệ chức năng trong pha Construction, ánh xạ 1-1 với [class_diagram.md](./uml_modeling/class_diagram.md) và [sequence_diagram.md](./uml_modeling/sequence_diagram.md):
 
-```
-/api/v1
-├── /auth               (8 Endpoints)  - Định danh, Đăng ký, Đăng nhập JWT, Khôi phục mật khẩu [UC01, SQ01]
-├── /wallets            (5 Endpoints)  - Quản lý tài khoản ví tài sản, số dư mở sổ [UC02, SQ01]
+`
+/api
+├── /auth               (9 Endpoints)  - Định danh, Đăng ký, Đăng nhập JWT, Đổi mật khẩu, Đóng tài khoản [UC01, SQ01]
+├── /wallets            (8 Endpoints)  - Quản lý ví, số dư mở sổ, điều chỉnh sổ cái, lưu trữ ví, lịch sử [UC02, SQ01]
 ├── /transactions       (5 Endpoints)  - Ghi nhận thu chi, chuyển khoản nội bộ, đảo sổ cái [UC03, SQ02, SQ03]
-├── /categories         (2 Endpoints)  - Quản lý danh mục thu/chi người dùng [UC03]
-├── /exchange-rates     (2 Endpoints)  - Tỷ giá hối đoái ngoại tệ liên ngân hàng [UC03, UC08]
-├── /recurring          (6 Endpoints)  - Quản lý chi phí cố định định kỳ & tác vụ Cron [UC04, SQ04]
+├── /categories         (4 Endpoints)  - Quản lý danh mục thu/chi, cập nhật ghi chú & lưu trữ danh mục [UC03]
+├── /exchange-rates     (3 Endpoints)  - Tỷ giá hối đoái ngoại tệ, sync trực tiếp Vietcombank [UC03, UC08]
+├── /recurring          (5 Endpoints)  - Quản lý chi phí cố định định kỳ, tạm dừng & kích hoạt lại [UC04, SQ04]
 ├── /budgets            (5 Endpoints)  - Lập ngân sách tháng & cảnh báo bội chi [UC05, SQ02]
-├── /loans              (5 Endpoints)  - Quản lý nợ vay vi mô, giải ngân & lịch trả nợ [UC06, UC07, SQ05]
-├── /gold               (4 Endpoints)  - Danh mục đầu tư vàng vật chất & giá thị trường [UC08, SQ06]
-├── /goals              (5 Endpoints)  - Mục tiêu tiết kiệm & quỹ phong tỏa Earmark [UC09]
-├── /analytics          (4 Endpoints)  - Dashboard tài sản ròng Net Worth, dòng tiền & sức khỏe [UC10, SQ06]
+├── /loans              (4 Endpoints)  - Quản lý nợ vay vi mô, giải ngân & lịch trả nợ [UC06, UC07, SQ05]
+├── /gold               (5 Endpoints)  - Danh mục đầu tư vàng vật chất & giá thị trường [UC08, SQ06]
+├── /goals              (7 Endpoints)  - Mục tiêu tiết kiệm & quỹ phong tỏa Earmark [UC09]
+├── /analytics          (3 Endpoints)  - Dashboard tài sản ròng Net Worth, dòng tiền & Dashboard chi tiêu [UC10, SQ06]
 ├── /reports            (3 Endpoints)  - Đối soát sổ cái kép & xuất tệp CSV an toàn [UC11, SQ07]
-├── /notifications      (4 Endpoints)  - Trung tâm thông báo đẩy & đánh dấu đã đọc [SYS01, SQ02, SQ04]
-└── /admin              (6 Endpoints)  - Khóa tài khoản, phát thông báo toàn hệ thống, cấu hình [UC12, UC13, SQ08]
-```
+├── /notifications      (3 Endpoints)  - Trung tâm thông báo đẩy & đánh dấu đã đọc [SYS01, SQ02, SQ04]
+├── /privacy            (1 Endpoint)   - Xuất dữ liệu cá nhân toàn diện chuẩn GDPR [FR15]
+└── /admin              (12 Endpoints) - Quản trị người dùng, khóa tài khoản, danh mục mẫu, broadcast & cấu hình [UC12, UC13, SQ08]
+`
 
 ---
 
@@ -325,6 +326,18 @@ Dưới đây là ma trận phân bổ toàn bộ danh mục **42 RESTful API En
 - **Mô tả nghiệp vụ:** Nếu ví đã có giao dịch kế toán trong lịch sử, từ chối xóa vật lý (Foreign key constraint `ON DELETE RESTRICT`) và chuyển trạng thái sang lưu trữ ẩn.
 
 ---
+
+#### 3.2.6. `POST /api/wallets/{id}/adjustments` - Điều Chỉnh Số Dư Qua Bút Toán Sổ Cái
+- **Mục đích:** Đồng bộ số dư thực tế với số dư sổ sách bằng cách sinh tự động 2 bút toán Nợ/Có đối ứng vào tài khoản chênh lệch kiểm toán.
+- **Payload:** `{ "adjustedBalance": "5000000", "reason": "Đối soát tiền mặt thực tế" }`.
+
+#### 3.2.7. `POST /api/wallets/{id}/archive` - Lưu Trữ Ví Tài Sản (Số Dư Bằng 0)
+- **Ràng buộc nghiệp vụ:** Số dư ví phải bằng 0 và không còn khoản định kỳ `ACTIVE` nào liên kết.
+- **Response:** `200 OK` chuyển trạng thái sang `ARCHIVED`.
+
+#### 3.2.8. `GET /api/wallets/{id}/history` - Tra Cứu Lịch Sử Dòng Tiền Theo Ví
+- **Query Parameters:** `limit=50&offset=0`.
+- **Response:** Danh sách biến động số dư, hướng dòng tiền (`IN`/`OUT`) và tỷ giá tương đương.
 
 ### 3.3. Phân Hệ 3: Giao Dịch Thu Chi, Chuyển Khoản & Sổ Cái Kép (Transactions & Ledger)
 > Ánh xạ: [UC03: Ghi nhận giao dịch thu chi](./uml_modeling/usecase_diagram.md#uc03-quan-ly-giao-dich-thu-chi-va-chuyen-khoan) | [SQ02: Ghi nhận chi tiêu](./uml_modeling/sequence_diagram.md#32-sq02-ghi-nhận-chi-tiêu-khóa-bi-quan--cảnh-báo-ngân-sách) | [SQ03: Chuyển tiền & Đảo bút toán](./uml_modeling/sequence_diagram.md#33-sq03-chuyển-tiền-nội-bộ--đảo-giao-dịch-reversal) | [CD03](./uml_modeling/class_diagram.md#23-phân-hệ-3-ghi-nhận-giao-dịch-thu-chi--sổ-cái-kế-toán-kép-double-entry-ledger-context---uc03) | [ERD02](./database_design.md#32-phân-hệ-ví-danh-mục--sổ-cái-kép-core-wallets--double-entry-ledger)
@@ -616,6 +629,10 @@ Dưới đây là ma trận phân bổ toàn bộ danh mục **42 RESTful API En
 
 ---
 
+#### 3.9.5. `GET /api/analytics/expenses` - Dashboard Chi Tiêu Phân Nhóm & Xu Hướng 6 Tháng
+- **Query Parameters:** `month=YYYY-MM`.
+- **Mục đích:** Tổng hợp chi tiêu ròng theo danh mục, cơ cấu tỷ trọng và biểu đồ cột xu hướng 6 tháng gần nhất để cung cấp dữ liệu tức thì cho giao diện người dùng.
+
 ### 3.10. Phân Hệ 10: Báo Cáo Đối Soát Sổ Cái & Xuất CSV (Reports & Reconciliation)
 > Ánh xạ: [UC11: Báo cáo đối soát & Xuất CSV](./uml_modeling/usecase_diagram.md#uc11-bao-cao-thong-ke-va-xuat-du-lieu-csv) | [SQ07: Đối soát & Xuất CSV](./uml_modeling/sequence_diagram.md#37-sq07-báo-cáo-đối-soát-sổ-cái--xuất-dữ-liệu-csv-an-toàn) | [CD04](./uml_modeling/class_diagram.md#24-phân-hệ-4-báo-cáo-đối-soát-sổ-cái--xuất-csv-an-toàn-ledger-reconciliation--secure-csv-export-context---uc11) | [ERD07](./database_design.md#37-phân-hệ-thông-báo-cấu-hình--kiểm-toán-quản-trị-audit--system)
 
@@ -728,6 +745,36 @@ Dưới đây là ma trận phân bổ toàn bộ danh mục **42 RESTful API En
 - Tra cứu lịch sử can thiệp hệ thống của các quản trị viên từ bảng `admin_audit_logs`.
 
 ---
+
+#### 3.11.9. `GET /api/admin/default-categories` & `POST /api/admin/default-categories`
+- **Quyền truy cập:** `ADMIN`.
+- **Mục đích (FR13.01):** Quản lý danh mục mẫu hệ thống được gợi ý cho người dùng mới khi đăng ký.
+- **POST Payload:** `{ "name": "Bảo hiểm sức khỏe", "categoryType": "EXPENSE" }`. Chống trùng lặp theo cặp `(name, category_type)` trả lỗi `409 Conflict`.
+
+#### 3.11.10. `PUT /api/admin/default-categories/{id}` & `DELETE /api/admin/default-categories/{id}`
+- **Mục đích (FR13.01):** Sửa tên danh mục mẫu hoặc bật/tắt trạng thái hiệu lực (`is_active = 0/1`).
+
+#### 3.11.11. `GET /api/admin/overview` - Dashboard Thống Kê Vĩ Mô Cách Ly An Toàn (BR11)
+- **Quyền truy cập:** `ADMIN`.
+- **Mục đích (FR14.01, BR11):** Cung cấp các chỉ số vận hành vĩ mô gồm tổng số tài khoản (`totalUsers`), số tài khoản hoạt động (`activeUsers`), số tài khoản bị khóa (`lockedUsers`), số tài khoản mới trong tháng (`newUsersThisMonth`).
+- **Ràng buộc bảo mật BR11:** Tuyệt đối không truy vấn hoặc để lộ số dư ví, tài sản vàng hay ghi chú giao dịch của người dùng.
+
+#### 3.11.12. `GET /api/admin/announcements` - Lịch Sử Phát Thông Báo Broadcast
+- **Quyền truy cập:** `ADMIN`.
+- **Mục đích (FR13.03):** Tra cứu lịch sử các đợt phát thanh toàn hệ thống, mức độ ưu tiên và số lượng tài khoản đã nhận tin.
+
+---
+
+### 3.12. Phân Hệ 12: Quyền Riêng Tư & Đóng Tài Khoản (Privacy & Account Closure)
+> Ánh xạ: [FR15: Bảo mật dữ liệu & Quyền riêng tư](../02_elaboration/SRS.md#fr15---kiểm-soát-truy-cập-api-và-bảo-mật-dữ-liệu-đa-người-dùng) | [GDPR Article 20: Right to Data Portability]
+
+#### 3.12.1. `GET /api/privacy/export` - Xuất Toàn Bộ Dữ Liệu Tài Chính Cá Nhân
+- **Xác thực:** Yêu cầu người dùng đăng nhập (`USER`).
+- **Mô tả nghiệp vụ:** Trích xuất toàn bộ dữ liệu lịch sử của tài khoản (Ví, Giao dịch, Sổ cái kép, Danh mục, Ngân sách, Khoản vay, Vàng) ra tệp định dạng JSON chuẩn hóa; loại bỏ hoàn toàn mã băm mật khẩu và các token nhạy cảm.
+
+#### 3.12.2. `POST /api/auth/close-account` - Đóng Tài Khoản Người Dùng & Thu Hồi Phiên
+- **Xác thực:** Yêu cầu người dùng đăng nhập (`USER`).
+- **Mô tả nghiệp vụ:** Người dùng chủ động yêu cầu ngừng sử dụng dịch vụ. Hệ thống cập nhật `status = 'LOCKED'` và ghi nhận thời điểm `closed_at = CURRENT_TIMESTAMP`, đồng thời hủy hiệu lực toàn bộ phiên làm việc trong `auth_sessions` và ghi nhận sự kiện `ACCOUNT_CLOSED` vào `security_audit_logs`.
 
 ## 4. Ma Trận Truy Vết API, Use Cases & Kiến Trúc BCE+D
 

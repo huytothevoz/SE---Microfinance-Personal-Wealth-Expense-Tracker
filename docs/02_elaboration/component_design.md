@@ -275,6 +275,20 @@ Dưới đây là bảng quy hoạch chi tiết từng thành phần phần mề
 
 ---
 
+### 3.12. Phân Hệ 12: Quyền Riêng Tư & Bảo Vệ Dữ Liệu Cá Nhân (Privacy & Data Protection - `src/Modules/Privacy/`)
+
+Phân hệ đảm nhiệm tuân thủ quyền riêng tư dữ liệu cá nhân (GDPR Article 20 - Data Portability) và quy trình đóng tài khoản tự nguyện an toàn.
+
+| Lớp Thành Phần (Component Class) | Vị Trí Tệp Vật Lý (Physical Path) | Phân Loại Stereotype (BCE+D) | Trách Nhiệm Thiết Kế & Hợp Đồng Kỹ Thuật |
+| :--- | :--- | :---: | :--- |
+| `PrivacyController` | `source/backend/src/Modules/Privacy/PrivacyController.php` | `<<Boundary>>` | Tiếp nhận yêu cầu xuất dữ liệu cá nhân (`GET /api/privacy/export`) và đóng tài khoản (`POST /api/auth/close-account`). |
+| `AccountDataExportService` | `source/backend/src/Modules/Privacy/AccountDataExportService.php` | `<<Control>>` | Thu thập toàn bộ lịch sử tài sản, giao dịch, sổ cái của người dùng và đóng gói thành tệp JSON an toàn không chứa mật khẩu. |
+| `UserDAO` | `source/backend/src/Modules/Auth/UserDAO.php` | `<<DataAccess>>` | Thực thi cập nhật `status = 'LOCKED'` kèm mốc `closed_at`, xóa sạch toàn bộ phiên `auth_sessions`. |
+| `profile-security.js` | `source/frontend/js/app/profile-security.js` | Frontend Controller | Giao diện cài đặt bảo mật, tải xuống tệp sao lưu dữ liệu và modal xác nhận đóng tài khoản. |
+| `privacy-api.js` | `source/frontend/js/services/privacy-api.js` | Frontend Service | Gọi các API xuất dữ liệu và đóng tài khoản từ trình duyệt. |
+
+---
+
 ## 4. Cây Thư Mục Triển Khai Toàn Diện Dự Án (Physical Directory Tree)
 
 Dưới đây là cấu trúc thư mục chi tiết từ thư mục `source/` quy chuẩn hóa toàn bộ các tệp tin trong Pha Construction:
@@ -530,7 +544,7 @@ Bảng dưới đây quy định chi tiết lộ trình di chuyển, tái tổ c
 
 ---
 
-### 5.4. Chiến Lược Quản Lý Di Chuyển CSDL Tuần Tự (28 Database Migrations 001_ to 028_)
+### 5.4. Chiến Lược Quản Lý Di Chuyển CSDL Tuần Tự (32 Database Migrations (001_ to 032_))
 
 - **Nguyên tắc độc lập & toàn vẹn:** Thay vì gộp chung các bảng vào một file SQL lớn gây khó khăn cho việc rollback hoặc theo dõi lịch sử, toàn bộ 28 bảng CSDL vật lý trong [database_design.md](./database_design.md) được phân bổ vào đúng 28 script migration độc lập có đánh số thứ tự từ `001_` đến `028_` tương ứng với cấu trúc thư mục ở Mục 4.
 - **Tuân thủ thứ tự phụ thuộc Khóa ngoại (Foreign Key Dependencies):**
