@@ -47,7 +47,7 @@ final class AuthService
             $this->db->commit();
         } catch (\Throwable $error) {
             $this->db->rollBack();
-            if ($error instanceof \PDOException && ($error->errorInfo[1] ?? 0) === 1062) {
+            if ($error instanceof \PDOException && (in_array(($error->errorInfo[1] ?? 0), [1062, 19, 2067], true) || ($error->errorInfo[0] ?? '') === '23000')) {
                 throw new ApiException('EMAIL_EXISTS', 'Email đã được đăng ký.', 409, ['email' => 'Email đã được đăng ký.']);
             }
             throw $error;

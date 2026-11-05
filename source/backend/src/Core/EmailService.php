@@ -28,7 +28,9 @@ final class EmailService
                 throw new RuntimeException('MAIL_LOG_NOT_ALLOWED');
             }
             $directory = $this->config->directory . '/storage';
-            if (!is_dir($directory) || !is_writable($directory)) {
+            $probe = $directory . '/.probe_' . bin2hex(random_bytes(4));
+            $canWrite = is_writable($directory) || (@file_put_contents($probe, '') !== false && @unlink($probe));
+            if (!is_dir($directory) || !$canWrite) {
                 throw new RuntimeException('MAIL_PREVIEW_DIRECTORY_NOT_WRITABLE');
             }
             return;

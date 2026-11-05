@@ -14,9 +14,9 @@ final class UserDAOTest extends DatabaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->pdo->exec('CREATE TABLE auth_sessions (
+        $this->pdo->exec('DROP TABLE IF EXISTS auth_sessions; CREATE TABLE auth_sessions (
             id TEXT PRIMARY KEY, user_id INTEGER, refresh_hash TEXT, expires_at DATETIME, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
-        $this->pdo->exec('CREATE TABLE registration_emails (
+        $this->pdo->exec('DROP TABLE IF EXISTS registration_emails; CREATE TABLE registration_emails (
             id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, status TEXT DEFAULT "PENDING", attempts INTEGER DEFAULT 0,
             sent_at DATETIME NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
         $this->dao = new UserDAO($this->pdo);
@@ -73,5 +73,23 @@ final class UserDAOTest extends DatabaseTestCase
     {
         $this->dao->recordSecurityAudit(' login_failed ', 1);
         self::assertSame(' login_failed ', $this->pdo->query('SELECT event FROM security_audit_logs')->fetchColumn());
+    }
+
+    public function testFindActiveSessionReturnsNullWhenExpired(): void
+    {
+        $this->dao->createSession('expired-session', 1, 'hash-exp', '2020-01-01 00:00:00');
+        self::assertNull($this->dao->findActiveSession('expired-session', 1));
+    }
+
+    public function testListUsersPaginationAndRole(): void
+    {
+        $id2 = $this->dao->createUser('User Two', 'user2@example.com', 'hash2', 'vnd');
+        $id3 = $this->dao->createUser('User Three', 'user3@example.com', 'hash3', 'usd');
+
+        $page1 = $this->dao->listUsers(2, 0);
+        self::assertCount(2, $page1);
+
+        $page2 = $this->dao->listUsers(2, 2);
+        self::assertGreaterThanOrEqual(1, count($page2));
     }
 }
