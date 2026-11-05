@@ -1,0 +1,73 @@
+title Bản đồ Hoạt động: Thiết lập & Xử lý Giao dịch Định kỳ Tự động (AD05 - UC04, SYS02)
+
+skinparam style strictuml
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam swimlaneWidth same
+skinparam swimlaneBorderColor #334155
+skinparam swimlaneBorderThickness 1.5
+skinparam swimlaneTitleFontStyle bold
+skinparam swimlaneTitleFontSize 13
+
+skinparam ActivityBorderColor #0F172A
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityFontSize 12
+skinparam ActivityFontColor #0F172A
+skinparam ActivityDiamondBorderColor #0F172A
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+
+skinparam ArrowColor #0F172A
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #334155
+
+
+|#F8FAFC|Người dùng (User)|
+start
+:1. Truy cập mục "Giao dịch định kỳ" & Nhấn "Tạo lịch mới";
+:2. Nhập Loại giao dịch, Ví thanh toán, Danh mục, Số tiền,\nChu kỳ lặp (Tháng/Tuần), Ngày neo [BR09] & Tùy chọn Tự động ghi sổ;
+:3. Bấm "Lưu lịch định kỳ";
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+:4. Thẩm định dữ liệu (Số tiền > 0, Ví & Danh mục Active);
+if (Kiểm tra dữ liệu nhập?) then (Không hợp lệ)
+  |#F8FAFC|Người dùng (User)|
+  :5. Hiển thị thông báo lỗi (400 Bad Request);
+  stop
+else (Hợp lệ)
+  |#F1F5F9|Hệ thống WealthFlow (System)|
+  :6. Xử lý quy tắc Ngày neo [BR09] & Tính ngày đến hạn kế tiếp (nextDueDate);
+  :7. Lưu bản ghi Lịch định kỳ với trạng thái Active;
+
+  |#F8FAFC|Người dùng (User)|
+  :8. Hiển thị thông báo "Thiết lập lịch định kỳ thành công";
+
+  |#EDE9FE|Bộ lập lịch (SYS02 lúc 00:05)|
+  :9. Đến ngày hẹn (00:05 AM hàng ngày):\nBộ lập lịch SYS02 kích hoạt quét các lịch đến hạn (nextDueDate <= TODAY);
+
+  |#F1F5F9|Hệ thống WealthFlow (System)|
+  :10. Tạo Idempotency-Key duy nhất (subscriptionId, dueDate) [BR13];
+  if (Chế độ xử lý ghi sổ (isAutoPost)?) then (Tự động ghi sổ)
+    if (Kiểm tra số dư Ví thanh toán [BR04]?) then (Không đủ số dư)
+      :11a. Tạo bản ghi giao dịch DRAFT/FAILED\nvà ghi Audit Log cảnh báo lỗi;
+      |#F8FAFC|Người dùng (User)|
+      :12a. Nhận Push Notification:\n"Cảnh báo: Giao dịch định kỳ thất bại do ví thiếu số dư" [EF04.02];
+      stop
+    else (Đủ số dư)
+      |#F1F5F9|Hệ thống WealthFlow (System)|
+      :11b. Thực thi Transaction ACID hạch toán kép [BR01]:\n- Nợ TK Chi phí sinh hoạt / Có TK Ví tài sản\n- Trừ số dư khả dụng của Ví nguồn;
+      :12b. Cập nhật tiến độ hạn mức Ngân sách tháng [BR06];
+      :13b. Tính toán nextDueDate cho chu kỳ tiếp theo [BR09]\n(Tự động lùi về ngày 28 nếu gặp tháng 2 thiếu ngày);
+      |#F8FAFC|Người dùng (User)|
+      :14b. Nhận Push Notification:\n"Đã tự động thanh toán định kỳ thành công";
+      stop
+    endif
+  else (Nhắc nhở thủ công)
+    |#F1F5F9|Hệ thống WealthFlow (System)|
+    :11c. Tạo bản ghi giao dịch nháp (DRAFT) chờ người dùng duyệt;
+    :12c. Tính toán nextDueDate cho chu kỳ tiếp theo [BR09];
+    |#F8FAFC|Người dùng (User)|
+    :13c. Nhận Notification nhắc nhở trên chuông thông báo:\n"Khoản định kỳ đến hạn, vui lòng vào duyệt chi" [AF04.01];
+    stop
+  endif
+endif

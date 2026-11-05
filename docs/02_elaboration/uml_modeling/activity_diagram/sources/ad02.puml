@@ -1,0 +1,49 @@
+title Bản đồ Hoạt động: Quản lý Tài khoản Thanh toán & Ví tiền (AD02 - UC02)
+
+skinparam style strictuml
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam swimlaneWidth same
+skinparam swimlaneBorderColor #334155
+skinparam swimlaneBorderThickness 1.5
+skinparam swimlaneTitleFontStyle bold
+skinparam swimlaneTitleFontSize 13
+
+skinparam ActivityBorderColor #0F172A
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityFontSize 12
+skinparam ActivityFontColor #0F172A
+skinparam ActivityDiamondBorderColor #0F172A
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+
+skinparam ArrowColor #0F172A
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #334155
+
+
+|#F8FAFC|Người dùng (User)|
+start
+:1. Truy cập mục "Quản lý Ví" & Chọn "Tạo ví mới";
+:2. Nhập Tên ví, chọn Loại ví (Tiền mặt, Ngân hàng, Ví điện tử),\nchọn Loại tiền tệ và nhập Số dư ban đầu;
+:3. Bấm "Lưu ví";
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+:4. Kiểm tra tính hợp lệ dữ liệu (Tên ví không rỗng/không trùng, Số dư >= 0);
+if (Kiểm tra dữ liệu nhập?) then (Dữ liệu không hợp lệ)
+  |#F8FAFC|Người dùng (User)|
+  :5. Hiển thị thông báo lỗi (400 Bad Request);
+  stop
+else (Hợp lệ)
+  |#F1F5F9|Hệ thống WealthFlow (System)|
+  :6. Mở Database Transaction nguyên tử:\nTạo bản ghi Ví mới (Status = Active);
+  if (Kiểm tra Số dư ban đầu?) then (Số dư ban đầu > 0)
+    :7. Tự động sinh bút toán kế toán kép mở sổ (BR01, BR02):\n- Ghi Nợ (Debit) TK Ví tài sản mới\n- Ghi Có (Credit) TK Vốn chủ sở hữu (Equity:Opening Balance);
+  else (Số dư = 0)
+  endif
+  :8. Commit Database Transaction;
+
+  |#F8FAFC|Người dùng (User)|
+  :9. Hiển thị thông báo "Tạo ví mới thành công"\nvà cập nhật danh sách ví sẵn sàng giao dịch;
+  stop
+endif

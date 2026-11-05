@@ -1,0 +1,53 @@
+title Bản đồ Hoạt động: Khởi tạo Khoản vay & Thanh toán Trả nợ Vi mô (AD06 - UC06, UC07)
+
+skinparam style strictuml
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam swimlaneWidth same
+skinparam swimlaneBorderColor #334155
+skinparam swimlaneBorderThickness 1.5
+skinparam swimlaneTitleFontStyle bold
+skinparam swimlaneTitleFontSize 13
+
+skinparam ActivityBorderColor #0F172A
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityFontSize 12
+skinparam ActivityFontColor #0F172A
+skinparam ActivityDiamondBorderColor #0F172A
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+
+skinparam ArrowColor #0F172A
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #334155
+
+
+|#F8FAFC|Người vay / Người dùng|
+start
+:1. Khởi tạo Hồ sơ Khoản vay vi mô\n(Người cho vay, Số tiền gốc, Lãi suất, Kỳ hạn);
+
+|#F1F5F9|Hệ thống WealthFlow|
+:1. Lưu thông tin Khoản vay & Lập lịch trả nợ\n2. Giải ngân: Nợ Ví tiền / Có Nợ phải trả (BR01);
+
+|#F8FAFC|Người vay / Người dùng|
+:2. Thực hiện Thanh toán Trả nợ định kỳ\n(Chọn kỳ hạn, Số tiền Gốc, Số tiền Lãi, Ví trả);
+
+|#F1F5F9|Hệ thống WealthFlow|
+if (Kiểm tra số dư Ví thanh toán (BR04)?) then (Thiếu tiền)
+  |#F8FAFC|Người vay / Người dùng|
+  :Báo lỗi: Số dư ví không đủ thanh toán;
+  stop
+else (Đủ số dư)
+  |#F1F5F9|Hệ thống WealthFlow|
+  :Bút toán trả nợ 3 dòng nguyên tử (BR05, BR17):\n- Nợ TK Nợ phải trả (Trừ nợ gốc, KHÔNG tính chi phí)\n- Nợ TK Chi phí Lãi vay (Tính vào chi phí sinh hoạt)\n- Có TK Ví tiền (Tổng tiền thực chi);
+  :Giảm dư nợ gốc của Khoản vay;
+  if (Dư nợ gốc còn lại == 0?) then (Đã hết nợ)
+    :Cập nhật trạng thái Khoản vay = SETTLED;
+  else (Còn dư nợ)
+    :Cập nhật lịch thanh toán kỳ tiếp theo;
+  endif
+
+  |#F8FAFC|Người vay / Người dùng|
+  :Hiển thị xác nhận trả nợ thành công &\nCập nhật dư nợ gốc còn lại;
+  stop
+endif

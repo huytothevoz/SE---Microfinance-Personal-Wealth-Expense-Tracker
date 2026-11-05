@@ -1,0 +1,67 @@
+title Bản đồ Hoạt động: Chuyển tiền Nội bộ, Quy đổi Ngoại tệ & Đảo Giao dịch (AD04 - UC03, UC04)
+
+skinparam style strictuml
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam swimlaneWidth same
+skinparam swimlaneBorderColor #334155
+skinparam swimlaneBorderThickness 1.5
+skinparam swimlaneTitleFontStyle bold
+skinparam swimlaneTitleFontSize 13
+
+skinparam ActivityBorderColor #0F172A
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityFontSize 12
+skinparam ActivityFontColor #0F172A
+skinparam ActivityDiamondBorderColor #0F172A
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+
+skinparam ArrowColor #0F172A
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #334155
+
+
+|#F8FAFC|Người dùng (User)|
+start
+:1. Chọn Ví nguồn & Ví đích;
+:2. Nhập số tiền chuyển;
+
+|#F1F5F9|Hệ thống WealthFlow|
+if (Hai ví cùng loại tiền tệ?) then (Cùng tiền tệ)
+  :Tỷ giá quy đổi mặc định = 1.0;
+else (Khác tiền tệ)
+  |#FEF3C7|Dịch vụ Tỷ giá (A03 API)|
+  :Cung cấp tỷ giá hối đoái thời gian thực;
+  |#F1F5F9|Hệ thống WealthFlow|
+  :Quy đổi số tiền sang loại tiền của Ví đích (BR08);
+  |#F8FAFC|Người dùng (User)|
+  :Xác nhận số tiền quy đổi dự kiến;
+endif
+
+|#F1F5F9|Hệ thống WealthFlow|
+if (Kiểm tra số dư Ví nguồn (BR04)?) then (Không đủ số dư)
+  |#F8FAFC|Người dùng (User)|
+  :Nhận thông báo lỗi: Số dư không đủ;
+  stop
+else (Đủ số dư)
+  |#F1F5F9|Hệ thống WealthFlow|
+  :Hạch toán kép chuyển khoản nguyên tử:\nNợ Ví đích / Có Ví nguồn (BR01);
+  |#F8FAFC|Người dùng (User)|
+  :Chuyển khoản thành công;
+  
+  if (Người dùng có yêu cầu Đảo giao dịch (BR07)?) then (Có yêu cầu)
+    :Bấm "Yêu cầu Đảo giao dịch" & Nhập lý do;
+    |#F1F5F9|Hệ thống WealthFlow|
+    if (Giao dịch hợp lệ & Chưa bị đảo?) then (Hợp lệ)
+      :1. Đánh dấu status = REVERSED (BR07)\n2. Tạo bút toán đảo đối ứng (Nợ Ví nguồn / Có Ví đích)\n3. Khôi phục số dư 2 ví nguyên tử;
+      |#F8FAFC|Người dùng (User)|
+      :Nhận thông báo đảo giao dịch thành công;
+    else (Từ chối)
+      |#F8FAFC|Người dùng (User)|
+      :Báo lỗi không thể đảo giao dịch;
+    endif
+  else (Không yêu cầu)
+  endif
+  stop
+endif

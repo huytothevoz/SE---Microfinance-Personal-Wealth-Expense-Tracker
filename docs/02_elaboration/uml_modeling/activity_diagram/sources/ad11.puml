@@ -1,0 +1,66 @@
+title Bản đồ Hoạt động: Quản trị Người dùng, Khóa Tài khoản & Phát Thông báo (AD11 - UC12, UC13)
+
+skinparam style strictuml
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam swimlaneBorderColor #334155
+skinparam swimlaneBorderThickness 1.5
+skinparam swimlaneTitleFontStyle bold
+skinparam swimlaneTitleFontSize 13
+
+skinparam ActivityBorderColor #0F172A
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityFontSize 12
+skinparam ActivityFontColor #0F172A
+skinparam ActivityDiamondBorderColor #0F172A
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+
+skinparam ArrowColor #0F172A
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #334155
+
+
+|#FEF9C3|Quản trị viên (Admin A02)|
+start
+:1. Đăng nhập quyền Admin & Truy cập "Danh sách người dùng"\n(Dashboard vĩ mô cách ly dữ liệu cá nhân - BR11);
+:2. Chọn User vi phạm, bấm "Khóa tài khoản" & Nhập lý do (bắt buộc >= 10 ký tự);
+:3. Bấm "Xác nhận khóa tài khoản";
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+if (Kiểm tra lý do khóa & vai trò (BR18, FR14.05)?) then (Lý do < 10 ký tự hoặc Khóa Admin duy nhất)
+  |#FEF9C3|Quản trị viên (Admin A02)|
+  :4. Hiển thị thông báo từ chối (400 / 403 Forbidden);
+  stop
+else (Hợp lệ >= 10 ký tự)
+  |#F1F5F9|Hệ thống WealthFlow (System)|
+  :5. Cập nhật trạng thái User = Suspended / Locked;
+  :6. Thu hồi toàn bộ Refresh Token & Hủy hiệu lực Access Token ngay lập tức (BR18);
+  :7. Ghi nhật ký kiểm toán Admin Audit Log bất biến;
+
+  |#F8FAFC|Người dùng (End-User)|
+  :8. Bị đăng xuất ngay lập tức; khi gửi request tiếp theo bị chặn lỗi 403 Forbidden;
+  stop
+endif
+
+|#FEF9C3|Quản trị viên (Admin A02)|
+start
+:9. Truy cập "Cấu hình & Thông báo" & Chọn "Tạo thông báo mới" (UC13, SYS01);
+:10. Soạn Tiêu đề, Nội dung thông báo và Chọn mức độ ưu tiên;
+:11. Bấm "Phát thông báo cho toàn bộ người dùng";
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+if (Kiểm tra nội dung thông báo?) then (Tiêu đề hoặc Nội dung rỗng)
+  |#FEF9C3|Quản trị viên (Admin A02)|
+  :12. Báo lỗi (400 Bad Request): "Nội dung thông báo không được để trống";
+  stop
+else (Nội dung hợp lệ)
+  |#F1F5F9|Hệ thống WealthFlow (System)|
+  :13. Tạo bản ghi SystemAnnouncement mới trong CSDL;
+  :14. Đẩy thông báo vào hàng đợi Broadcast Queue (SYS01);
+  :15. Ghi nhật ký kiểm toán Admin Audit Log xác nhận phát thông báo;
+
+  |#F8FAFC|Người dùng (End-User)|
+  :16. Biểu tượng chuông thông báo (Notification Center) sáng đèn;\nNgười dùng xem toàn văn thông báo hệ thống;
+  stop
+endif

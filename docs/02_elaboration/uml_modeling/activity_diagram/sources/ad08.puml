@@ -1,0 +1,91 @@
+title Bản đồ Hoạt động: Quản lý Mục tiêu Tiết kiệm & Khóa tiền Earmarking (AD08 - UC09)
+
+skinparam style strictuml
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam swimlaneBorderColor #334155
+skinparam swimlaneBorderThickness 1.5
+skinparam swimlaneTitleFontStyle bold
+skinparam swimlaneTitleFontSize 13
+
+skinparam ActivityBorderColor #0F172A
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityFontSize 12
+skinparam ActivityFontColor #0F172A
+skinparam ActivityDiamondBorderColor #0F172A
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+
+skinparam ArrowColor #0F172A
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #334155
+
+
+|#F8FAFC|Người dùng (User)|
+start
+:1. Truy cập mục "Mục tiêu tài chính" & Chọn "Tạo mục tiêu mới";
+:2. Nhập Tên mục tiêu, Số tiền cần tích lũy\nvà Ngày dự kiến hoàn thành;
+:3. Nhấn "Lưu mục tiêu";
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+:4. Thẩm định dữ liệu (Số tiền > 0, Ngày hoàn thành trong tương lai);
+if (Kiểm tra dữ liệu mục tiêu (EF09.01)?) then (Dữ liệu không hợp lệ)
+  |#F8FAFC|Người dùng (User)|
+  :5. Hiển thị thông báo lỗi (400 Bad Request):\n"Thông tin mục tiêu không hợp lệ";
+  stop
+endif
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+:6. Lưu bản ghi Mục tiêu trạng thái Active\nvà tự động tính kế hoạch tiết kiệm hàng tháng (BR10);
+
+|#F8FAFC|Người dùng (User)|
+:7. Hiển thị thẻ Mục tiêu (Tiến độ 0%)\nvà chọn "Nạp tiền vào mục tiêu";
+:8. Nhập Số tiền phân bổ và chọn Ví nguồn trích tiền;
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+if (Kiểm tra nguồn tiền phân bổ (BR10)?) then (Nguồn từ Tài sản ảo / Vàng tích lũy)
+  |#F8FAFC|Người dùng (User)|
+  :9. Từ chối: "Mục tiêu tiết kiệm chỉ nhận tiền mặt/ví, cấm tài sản ảo (BR10)";
+  stop
+endif
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+if (Kiểm tra số dư khả dụng Ví nguồn (EF09.02)?) then (Số dư ví không đủ chi trả)
+  |#F8FAFC|Người dùng (User)|
+  :10. Hiển thị lỗi (400 Bad Request):\n"Số dư ví nguồn không đủ để phân bổ vào mục tiêu";
+  stop
+endif
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+:11. Thực thi Transaction khóa tạm thời số dư (Earmarking):\n- Trừ số dư khả dụng của Ví nguồn\n- Tăng số tiền đã tích lũy của Mục tiêu\n- Bảo đảm Tổng tài sản & Net Worth KHÔNG ĐỔI (BR10);
+:12. Cập nhật tỷ lệ tiến độ tích lũy (Progress %);
+
+if (Tiến độ tích lũy đạt mốc (AF09.02)?) then (Đạt >= 100%)
+  :13. Chuyển trạng thái Mục tiêu sang Completed\nvà cấp huy hiệu "Hoàn thành mục tiêu";
+else (Dưới 100%)
+  :14. Duy trì trạng thái Mục tiêu ở mức Active;
+endif
+
+|#F8FAFC|Người dùng (User)|
+:15. Hiển thị thông báo nạp tiền thành công kèm\nthanh tiến độ tích lũy mới và huy hiệu (nếu đạt 100%);
+
+if (Người dùng có nhu cầu Rút tiền khẩn cấp về ví (AF09.01)?) then (Yêu cầu rút tiền về ví)
+  :16. Chọn "Rút tiền từ mục tiêu", nhập Số tiền\nvà chọn Ví đích nhận hoàn tiền;
+
+  |#F1F5F9|Hệ thống WealthFlow (System)|
+  if (Kiểm tra số tiền rút (EF09.03)?) then (Rút vượt số tiền đã tích lũy)
+    |#F8FAFC|Người dùng (User)|
+    :17. Hiển thị lỗi (400 Bad Request):\n"Số tiền rút không được vượt quá số tiền đã tích lũy";
+    stop
+  endif
+
+  |#F1F5F9|Hệ thống WealthFlow (System)|
+  :18. Thực thi Transaction giải phóng Earmarking:\n- Giảm số tiền tích lũy của Mục tiêu\n- Hoàn trả số dư khả dụng về Ví đích\n- Bảo toàn Tổng tài sản & Net Worth không đổi (BR10);
+
+  |#F8FAFC|Người dùng (User)|
+  :19. Hiển thị thông báo rút tiền thành công\nvà cập nhật hoàn trả số dư khả dụng ví đích;
+  stop
+else (Duy trì mục tiêu & Tiếp tục tích lũy)
+  :20. Hoàn tất quy trình quản lý mục tiêu tiết kiệm;
+  stop
+endif
