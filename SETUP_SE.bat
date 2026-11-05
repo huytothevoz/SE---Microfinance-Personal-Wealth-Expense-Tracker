@@ -19,7 +19,7 @@ if not defined XAMPP_ROOT (
     exit /b 1
 )
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0setup-se.ps1" -XamppRoot "%XAMPP_ROOT%" -WebPort 8080 -DbPort 3307
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0setup-se.ps1" -XamppRoot "%XAMPP_ROOT%" -WebPort 8070 -DbPort 3306
 set "RESULT=%ERRORLEVEL%"
 if not "%RESULT%"=="0" (
     echo.

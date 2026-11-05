@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-$WebPort = 8080
-$DbPort = 3307
+$WebPort = 8070
+$DbPort = 3306
 $DbName = 'wealthflow'
 
 function Find-Xampp {
@@ -30,9 +30,7 @@ if (-not $XamppRoot) {
 
 $Php = Join-Path $XamppRoot 'php\php.exe'
 $Mysqld = Join-Path $XamppRoot 'mysql\bin\mysqld.exe'
-$MysqlAdmin = Join-Path $XamppRoot 'mysql\bin\mysqladmin.exe'
 $MysqlCli = Join-Path $XamppRoot 'mysql\bin\mysql.exe'
-$BackupTemplate = Join-Path $XamppRoot 'mysql\backup'
 
 $ProjectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $Source = Join-Path $ProjectRoot 'source'
@@ -41,12 +39,9 @@ $Router = Join-Path $Backend 'router.php'
 $Migrator = Join-Path $Backend 'bin\setup.php'
 
 $InstanceRoot = Join-Path $XamppRoot 'se-instance'
-$DbData = Join-Path $InstanceRoot 'mysql-data'
-$Tmp = Join-Path $InstanceRoot 'tmp'
-$MysqlConfig = Join-Path $InstanceRoot 'my-se.ini'
 $MysqlErrorLog = Join-Path $InstanceRoot 'mysql-error.log'
-$PhpOut = Join-Path $InstanceRoot 'php-8080.log'
-$PhpErr = Join-Path $InstanceRoot 'php-8080-error.log'
+$PhpOut = Join-Path $InstanceRoot 'php-8070.log'
+$PhpErr = Join-Path $InstanceRoot 'php-8070-error.log'
 $KeyFile = Join-Path $InstanceRoot 'app-key.txt'
 
 function Get-Listener([int]$Port) {
@@ -73,8 +68,18 @@ function Test-OwnListener([int]$Port, [string]$UniqueArgument) {
 function Test-WebRunning { return (@(Get-Listener $WebPort).Count -gt 0) }
 function Test-DbRunning { return (@(Get-Listener $DbPort).Count -gt 0) }
 function Test-OwnWeb { return Test-OwnListener $WebPort $Router }
-function Test-OwnDb { return Test-OwnListener $DbPort $MysqlConfig }
-
+function Test-OwnDb {
+    $listeners = @(Get-Listener $DbPort)
+    if ($listeners.Count -eq 0) { return $false }
+    foreach ($ownerPid in @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)) {
+        $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $ownerPid" -ErrorAction SilentlyContinue
+        if (-not $processInfo -or -not $processInfo.ExecutablePath -or
+            $processInfo.ExecutablePath -ine (Join-Path $XamppRoot 'mysql\bin\mysqld.exe')) {
+            return $false
+        }
+    }
+    return $true
+}
 function Quote-Win([string]$Path) { return '"' + $Path + '"' }
 
 function Secure-NewKey() {
@@ -86,7 +91,6 @@ function Secure-NewKey() {
 
 function Init-EnvVars {
     if (-not (Test-Path $InstanceRoot)) { New-Item -ItemType Directory -Path $InstanceRoot -Force | Out-Null }
-    if (-not (Test-Path $Tmp)) { New-Item -ItemType Directory -Path $Tmp -Force | Out-Null }
     if (-not (Test-Path $KeyFile)) { [IO.File]::WriteAllText($KeyFile, (Secure-NewKey), [Text.Encoding]::ASCII) }
     $appKey = ([IO.File]::ReadAllText($KeyFile)).Trim()
     
@@ -102,8 +106,7 @@ function Init-EnvVars {
     $env:MAIL_TRANSPORT = if ($env:SE_MAIL_TRANSPORT -eq 'smtp') { 'smtp' } else { 'log' }
 }
 
-# Use exactly the same validated setup path as CHAY_SE.bat.
-# In particular, it creates the SE tmpdir BEFORE launching mysqld.
+# Use the setup path to verify the shared XAMPP MariaDB and configured project schema.
 function Start-Database {
     $setupFile = Join-Path $ProjectRoot 'setup-se.ps1'
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $setupFile `
@@ -169,24 +172,7 @@ function Stop-AllServices {
             Write-Host "  [OK] Da dung tien trinh WealthFlow PHP (PID $pidValue)." -ForegroundColor Green
         }
     }
-    # 2. Dung MySQL SE an toan qua mysqladmin
-    if ((Test-DbRunning) -and (-not (Test-OwnDb))) {
-        Write-Host "  [CANH BAO] MySQL :$DbPort khong thuoc WealthFlow. Bo qua, KHONG tat DB khac." -ForegroundColor Yellow
-    } elseif (Test-DbRunning) {
-        if (Test-Path $MysqlAdmin) {
-            & $MysqlAdmin --protocol=tcp --host=127.0.0.1 --port=$DbPort --user=root shutdown 2>$null
-            Start-Sleep -Seconds 2
-        }
-        if (Test-DbRunning) {
-            # Never force-stop mysqld.exe: doing so can corrupt the separate SE datadir.
-            Write-Host '  [CANH BAO] mysqladmin could not shut down SE MySQL cleanly. Leaving the database running.' -ForegroundColor Yellow
-            Write-Host '  Check credentials / mysql-error.log before attempting another shutdown.' -ForegroundColor Yellow
-        } else {
-            Write-Host '  [OK] SE MySQL stopped cleanly.' -ForegroundColor Green
-        }
-    } else {
-        Write-Host "  [OK] MySQL SE hien khong chay." -ForegroundColor Gray
-    }
+    Write-Host '  [OK] XAMPP MariaDB is left running.' -ForegroundColor Green
 }
 
 function Reset-Database {
@@ -232,7 +218,7 @@ function Check-HealthStatus {
     Write-Host ("  * PHP Web Server (Port $WebPort):  " + $(if ($web) { "DANG CHAY (RUNNING)" } else { "DA DUNG (STOPPED)" })) -ForegroundColor $(if ($web) { "Green" } else { "Red" })
     Write-Host ("  * MySQL SE DB    (Port $DbPort):   " + $(if ($db) { "DANG CHAY (RUNNING)" } else { "DA DUNG (STOPPED)" })) -ForegroundColor $(if ($db) { "Green" } else { "Red" })
     Write-Host "  * XAMPP Thu muc:                   $XamppRoot" -ForegroundColor Gray
-    Write-Host "  * Du lieu SE MySQL:                $DbData" -ForegroundColor Gray
+    Write-Host "  * Database rieng cua project:      $DbName (tren XAMPP :$DbPort)" -ForegroundColor Gray
 
     if ($web -and $db) {
         Write-Host "  * Kiem tra Endpoint /api/health: " -NoNewline
@@ -316,8 +302,8 @@ while ($true) {
     Write-Host $dbState -ForegroundColor $dbColor
     Write-Host "  [XAMPP Path] $XamppRoot" -ForegroundColor Gray
     Write-Host "-----------------------------------------------------------------------" -ForegroundColor Cyan
-    Write-Host "  [1] Khoi dong he thong (Start Web + DB) va Mo trinh duyet" -ForegroundColor White
-    Write-Host "  [2] Dung toan bo he thong (Stop Web va DB an toan)" -ForegroundColor White
+    Write-Host "  [1] Khoi dong web va ket noi XAMPP MariaDB (3306)" -ForegroundColor White
+    Write-Host "  [2] Dung web (giu XAMPP MariaDB chay)" -ForegroundColor White
     Write-Host "  [3] Kiem tra trang thai chi tiet (Health Check va API status)" -ForegroundColor White
     Write-Host "  [4] Chay cap nhat CSDL Migrations (28 SQL files)" -ForegroundColor White
     Write-Host "  [5] Reset SE database (backup + explicit confirmation)" -ForegroundColor Yellow
@@ -356,7 +342,7 @@ while ($true) {
         '4' {
             Write-Host ""
             if ((-not (Test-DbRunning)) -and (-not (Start-Database))) { break }
-            if ((Test-DbRunning) -and (-not (Test-OwnDb))) { Write-Host '[LOI] Foreign DB process on 3307; refusing migration.' -ForegroundColor Red; break }
+            if ((Test-DbRunning) -and (-not (Test-OwnDb))) { Write-Host '[LOI] Foreign DB process on 3306; refusing migration.' -ForegroundColor Red; break }
             Apply-Migrations
         }
         '5' {

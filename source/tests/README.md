@@ -3,7 +3,7 @@
 ## 1. Chuẩn bị môi trường
 Trước khi kiểm thử, hãy đảm bảo:
 1. Mở **XAMPP Control Panel** ➔ Bấm **Start** dịch vụ **MySQL**.
-2. Chạy file `run_wealthflow.bat` tại thư mục gốc để khởi động máy chủ Web (hoặc đảm bảo hệ thống đang chạy tại `http://localhost:8080`).
+2. Chạy file `run_wealthflow.bat` tại thư mục gốc để khởi động máy chủ Web (hoặc đảm bảo hệ thống đang chạy tại `http://localhost:8070`).
 
 ---
 

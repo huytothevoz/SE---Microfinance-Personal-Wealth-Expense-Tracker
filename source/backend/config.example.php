@@ -1,11 +1,11 @@
 <?php
 // Installer creates config.local.php; edit that file, never commit credentials.
 return [
-    'APP_URL' => 'http://localhost:8080',
+    'APP_URL' => 'http://localhost:8070',
     'APP_ENV' => 'local',
     'APP_KEY' => '', // Installer generates a random 256-bit secret.
     'DB_HOST' => '127.0.0.1',
-    'DB_PORT' => '3307',
+    'DB_PORT' => '3306',
     'DB_NAME' => 'wealthflow',
     'DB_USER' => 'root',
     'DB_PASSWORD' => '',
