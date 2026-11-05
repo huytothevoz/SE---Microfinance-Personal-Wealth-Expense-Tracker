@@ -1,0 +1,70 @@
+title Bản đồ Hoạt động: Ghi nhận Chi tiêu, Hạch toán Kép & Kiểm soát Ngân sách (AD03 - UC03, UC05)
+
+skinparam style strictuml
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam swimlaneWidth same
+skinparam swimlaneBorderColor #334155
+skinparam swimlaneBorderThickness 1.5
+skinparam swimlaneTitleFontStyle bold
+skinparam swimlaneTitleFontSize 13
+
+skinparam ActivityBorderColor #0F172A
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityFontSize 12
+skinparam ActivityFontColor #0F172A
+skinparam ActivityDiamondBorderColor #0F172A
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+
+skinparam ArrowColor #0F172A
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #334155
+
+
+|#F8FAFC|Người dùng (User)|
+start
+:1. Chọn Ví thanh toán & Danh mục chi tiêu;
+:2. Nhập số tiền chi (> 0), ngày giao dịch & ghi chú;
+:3. Bấm "Lưu giao dịch chi tiêu";
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+if (Kiểm tra tính hợp lệ dữ liệu\n(Số tiền > 0, Ví Active)?) then (Không hợp lệ)
+  |#F8FAFC|Người dùng (User)|
+  :4. Hiển thị thông báo lỗi nhập liệu (400 Bad Request);
+  stop
+else (Hợp lệ)
+  |#F1F5F9|Hệ thống WealthFlow (System)|
+  if (Kiểm tra số dư khả dụng của Ví (BR04)?) then (Số dư ví < Số tiền chi)
+    |#F8FAFC|Người dùng (User)|
+    :5. Hiển thị cảnh báo lỗi 422:\n"Số dư ví không đủ chi trả (BR04)";
+    stop
+  else (Đủ số dư khả dụng)
+    |#F1F5F9|Hệ thống WealthFlow (System)|
+    :6. Thực thi Transaction ACID hạch toán kép (BR01, BR03):\n- Ghi Nợ (Debit) TK Chi phí sinh hoạt\n- Ghi Có (Credit) TK Ví tài sản\n- Trừ số dư khả dụng của Ví\n- Ghi nhận Idempotency-Key (BR13);
+    :7. Commit Transaction ghi sổ thành công;
+
+    |#F8FAFC|Người dùng (User)|
+    :8. Nhận phản hồi giao dịch thành công (201 Created)\nvà cập nhật số dư ví tức thời;
+
+    |#F1F5F9|Hệ thống WealthFlow (System)|
+    :9. Tính toán lũy kế chi tiêu và kiểm tra Ngân sách tháng (BR06);
+    if (Tỷ lệ chi tiêu danh mục?) then (Vượt ngân sách >= 100%)
+      :10. Kích hoạt Cảnh báo ĐỎ (Badge Đỏ: Vượt ngân sách);
+      |#F8FAFC|Người dùng (User)|
+      :11. Nhận thông báo Cảnh báo Đỏ;
+    else (Dưới 100%)
+      |#F1F5F9|Hệ thống WealthFlow (System)|
+      if (Tỷ lệ chi tiêu danh mục?) then (Chạm ngưỡng >= 80%)
+        :12. Kích hoạt Cảnh báo VÀNG (Badge Vàng: Sắp chạm hạn mức);
+        |#F8FAFC|Người dùng (User)|
+        :13. Nhận thông báo Cảnh báo Vàng;
+      else (An toàn < 80%)
+      endif
+    endif
+
+    |#F8FAFC|Người dùng (User)|
+    :14. Hoàn tất quy trình chi tiêu & kiểm soát ngân sách;
+    stop
+  endif
+endif

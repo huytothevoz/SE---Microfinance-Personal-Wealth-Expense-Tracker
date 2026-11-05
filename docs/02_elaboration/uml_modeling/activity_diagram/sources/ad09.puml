@@ -1,0 +1,66 @@
+title Bản đồ Hoạt động: Dashboard Sức khỏe Net Worth & Snapshot Nền (AD09 - UC10, SYS03)
+
+skinparam style strictuml
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam swimlaneBorderColor #334155
+skinparam swimlaneBorderThickness 1.5
+skinparam swimlaneTitleFontStyle bold
+skinparam swimlaneTitleFontSize 13
+
+skinparam ActivityBorderColor #0F172A
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityFontSize 12
+skinparam ActivityFontColor #0F172A
+skinparam ActivityDiamondBorderColor #0F172A
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+
+skinparam ArrowColor #0F172A
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #334155
+
+
+|#F8FAFC|Người dùng (User)|
+start
+:1. Đăng nhập hoặc Truy cập màn hình "Dashboard / Tổng quan";
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+:2. Trích xuất định danh userId an toàn từ JWT Token;
+:3. Thực thi song song truy vấn dữ liệu tài chính thời gian thực:\n- Total Assets = Tổng số dư ví + Giá trị thị trường Vàng (BR16)\n- Total Liabilities = Tổng nợ ví + Dư nợ gốc khoản vay (BR05)\n- Net Worth = Total Assets - Total Liabilities (BR16)\n- Dòng tiền tháng = Tổng Thu nhập - Tổng Chi phí sinh hoạt;
+
+if (Kiểm tra Tổng thu nhập trong kỳ (BR18)?) then (Income <= 0 hoặc Thâm hụt)
+  :4a. Gán Saving Rate = "N/A" (Triệt tiêu lỗi chia cho 0 - EF10.01);
+else (Income > 0)
+  :4b. Tính toán Tỷ lệ tiết kiệm:\nSaving Rate = ((Income - Expense) / Income) x 100% (BR18);
+endif
+
+:5. Nạp các điểm Snapshot lịch sử từ bảng net_worth_snapshots\nvà kết hợp điểm Net Worth thời gian thực hôm nay (SYS03);
+:6. Kiểm tra cảnh báo Ngân sách (>= 80%) và Lịch trả nợ vay (trong 3 ngày tới);
+
+|#F8FAFC|Người dùng (User)|
+:7. Hiển thị giao diện Dashboard toàn diện:\n- Thẻ KPI: Total Assets, Total Liabilities, Net Worth, Saving Rate\n- Biểu đồ đường: Xu hướng Net Worth (kết hợp Snapshot & Real-time)\n- Biểu đồ tròn: Cơ cấu tài sản & Danh mục chi tiêu\n- Danh sách widget cảnh báo thông minh;
+
+if (Tùy chọn tương tác trên Dashboard?) then (Theo dõi thông thường)
+  :8. Đánh giá sức khỏe tài chính & Hoàn tất xem Dashboard;
+  stop
+else if (Tùy chọn tương tác?) then (Bật Privacy Mode - AF10.02)
+  :9. Nhấn biểu tượng con mắt: Ẩn số tiền nhạy cảm (******),\nchỉ hiển thị phần trăm tỷ lệ và biểu đồ;
+  stop
+else (Thay đổi kỳ khảo sát - AF10.01)
+  :10. Chọn kỳ khảo sát (Tuần / Tháng / Năm / Khoảng ngày);
+  |#F1F5F9|Hệ thống WealthFlow (System)|
+  :11. Tính toán lại Cash Flow & Saving Rate cho kỳ chọn;
+  |#F8FAFC|Người dùng (User)|
+  :12. Cập nhật biểu đồ và số liệu theo kỳ mới;
+  stop
+endif
+
+|#EDE9FE|Bộ lập lịch (SYS03 lúc 23:59:59)|
+start
+:13. Đến 23:59:59 mỗi đêm: Timer kích hoạt Cron Job SYS03;
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+:14. Tính toán giá trị Net Worth chốt ngày của từng người dùng;
+:15. Lưu bản ghi Snapshot vào bảng net_worth_snapshots (SYS03)\nđể làm dữ liệu đối chiếu xu hướng dài hạn;
+stop

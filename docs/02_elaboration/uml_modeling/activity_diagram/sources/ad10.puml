@@ -1,0 +1,55 @@
+title Bản đồ Hoạt động: Báo cáo Đối soát Sổ cái & Xuất Dữ liệu CSV An toàn (AD10 - UC11)
+
+skinparam style strictuml
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam swimlaneBorderColor #334155
+skinparam swimlaneBorderThickness 1.5
+skinparam swimlaneTitleFontStyle bold
+skinparam swimlaneTitleFontSize 13
+
+skinparam ActivityBorderColor #0F172A
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityFontSize 12
+skinparam ActivityFontColor #0F172A
+skinparam ActivityDiamondBorderColor #0F172A
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+
+skinparam ArrowColor #0F172A
+skinparam ArrowFontSize 11
+skinparam ArrowFontColor #334155
+
+
+|#F8FAFC|Người dùng (User)|
+start
+:1. Truy cập mục "Báo cáo tài chính" & Chọn khoảng thời gian;
+:2. Chọn Tài khoản / Ví cần đối soát & Chọn định dạng xuất (CSV);
+:3. Bấm "Yêu cầu xuất dữ liệu";
+
+|#F1F5F9|Hệ thống WealthFlow (System)|
+:4. Kiểm tra tính hợp lệ của tham số lọc (Từ ngày <= Đến ngày);
+if (Kiểm tra tham số lọc?) then (Không hợp lệ)
+  |#F8FAFC|Người dùng (User)|
+  :5. Hiển thị thông báo lỗi lọc dữ liệu (400 Bad Request);
+  stop
+else (Hợp lệ)
+  |#F1F5F9|Hệ thống WealthFlow (System)|
+  :6. Truy vấn dữ liệu Sổ cái kép (General Ledger Journal Entries);
+  :7. Thực hiện đối soát Bảng cân đối thử (Trial Balance - BR01):\nTổng phát sinh Nợ == Tổng phát sinh Có?;
+  if (Kiểm tra Bảng cân đối thử (Trial Balance)?) then (Bị lệch Nợ/Có)
+    :8. Ghi Audit Log cảnh báo mất cân đối sổ cái nghiêm trọng;
+    |#F8FAFC|Người dùng (User)|
+    :9. Hiển thị cảnh báo: "Dữ liệu sổ cái đang có sai lệch, vui lòng liên hệ Admin";
+    stop
+  else (Cân đối hoàn hảo)
+    |#F1F5F9|Hệ thống WealthFlow (System)|
+    :10. Khử độc dữ liệu chống tấn công CSV Injection (BR16):\nThêm dấu nháy đơn (') vào trước các ký tự nguy hiểm (=, +, -, @);
+    :11. Đính kèm tiền tố UTF-8 BOM (\uFEFF) để hiển thị chuẩn tiếng Việt trong Excel;
+    :12. Đóng gói tệp CSV an toàn và gửi về trình duyệt;
+
+    |#F8FAFC|Người dùng (User)|
+    :13. Tải tệp CSV về máy và xem báo cáo đối soát sổ cái hoàn hảo;
+    stop
+  endif
+endif
