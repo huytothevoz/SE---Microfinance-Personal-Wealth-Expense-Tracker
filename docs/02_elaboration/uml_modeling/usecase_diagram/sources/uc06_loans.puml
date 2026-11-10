@@ -1,0 +1,60 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam shadowing false
+
+skinparam actor {
+  BorderColor #0284C7
+  BackgroundColor #BAE6FD
+}
+
+skinparam usecase {
+  BackgroundColor #7DD3FC
+  BorderColor #0284C7
+  FontColor #0F172A
+  FontSize 12
+}
+
+skinparam arrow {
+  Color #0F172A
+  FontColor #0F172A
+  FontSize 11
+}
+
+actor "Người dùng\n<size:11>(Đi vay / Cho vay)</size>" as User
+actor "Đối tác Vay mượn\n<size:11>(Cá nhân / Quỹ vi mô)</size>" as Partner <<External>>
+
+rectangle "WealthFlow - Sơ đồ chi tiết UC06 & UC07: Quản lý Khoản vay Vi mô & Thanh toán Trả nợ" {
+  ' Base Use Cases
+  usecase "Khởi tạo Hợp đồng Vay vi mô\n(Gốc, Lãi suất, Kỳ hạn)" as UC_CreateLoan #7DD3FC
+  usecase "Theo dõi Lịch trả nợ & Dư nợ gốc" as UC_TrackLoan #7DD3FC
+  usecase "Thực hiện Trả nợ định kỳ\n(Trả góp hàng tháng)" as UC_PayInstallment #7DD3FC
+  usecase "Tất toán sớm toàn bộ khoản vay" as UC_Settle #7DD3FC
+
+  ' Included & Extended Use Cases
+  usecase "Hạch toán Giải ngân vào Ví\n(Ghi tăng Nợ phải trả - CẤM vào Thu nhập BR17)" as UC_Disburse #F0F9FF;line.dashed;line:0284C7
+  usecase "Tự động sinh Bảng tính trả nợ\n(Amortization Schedule)" as UC_Schedule #F0F9FF;line.dashed;line:0284C7
+  usecase "Bút toán 3 dòng nguyên tử (BR05, BR17):\n- Nợ TK Nợ phải trả (Trừ nợ gốc)\n- Nợ TK Chi phí Lãi vay (Tính vào Chi phí)\n- Có TK Ví tiền (Tổng chi trả)" as UC_ThreeLine #F0F9FF;line.dashed;line:0284C7
+  usecase "Cập nhật trạng thái SETTLED\nvà Giải phóng nghĩa vụ nợ" as UC_SettledStatus #F0F9FF;line.dashed;line:0284C7
+
+  ' Actor associations
+  User --> UC_CreateLoan
+  User --> UC_TrackLoan
+  User --> UC_PayInstallment
+  User --> UC_Settle
+
+  UC_CreateLoan --> Partner
+
+  ' Relationships
+  UC_Disburse .> UC_CreateLoan : <<extend>>
+  UC_CreateLoan .> UC_Schedule : <<include>>
+
+  UC_PayInstallment .> UC_ThreeLine : <<include>>
+
+  UC_Settle .> UC_PayInstallment : <<extend>>
+  UC_Settle .> UC_SettledStatus : <<include>>
+}
+@enduml

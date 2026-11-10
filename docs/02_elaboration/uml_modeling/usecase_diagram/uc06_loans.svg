@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 660" width="1180" height="660">
+  <defs>
+    <marker id="uml-arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+      <polyline points="2 2, 10 6, 2 10" fill="none" stroke="#000000" stroke-width="1.5"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1180" height="660" fill="#FFFFFF"/>
+
+  <!-- System Boundary Box -->
+  <rect x="20" y="20" width="1140" height="620" fill="#FFFFFF" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Header Banner -->
+  <rect x="20" y="20" width="1140" height="46" fill="#F1F5F9" stroke="#000000" stroke-width="1.5"/>
+  <text x="590" y="49" font-family="'Segoe UI', Arial, sans-serif" font-size="15" font-weight="bold" fill="#000000" text-anchor="middle">WealthFlow - Sơ đồ chi tiết UC06 &amp; UC07: Quản lý Khoản vay Vi mô &amp; Thanh toán Trả nợ</text>
+
+  <!-- ==================== ACTORS ==================== -->
+  <!-- Left Actor: Người dùng (Đi vay / Cho vay) -->
+  <g id="actor-user">
+    <circle cx="100" cy="290" r="17" fill="#BAE6FD" stroke="#0284C7" stroke-width="2"/>
+    <line x1="100" y1="307" x2="100" y2="365" stroke="#0F172A" stroke-width="2"/>
+    <line x1="70" y1="328" x2="130" y2="328" stroke="#0F172A" stroke-width="2"/>
+    <line x1="100" y1="365" x2="75" y2="420" stroke="#0F172A" stroke-width="2"/>
+    <line x1="100" y1="365" x2="125" y2="420" stroke="#0F172A" stroke-width="2"/>
+    <text x="100" y="445" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Người dùng</text>
+    <text x="100" y="465" font-family="'Segoe UI', Arial, sans-serif" font-size="12" fill="#475569" text-anchor="middle">(Đi vay / Cho vay)</text>
+  </g>
+
+  <!-- Right Actor: Đối tác Vay mượn -->
+  <g id="actor-partner">
+    <circle cx="1080" cy="190" r="17" fill="#E2E8F0" stroke="#475569" stroke-width="2"/>
+    <line x1="1080" y1="207" x2="1080" y2="260" stroke="#0F172A" stroke-width="2"/>
+    <line x1="1055" y1="225" x2="1105" y2="225" stroke="#0F172A" stroke-width="2"/>
+    <line x1="1080" y1="260" x2="1060" y2="310" stroke="#0F172A" stroke-width="2"/>
+    <line x1="1080" y1="260" x2="1100" y2="310" stroke="#0F172A" stroke-width="2"/>
+    <text x="1080" y="332" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">Đối tác Vay mượn</text>
+    <text x="1080" y="348" font-family="'Segoe UI', Arial, sans-serif" font-size="11" fill="#475569" text-anchor="middle">(Cá nhân / Quỹ vi mô)</text>
+  </g>
+
+  <!-- ==================== PRIMARY USE CASES ==================== -->
+  <!-- UC1: Khởi tạo Hợp đồng Vay vi mô -->
+  <ellipse cx="370" cy="130" rx="125" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="135" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Khởi tạo Hợp đồng Vay vi mô</text>
+
+  <!-- UC2: Theo dõi Lịch trả nợ & Dư nợ gốc -->
+  <ellipse cx="370" cy="270" rx="125" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="275" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Theo dõi Lịch trả &amp; Dư nợ gốc</text>
+
+  <!-- UC3: Thực hiện Trả nợ định kỳ -->
+  <ellipse cx="370" cy="410" rx="125" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="415" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Thực hiện Trả nợ định kỳ</text>
+
+  <!-- UC4: Tất toán sớm toàn bộ khoản vay -->
+  <ellipse cx="370" cy="555" rx="125" ry="30" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="560" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Tất toán sớm toàn bộ khoản nợ</text>
+
+  <!-- ==================== SECONDARY / INCLUDED / EXTENDED USE CASES ==================== -->
+  <!-- Extended: Hạch toán Giải ngân -->
+  <ellipse cx="790" cy="100" rx="145" ry="32" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="790" y="95" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Hạch toán Giải ngân vào Ví (BR17)</text>
+  <text x="790" y="111" font-family="'Segoe UI', Arial, sans-serif" font-size="10" fill="#DC2626" font-weight="bold" text-anchor="middle">[Ghi tăng Nợ - CẤM vào Thu nhập]</text>
+
+  <!-- Included: Bảng tính trả nợ -->
+  <ellipse cx="790" cy="175" rx="140" ry="28" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="790" y="180" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Sinh Bảng tính trả nợ (Amortization)</text>
+
+  <!-- Included: Tính toán Dư nợ -->
+  <ellipse cx="790" cy="270" rx="140" ry="28" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="790" y="275" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Tính Dư nợ gốc còn lại &amp; Lãi lũy kế</text>
+
+  <!-- Included: Bút toán 3 dòng -->
+  <ellipse cx="790" cy="410" rx="145" ry="38" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="790" y="398" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="bold" fill="#0369A1" text-anchor="middle">Bút toán 3 dòng nguyên tử (BR05, BR17)</text>
+  <text x="790" y="414" font-family="'Segoe UI', Arial, sans-serif" font-size="10" fill="#0F172A" text-anchor="middle">• Nợ TK Nợ phải trả (Trừ nợ gốc)</text>
+  <text x="790" y="428" font-family="'Segoe UI', Arial, sans-serif" font-size="10" fill="#0F172A" text-anchor="middle">• Nợ TK Chi phí Lãi vay / Có TK Ví</text>
+
+  <!-- Included: Cập nhật SETTLED -->
+  <ellipse cx="790" cy="555" rx="140" ry="28" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="790" y="560" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Đổi trạng thái SETTLED (Hết nợ)</text>
+
+  <!-- ==================== CONNECTIONS ==================== -->
+  <!-- User to Primary UCs -->
+  <line x1="130" y1="340" x2="255" y2="145" stroke="#000000" stroke-width="1.5"/>
+  <line x1="130" y1="340" x2="245" y2="270" stroke="#000000" stroke-width="1.5"/>
+  <line x1="130" y1="340" x2="245" y2="410" stroke="#000000" stroke-width="1.5"/>
+  <line x1="130" y1="340" x2="255" y2="545" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- CreateLoan to Partner -->
+  <line x1="495" y1="130" x2="1055" y2="225" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Disburse extends CreateLoan -->
+  <line x1="645" y1="108" x2="495" y2="125" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="570" y="105" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
+
+  <!-- CreateLoan includes Schedule -->
+  <line x1="490" y1="145" x2="655" y2="168" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="570" y="172" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- TrackLoan includes Calc Balance -->
+  <line x1="495" y1="270" x2="650" y2="270" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="572" y="260" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- PayInstallment includes ThreeLine -->
+  <line x1="495" y1="410" x2="645" y2="410" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="570" y="400" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Settle extends PayInstallment -->
+  <line x1="370" y1="525" x2="370" y2="447" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="325" y="488" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
+
+  <!-- Settle includes SettledStatus -->
+  <line x1="495" y1="555" x2="650" y2="555" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="572" y="545" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+</svg>

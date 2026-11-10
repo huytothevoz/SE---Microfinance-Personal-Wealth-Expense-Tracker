@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 680" width="1180" height="680">
+  <defs>
+    <marker id="uml-arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+      <polyline points="2 2, 10 6, 2 10" fill="none" stroke="#000000" stroke-width="1.5"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1180" height="680" fill="#FFFFFF"/>
+
+  <!-- System Boundary Box -->
+  <rect x="20" y="20" width="1140" height="640" fill="#FFFFFF" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Header Banner -->
+  <rect x="20" y="20" width="1140" height="46" fill="#F1F5F9" stroke="#000000" stroke-width="1.5"/>
+  <text x="590" y="49" font-family="'Segoe UI', Arial, sans-serif" font-size="15" font-weight="bold" fill="#000000" text-anchor="middle">WealthFlow - Sơ đồ chi tiết UC03: Ghi nhận Thu chi, Chuyển tiền &amp; Sổ cái Kép</text>
+
+  <!-- ==================== ACTORS ==================== -->
+  <!-- Left Actor: Người dùng (End-User) -->
+  <g id="actor-user">
+    <circle cx="100" cy="300" r="17" fill="#BAE6FD" stroke="#0284C7" stroke-width="2"/>
+    <line x1="100" y1="317" x2="100" y2="375" stroke="#0F172A" stroke-width="2"/>
+    <line x1="70" y1="338" x2="130" y2="338" stroke="#0F172A" stroke-width="2"/>
+    <line x1="100" y1="375" x2="75" y2="430" stroke="#0F172A" stroke-width="2"/>
+    <line x1="100" y1="375" x2="125" y2="430" stroke="#0F172A" stroke-width="2"/>
+    <text x="100" y="455" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Người dùng</text>
+    <text x="100" y="475" font-family="'Segoe UI', Arial, sans-serif" font-size="12" fill="#475569" text-anchor="middle">(End-User)</text>
+  </g>
+
+  <!-- Right Actor: Dịch vụ Tỷ giá Ngoại tệ -->
+  <g id="actor-fx">
+    <circle cx="1080" cy="400" r="17" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+    <line x1="1080" y1="417" x2="1080" y2="470" stroke="#0F172A" stroke-width="2"/>
+    <line x1="1055" y1="435" x2="1105" y2="435" stroke="#0F172A" stroke-width="2"/>
+    <line x1="1080" y1="470" x2="1060" y2="520" stroke="#0F172A" stroke-width="2"/>
+    <line x1="1080" y1="470" x2="1100" y2="520" stroke="#0F172A" stroke-width="2"/>
+    <text x="1080" y="542" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">Dịch vụ Tỷ giá</text>
+    <text x="1080" y="558" font-family="'Segoe UI', Arial, sans-serif" font-size="11" fill="#475569" text-anchor="middle">(FX Rate API A03)</text>
+  </g>
+
+  <!-- ==================== PRIMARY USE CASES ==================== -->
+  <!-- UC1: Ghi nhận Giao dịch Chi tiêu -->
+  <ellipse cx="370" cy="120" rx="120" ry="30" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="125" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Ghi nhận Chi tiêu (Expense)</text>
+
+  <!-- UC2: Ghi nhận Giao dịch Thu nhập -->
+  <ellipse cx="370" cy="240" rx="120" ry="30" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="245" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Ghi nhận Thu nhập (Income)</text>
+
+  <!-- UC3: Chuyển tiền Nội bộ giữa các Ví -->
+  <ellipse cx="370" cy="380" rx="125" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="385" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Chuyển tiền Nội bộ giữa các Ví</text>
+
+  <!-- UC4: Đảo giao dịch bất biến (Reversal) -->
+  <ellipse cx="370" cy="560" rx="125" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="565" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Đảo giao dịch bất biến (BR06)</text>
+
+  <!-- ==================== SECONDARY / INCLUDED / EXTENDED USE CASES ==================== -->
+  <!-- Included: Khóa bi quan & Idempotency -->
+  <ellipse cx="800" cy="90" rx="145" ry="26" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="800" y="94" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Khóa bi quan &amp; Idempotency-Key</text>
+
+  <!-- Included: Hạch toán kép Chi phí -->
+  <ellipse cx="800" cy="155" rx="145" ry="26" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="800" y="159" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Hạch toán Kép Nợ Chi phí / Có Ví</text>
+
+  <!-- Included: Hạch toán kép Thu nhập -->
+  <ellipse cx="800" cy="240" rx="140" ry="26" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="800" y="244" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Hạch toán Kép Nợ Ví / Có Thu nhập</text>
+
+  <!-- Included: Khóa ví chống Deadlock -->
+  <ellipse cx="800" cy="330" rx="140" ry="26" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="800" y="334" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Khóa ví theo ID (Chống Deadlock)</text>
+
+  <!-- Extended: Quy đổi Ngoại tệ FX -->
+  <ellipse cx="800" cy="425" rx="145" ry="32" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="800" y="420" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Quy đổi Ngoại tệ snapshot (BR04)</text>
+  <text x="800" y="436" font-family="'Segoe UI', Arial, sans-serif" font-size="10" fill="#64748B" text-anchor="middle">[Kích hoạt khi 2 ví khác loại tiền]</text>
+
+  <!-- Included: Bút toán đảo sổ -->
+  <ellipse cx="800" cy="560" rx="145" ry="30" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="800" y="565" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Sinh bút toán đảo &amp; Khôi phục số dư</text>
+
+  <!-- ==================== CONNECTIONS ==================== -->
+  <!-- User to Primary UCs -->
+  <line x1="130" y1="350" x2="260" y2="135" stroke="#000000" stroke-width="1.5"/>
+  <line x1="130" y1="350" x2="255" y2="245" stroke="#000000" stroke-width="1.5"/>
+  <line x1="130" y1="350" x2="250" y2="375" stroke="#000000" stroke-width="1.5"/>
+  <line x1="130" y1="350" x2="260" y2="550" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Expense includes Lock & DoubleEntry -->
+  <line x1="480" y1="110" x2="655" y2="95" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="568" y="93" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="480" y1="130" x2="655" y2="148" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="568" y="152" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Income includes DoubleIncome -->
+  <line x1="490" y1="240" x2="655" y2="240" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="570" y="230" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Transfer includes Deadlock & FX Extends Transfer -->
+  <line x1="490" y1="365" x2="660" y2="340" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="575" y="342" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="660" y1="410" x2="490" y2="390" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="575" y="415" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
+
+  <!-- FX connects to FXService -->
+  <line x1="945" y1="425" x2="1055" y2="445" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Reversal extends Expense & Transfer -->
+  <path d="M 370 528 C 370 470, 370 435, 370 415" fill="none" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="325" y="470" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
+
+  <!-- Reversal includes RevEntry -->
+  <line x1="495" y1="560" x2="655" y2="560" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="575" y="550" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+</svg>

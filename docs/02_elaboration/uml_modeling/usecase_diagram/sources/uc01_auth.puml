@@ -1,0 +1,65 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam shadowing false
+
+skinparam actor {
+  BorderColor #0284C7
+  BackgroundColor #BAE6FD
+}
+
+skinparam usecase {
+  BackgroundColor #7DD3FC
+  BorderColor #0284C7
+  FontColor #0F172A
+  FontSize 12
+}
+
+skinparam arrow {
+  Color #0F172A
+  FontColor #0F172A
+  FontSize 11
+}
+
+actor "Khách vãng lai\n<size:11>(Guest)</size>" as Guest
+actor "Người dùng\n<size:11>(End-User)</size>" as User
+actor "Dịch vụ Email\n<size:11>(SMTP / OTP)</size>" as EmailService <<Secondary>>
+
+rectangle "WealthFlow - Sơ đồ chi tiết UC01: Đăng ký, Xác thực & Quản lý Phiên Người dùng" {
+  ' Base Use Cases
+  usecase "Đăng ký tài khoản mới" as UC_Register #7DD3FC
+  usecase "Đăng nhập hệ thống" as UC_Login #7DD3FC
+  usecase "Quên mật khẩu & Đặt lại qua OTP" as UC_Forgot #7DD3FC
+  usecase "Đổi mật khẩu & Cập nhật Hồ sơ" as UC_Profile #7DD3FC
+  usecase "Đăng xuất (Thu hồi phiên JWT)" as UC_Logout #7DD3FC
+
+  ' Included & Extended Use Cases
+  usecase "Băm mật khẩu bcrypt (cost=12)" as UC_Hash #F0F9FF;line.dashed;line:0284C7
+  usecase "Sao chép danh mục mẫu (FR13.01)" as UC_CopyCat #F0F9FF;line.dashed;line:0284C7
+  usecase "Thẩm định danh tính & Trạng thái Active" as UC_Validate #F0F9FF;line.dashed;line:0284C7
+  usecase "Cấp phát cặp JWT (Access 15m / Refresh 7d)" as UC_JWT #F0F9FF;line.dashed;line:0284C7
+  usecase "Gửi & Xác thực mã OTP 6 số" as UC_VerifyOTP #F0F9FF;line.dashed;line:0284C7
+
+  ' Actor associations
+  Guest --> UC_Register
+  Guest --> UC_Login
+  Guest --> UC_Forgot
+
+  User --> UC_Profile
+  User --> UC_Logout
+
+  ' Relationships
+  UC_Register .> UC_Hash : <<include>>
+  UC_Register .> UC_CopyCat : <<include>>
+
+  UC_Login .> UC_Validate : <<include>>
+  UC_Login .> UC_JWT : <<include>>
+
+  UC_Forgot .> UC_Login : <<extend>>
+  UC_Forgot .> UC_VerifyOTP : <<include>>
+  UC_VerifyOTP --> EmailService
+}
+@enduml

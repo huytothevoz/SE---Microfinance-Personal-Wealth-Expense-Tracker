@@ -1,0 +1,60 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam shadowing false
+
+skinparam actor {
+  BorderColor #0284C7
+  BackgroundColor #BAE6FD
+}
+
+skinparam usecase {
+  BackgroundColor #7DD3FC
+  BorderColor #0284C7
+  FontColor #0F172A
+  FontSize 12
+}
+
+skinparam arrow {
+  Color #0F172A
+  FontColor #0F172A
+  FontSize 11
+}
+
+actor "Người dùng\n<size:11>(End-User)</size>" as User
+actor "Notification Center\n<size:11>(Trung tâm Thông báo)</size>" as NotifCenter <<Secondary>>
+
+rectangle "WealthFlow - Sơ đồ chi tiết UC05: Thiết lập & Kiểm soát Hạn mức Ngân sách" {
+  ' Base Use Cases
+  usecase "Thiết lập Hạn mức Ngân sách\n(Theo từng Danh mục / Tháng)" as UC_SetLimit #7DD3FC
+  usecase "Theo dõi Tiến độ Sử dụng Ngân sách\n(Usage Rate & Thanh tiến độ)" as UC_Monitor #7DD3FC
+  usecase "Điều chỉnh Hạn mức trong kỳ" as UC_Adjust #7DD3FC
+
+  ' Included & Extended Use Cases
+  usecase "Thẩm định Hạn mức > 0\nvà Quy đổi theo Tiền cơ sở (BR07)" as UC_ValLimit #F0F9FF;line.dashed;line:0284C7
+  usecase "Tính toán Chi tiêu ròng lũy kế\n(Tổng chi - Tổng hoàn/đảo trong tháng)" as UC_NetSpent #F0F9FF;line.dashed;line:0284C7
+  usecase "Kích hoạt Cảnh báo Vàng (Warning)\n[80% <= Chi tiêu ròng < 100%]" as UC_Yellow #F0F9FF;line.dashed;line:0284C7
+  usecase "Kích hoạt Cảnh báo Đỏ khẩn cấp\n[Chi tiêu ròng >= 100% hạn mức]" as UC_Red #F0F9FF;line.dashed;line:0284C7
+  usecase "Khử trùng thông báo (Dedup Key)\n(Tối đa 1 thông báo/mức/tháng BR08)" as UC_Dedup #F0F9FF;line.dashed;line:0284C7
+
+  ' Actor associations
+  User --> UC_SetLimit
+  User --> UC_Monitor
+  User --> UC_Adjust
+
+  ' Relationships
+  UC_SetLimit .> UC_ValLimit : <<include>>
+  UC_Adjust .> UC_SetLimit : <<extend>>
+
+  UC_Monitor .> UC_NetSpent : <<include>>
+  UC_Yellow .> UC_Monitor : <<extend>>
+  UC_Red .> UC_Monitor : <<extend>>
+
+  UC_Yellow .> UC_Dedup : <<include>>
+  UC_Red .> UC_Dedup : <<include>>
+  UC_Dedup --> NotifCenter
+}
+@enduml

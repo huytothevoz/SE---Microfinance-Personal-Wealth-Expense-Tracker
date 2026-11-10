@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 640" width="1100" height="640">
+  <defs>
+    <!-- UML open arrow for <<include>> and <<extend>> -->
+    <marker id="uml-arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+      <polyline points="2 2, 10 6, 2 10" fill="none" stroke="#000000" stroke-width="1.5"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="640" fill="#FFFFFF"/>
+
+  <!-- System Boundary Box -->
+  <rect x="20" y="20" width="1060" height="600" fill="#FFFFFF" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Header Banner -->
+  <rect x="20" y="20" width="1060" height="46" fill="#F1F5F9" stroke="#000000" stroke-width="1.5"/>
+  <text x="550" y="49" font-family="'Segoe UI', Arial, sans-serif" font-size="15" font-weight="bold" fill="#000000" text-anchor="middle">WealthFlow - Sơ đồ chi tiết UC01: Đăng ký, Xác thực &amp; Quản lý Phiên Người dùng</text>
+
+  <!-- ==================== ACTORS ==================== -->
+  <!-- Actor 1: Khách vãng lai (Guest) -->
+  <g id="actor-guest">
+    <circle cx="95" cy="210" r="16" fill="#BAE6FD" stroke="#0284C7" stroke-width="2"/>
+    <line x1="95" y1="226" x2="95" y2="280" stroke="#0F172A" stroke-width="2"/>
+    <line x1="70" y1="245" x2="120" y2="245" stroke="#0F172A" stroke-width="2"/>
+    <line x1="95" y1="280" x2="72" y2="330" stroke="#0F172A" stroke-width="2"/>
+    <line x1="95" y1="280" x2="118" y2="330" stroke="#0F172A" stroke-width="2"/>
+    <text x="95" y="352" font-family="'Segoe UI', Arial, sans-serif" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Khách vãng lai</text>
+    <text x="95" y="370" font-family="'Segoe UI', Arial, sans-serif" font-size="11" fill="#475569" text-anchor="middle">(Guest)</text>
+  </g>
+
+  <!-- Actor 2: Người dùng (End-User) -->
+  <g id="actor-user">
+    <circle cx="95" cy="450" r="16" fill="#BAE6FD" stroke="#0284C7" stroke-width="2"/>
+    <line x1="95" y1="466" x2="95" y2="520" stroke="#0F172A" stroke-width="2"/>
+    <line x1="70" y1="485" x2="120" y2="485" stroke="#0F172A" stroke-width="2"/>
+    <line x1="95" y1="520" x2="72" y2="570" stroke="#0F172A" stroke-width="2"/>
+    <line x1="95" y1="520" x2="118" y2="570" stroke="#0F172A" stroke-width="2"/>
+    <text x="95" y="592" font-family="'Segoe UI', Arial, sans-serif" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Người dùng</text>
+    <text x="95" y="610" font-family="'Segoe UI', Arial, sans-serif" font-size="11" fill="#475569" text-anchor="middle">(End-User)</text>
+  </g>
+
+  <!-- Secondary Actor: Dịch vụ Email (Right side) -->
+  <g id="actor-email">
+    <circle cx="1005" cy="380" r="16" fill="#E2E8F0" stroke="#475569" stroke-width="2"/>
+    <line x1="1005" y1="396" x2="1005" y2="445" stroke="#0F172A" stroke-width="2"/>
+    <line x1="980" y1="412" x2="1030" y2="412" stroke="#0F172A" stroke-width="2"/>
+    <line x1="1005" y1="445" x2="985" y2="490" stroke="#0F172A" stroke-width="2"/>
+    <line x1="1005" y1="445" x2="1025" y2="490" stroke="#0F172A" stroke-width="2"/>
+    <text x="1005" y="512" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">Dịch vụ Email</text>
+    <text x="1005" y="528" font-family="'Segoe UI', Arial, sans-serif" font-size="11" fill="#475569" text-anchor="middle">(SMTP / OTP)</text>
+  </g>
+
+  <!-- ==================== PRIMARY USE CASES ==================== -->
+  <!-- UC: Đăng ký tài khoản mới -->
+  <ellipse cx="370" cy="135" rx="115" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="140" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Đăng ký tài khoản mới</text>
+
+  <!-- UC: Đăng nhập hệ thống -->
+  <ellipse cx="370" cy="275" rx="115" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="280" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Đăng nhập hệ thống</text>
+
+  <!-- UC: Quên mật khẩu & Đặt lại qua OTP -->
+  <ellipse cx="370" cy="415" rx="125" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="420" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Quên mật khẩu &amp; Đặt lại OTP</text>
+
+  <!-- UC: Đổi mật khẩu & Cập nhật Hồ sơ -->
+  <ellipse cx="370" cy="545" rx="125" ry="30" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="550" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Đổi mật khẩu &amp; Hồ sơ cá nhân</text>
+
+  <!-- UC: Đăng xuất (Thu hồi phiên JWT) -->
+  <ellipse cx="730" cy="545" rx="120" ry="30" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="730" y="550" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Đăng xuất (Thu hồi JWT)</text>
+
+  <!-- ==================== INCLUDED / EXTENDED USE CASES ==================== -->
+  <!-- UC Included: Băm mật khẩu bcrypt -->
+  <ellipse cx="760" cy="100" rx="130" ry="28" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="760" y="105" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Băm mật khẩu bcrypt (cost=12)</text>
+
+  <!-- UC Included: Sao chép danh mục mẫu -->
+  <ellipse cx="760" cy="165" rx="130" ry="28" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="760" y="170" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Sao chép danh mục mẫu (FR13.01)</text>
+
+  <!-- UC Included: Thẩm định danh tính -->
+  <ellipse cx="760" cy="245" rx="135" ry="28" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="760" y="250" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Thẩm định danh tính &amp; Trạng thái</text>
+
+  <!-- UC Included: Cấp phát cặp JWT -->
+  <ellipse cx="760" cy="315" rx="140" ry="28" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="760" y="320" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Cấp phát cặp JWT (Access &amp; Refresh)</text>
+
+  <!-- UC Included: Gửi & Xác thực OTP -->
+  <ellipse cx="730" cy="415" rx="125" ry="30" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="730" y="420" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Gửi &amp; Xác thực mã OTP 6 số</text>
+
+  <!-- ==================== CONNECTIONS & ARROWS ==================== -->
+  <!-- Guest to Primary UCs -->
+  <line x1="120" y1="260" x2="260" y2="145" stroke="#000000" stroke-width="1.5"/>
+  <line x1="120" y1="260" x2="255" y2="275" stroke="#000000" stroke-width="1.5"/>
+  <line x1="120" y1="260" x2="260" y2="400" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- User to Profile & Logout -->
+  <line x1="120" y1="500" x2="245" y2="540" stroke="#000000" stroke-width="1.5"/>
+  <line x1="120" y1="500" x2="615" y2="545" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Register includes Hash & CopyCat -->
+  <line x1="475" y1="122" x2="630" y2="105" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="548" y="106" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="475" y1="145" x2="630" y2="160" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="550" y="167" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Login includes Validate & JWT -->
+  <line x1="478" y1="265" x2="628" y2="250" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="550" y="250" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="478" y1="288" x2="625" y2="310" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="550" y="313" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Forgot extends Login -->
+  <line x1="370" y1="383" x2="370" y2="317" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="325" y="355" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
+
+  <!-- Forgot includes VerifyOTP -->
+  <line x1="495" y1="415" x2="605" y2="415" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="550" y="405" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- VerifyOTP to Email Service -->
+  <line x1="855" y1="415" x2="980" y2="430" stroke="#000000" stroke-width="1.5"/>
+</svg>

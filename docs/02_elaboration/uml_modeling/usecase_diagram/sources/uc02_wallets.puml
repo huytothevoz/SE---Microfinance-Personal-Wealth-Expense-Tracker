@@ -1,0 +1,54 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam shadowing false
+
+skinparam actor {
+  BorderColor #0284C7
+  BackgroundColor #BAE6FD
+}
+
+skinparam usecase {
+  BackgroundColor #7DD3FC
+  BorderColor #0284C7
+  FontColor #0F172A
+  FontSize 12
+}
+
+skinparam arrow {
+  Color #0F172A
+  FontColor #0F172A
+  FontSize 11
+}
+
+actor "Người dùng\n<size:11>(End-User)</size>" as User
+
+rectangle "WealthFlow - Sơ đồ chi tiết UC02: Quản lý Ví tiền & Nguồn vốn Mở sổ" {
+  ' Base Use Cases
+  usecase "Tạo ví thanh toán mới\n(Tiền mặt, Ngân hàng, Ví điện tử)" as UC_Create #7DD3FC
+  usecase "Xem chi tiết & Theo dõi số dư ví" as UC_View #7DD3FC
+  usecase "Điều chỉnh số dư thực tế\n(Kiểm kê / Đối soát)" as UC_Adjust #7DD3FC
+  usecase "Lưu trữ / Đóng ví (Archive)" as UC_Archive #7DD3FC
+
+  ' Included & Extended Use Cases
+  usecase "Hạch toán Vốn mở sổ (Equity BR02)\n[Số dư ban đầu > 0]" as UC_Equity #F0F9FF;line.dashed;line:0284C7
+  usecase "Tính toán Số dư khả dụng\n(Cached Balance - Earmarked)" as UC_Avail #F0F9FF;line.dashed;line:0284C7
+  usecase "Tự động sinh bút toán chênh lệch (BR01)\n(Nợ/Có điều chỉnh kiểm kê)" as UC_Diff #F0F9FF;line.dashed;line:0284C7
+  usecase "Kiểm tra ràng buộc lịch sử giao dịch\n(Cấm xóa cứng - BR06)" as UC_CheckTx #F0F9FF;line.dashed;line:0284C7
+
+  ' Actor associations
+  User --> UC_Create
+  User --> UC_View
+  User --> UC_Adjust
+  User --> UC_Archive
+
+  ' Relationships
+  UC_Equity .> UC_Create : <<extend>>
+  UC_View .> UC_Avail : <<include>>
+  UC_Adjust .> UC_Diff : <<include>>
+  UC_Archive .> UC_CheckTx : <<include>>
+}
+@enduml

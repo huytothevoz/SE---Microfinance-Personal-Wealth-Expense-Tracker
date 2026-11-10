@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 620" width="1100" height="620">
+  <defs>
+    <marker id="uml-arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+      <polyline points="2 2, 10 6, 2 10" fill="none" stroke="#000000" stroke-width="1.5"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="620" fill="#FFFFFF"/>
+
+  <!-- System Boundary Box -->
+  <rect x="20" y="20" width="1060" height="580" fill="#FFFFFF" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- Header Banner -->
+  <rect x="20" y="20" width="1060" height="46" fill="#F1F5F9" stroke="#000000" stroke-width="1.5"/>
+  <text x="550" y="49" font-family="'Segoe UI', Arial, sans-serif" font-size="15" font-weight="bold" fill="#000000" text-anchor="middle">WealthFlow - Sơ đồ chi tiết UC05: Thiết lập &amp; Kiểm soát Hạn mức Ngân sách</text>
+
+  <!-- ==================== ACTORS ==================== -->
+  <!-- Left Actor: Người dùng (End-User) -->
+  <g id="actor-user">
+    <circle cx="100" cy="270" r="17" fill="#BAE6FD" stroke="#0284C7" stroke-width="2"/>
+    <line x1="100" y1="287" x2="100" y2="345" stroke="#0F172A" stroke-width="2"/>
+    <line x1="70" y1="308" x2="130" y2="308" stroke="#0F172A" stroke-width="2"/>
+    <line x1="100" y1="345" x2="75" y2="400" stroke="#0F172A" stroke-width="2"/>
+    <line x1="100" y1="345" x2="125" y2="400" stroke="#0F172A" stroke-width="2"/>
+    <text x="100" y="425" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Người dùng</text>
+    <text x="100" y="445" font-family="'Segoe UI', Arial, sans-serif" font-size="12" fill="#475569" text-anchor="middle">(End-User)</text>
+  </g>
+
+  <!-- Right Actor: Notification Center -->
+  <g id="actor-notif">
+    <circle cx="1005" cy="420" r="17" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+    <line x1="1005" y1="437" x2="1005" y2="490" stroke="#0F172A" stroke-width="2"/>
+    <line x1="980" y1="455" x2="1030" y2="455" stroke="#0F172A" stroke-width="2"/>
+    <line x1="1005" y1="490" x2="985" y2="540" stroke="#0F172A" stroke-width="2"/>
+    <line x1="1005" y1="490" x2="1025" y2="540" stroke="#0F172A" stroke-width="2"/>
+    <text x="1005" y="562" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">Notification Center</text>
+    <text x="1005" y="578" font-family="'Segoe UI', Arial, sans-serif" font-size="11" fill="#475569" text-anchor="middle">(Trung tâm Thông báo)</text>
+  </g>
+
+  <!-- ==================== PRIMARY USE CASES ==================== -->
+  <!-- UC1: Thiết lập Hạn mức Ngân sách -->
+  <ellipse cx="370" cy="140" rx="125" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="145" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Thiết lập Hạn mức Ngân sách</text>
+
+  <!-- UC2: Theo dõi Tiến độ Sử dụng Ngân sách -->
+  <ellipse cx="370" cy="320" rx="130" ry="34" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="316" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Theo dõi Tiến độ Ngân sách</text>
+  <text x="370" y="332" font-family="'Segoe UI', Arial, sans-serif" font-size="11" fill="#0F172A" text-anchor="middle">(Usage Rate &amp; Tiến độ)</text>
+
+  <!-- UC3: Điều chỉnh Hạn mức trong kỳ -->
+  <ellipse cx="370" cy="490" rx="120" ry="30" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
+  <text x="370" y="495" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Điều chỉnh Hạn mức trong kỳ</text>
+
+  <!-- ==================== SECONDARY / INCLUDED / EXTENDED USE CASES ==================== -->
+  <!-- Included: Thẩm định Hạn mức -->
+  <ellipse cx="780" cy="140" rx="135" ry="28" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="780" y="145" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Thẩm định Hạn mức &gt; 0 (Tiền cơ sở)</text>
+
+  <!-- Included: Tính chi tiêu ròng -->
+  <ellipse cx="780" cy="250" rx="140" ry="30" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="780" y="246" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Tính toán Chi tiêu ròng lũy kế</text>
+  <text x="780" y="262" font-family="'Segoe UI', Arial, sans-serif" font-size="10" fill="#64748B" text-anchor="middle">(Tổng chi - Tổng hoàn/đảo BR07)</text>
+
+  <!-- Extended: Cảnh báo Vàng 80% -->
+  <ellipse cx="760" cy="350" rx="135" ry="30" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="760" y="346" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#92400E" text-anchor="middle">Cảnh báo Vàng chạm ngưỡng 80%</text>
+  <text x="760" y="362" font-family="'Segoe UI', Arial, sans-serif" font-size="10" fill="#B45309" text-anchor="middle">[80% &lt;= Chi tiêu &lt; 100% hạn mức]</text>
+
+  <!-- Extended: Cảnh báo Đỏ 100% -->
+  <ellipse cx="760" cy="445" rx="135" ry="30" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="760" y="441" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#991B1B" text-anchor="middle">Cảnh báo Đỏ vượt hạn mức 100%</text>
+  <text x="760" y="457" font-family="'Segoe UI', Arial, sans-serif" font-size="10" fill="#DC2626" text-anchor="middle">[Chi tiêu ròng &gt;= 100% hạn mức]</text>
+
+  <!-- Included: Khử trùng Dedup Key -->
+  <ellipse cx="760" cy="540" rx="135" ry="28" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="760" y="536" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Khử trùng thông báo (Dedup Key)</text>
+  <text x="760" y="552" font-family="'Segoe UI', Arial, sans-serif" font-size="10" fill="#64748B" text-anchor="middle">(Tối đa 1 thông báo/mức/tháng BR08)</text>
+
+  <!-- ==================== CONNECTIONS ==================== -->
+  <!-- User to Primary UCs -->
+  <line x1="130" y1="320" x2="255" y2="155" stroke="#000000" stroke-width="1.5"/>
+  <line x1="130" y1="320" x2="242" y2="320" stroke="#000000" stroke-width="1.5"/>
+  <line x1="130" y1="320" x2="258" y2="480" stroke="#000000" stroke-width="1.5"/>
+
+  <!-- SetLimit includes ValLimit -->
+  <line x1="495" y1="140" x2="645" y2="140" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="570" y="130" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Adjust extends SetLimit -->
+  <path d="M 370 460 C 370 380, 370 230, 370 174" fill="none" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="325" y="235" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
+
+  <!-- Monitor includes NetSpent -->
+  <line x1="485" y1="300" x2="648" y2="265" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="565" y="270" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Yellow & Red extend Monitor (arrows point to Monitor) -->
+  <line x1="625" y1="345" x2="500" y2="330" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="560" y="348" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
+
+  <line x1="635" y1="430" x2="490" y2="345" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="545" y="405" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
+
+  <!-- Yellow & Red include Dedup Key -->
+  <line x1="760" y1="380" x2="760" y2="512" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
+  <text x="795" y="495" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Dedup to Notification Center -->
+  <line x1="895" y1="540" x2="980" y2="470" stroke="#000000" stroke-width="1.5"/>
+</svg>

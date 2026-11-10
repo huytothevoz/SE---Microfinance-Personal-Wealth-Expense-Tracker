@@ -1,0 +1,65 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam shadowing false
+
+skinparam actor {
+  BorderColor #0284C7
+  BackgroundColor #BAE6FD
+}
+
+skinparam usecase {
+  BackgroundColor #7DD3FC
+  BorderColor #0284C7
+  FontColor #0F172A
+  FontSize 12
+}
+
+skinparam arrow {
+  Color #0F172A
+  FontColor #0F172A
+  FontSize 11
+}
+
+actor "Người dùng\n<size:11>(End-User)</size>" as User
+actor "Dịch vụ Tỷ giá\n<size:11>(FX Rate API A03)</size>" as FXService <<Secondary>>
+
+rectangle "WealthFlow - Sơ đồ chi tiết UC03: Ghi nhận Thu chi, Chuyển tiền & Sổ cái Kép" {
+  ' Base Use Cases
+  usecase "Ghi nhận Giao dịch Chi tiêu\n(Expense)" as UC_Expense #7DD3FC
+  usecase "Ghi nhận Giao dịch Thu nhập\n(Income)" as UC_Income #7DD3FC
+  usecase "Chuyển tiền Nội bộ giữa các Ví\n(Internal Transfer)" as UC_Transfer #7DD3FC
+  usecase "Đảo giao dịch bất biến\n(Reversal - BR06)" as UC_Reversal #7DD3FC
+
+  ' Included & Extended Use Cases
+  usecase "Khóa bi quan ví nguồn (FOR UPDATE)\nvà Chống trùng Idempotency-Key (BR13)" as UC_Lock #F0F9FF;line.dashed;line:0284C7
+  usecase "Hạch toán Kép Nợ Chi phí / Có Ví\n(Cân bằng tuyệt đối BR01)" as UC_DoubleExpense #F0F9FF;line.dashed;line:0284C7
+  usecase "Hạch toán Kép Nợ Ví / Có Thu nhập\n(BR01, BR05)" as UC_DoubleIncome #F0F9FF;line.dashed;line:0284C7
+  usecase "Khóa ví theo thứ tự ID\n(Triệt tiêu Deadlock đa luồng)" as UC_Deadlock #F0F9FF;line.dashed;line:0284C7
+  usecase "Quy đổi Ngoại tệ theo Tỷ giá snapshot\n(BR04, BR08) [Khác loại tiền tệ]" as UC_FX #F0F9FF;line.dashed;line:0284C7
+  usecase "Sinh bút toán đảo đối ứng ngược dấu\nvà Khôi phục số dư ví nguyên tử" as UC_RevEntry #F0F9FF;line.dashed;line:0284C7
+
+  ' Actor associations
+  User --> UC_Expense
+  User --> UC_Income
+  User --> UC_Transfer
+  User --> UC_Reversal
+
+  ' Relationships
+  UC_Expense .> UC_Lock : <<include>>
+  UC_Expense .> UC_DoubleExpense : <<include>>
+
+  UC_Income .> UC_DoubleIncome : <<include>>
+
+  UC_Transfer .> UC_Deadlock : <<include>>
+  UC_FX .> UC_Transfer : <<extend>>
+  UC_FX --> FXService
+
+  UC_Reversal .> UC_Expense : <<extend>>
+  UC_Reversal .> UC_Transfer : <<extend>>
+  UC_Reversal .> UC_RevEntry : <<include>>
+}
+@enduml
