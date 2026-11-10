@@ -99,7 +99,7 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
 | **CD06** | Phân hệ 6: Thiết lập & Kiểm soát Ngân sách Chi tiêu | [UC05](../SRS.md#uc05), [SYS03](../SRS.md#sys03) | `BudgetController`, `BudgetService`, `Budget`, `BudgetDAO` | [cd06_budget_planning.svg](./class_diagram/cd06_budget_planning.svg) |
 | **CD07** | Phân hệ 7: Quản lý Khoản vay Vi mô & Phân bổ Gốc/Lãi | [UC06](../SRS.md#uc06), [UC07](../SRS.md#uc07) | `LoanController`, `LoanService`, `Loan`, `LoanDAO` | [cd07_microfinance_loans.svg](./class_diagram/cd07_microfinance_loans.svg) |
 | **CD08** | Phân hệ 8: Tích lũy Tài sản Vàng & Định giá Thị trường | [UC08](../SRS.md#uc08) | `GoldController`, `GoldAssetService`, `GoldHolding`, `GoldHoldingDAO` | [cd08_gold_asset_market.svg](./class_diagram/cd08_gold_asset_market.svg) |
-| **CD09** | Phân hệ 9: Mục tiêu Tiết kiệm & Khóa tiền Earmarking | [UC09](../SRS.md#uc09) | `GoalController`, `GoalSavingService`, `FinancialGoal`, `FinancialGoalDAO` | [cd09_goal_saving_earmark.svg](./class_diagram/cd09_goal_saving_earmark.svg) |
+| **CD09** | Phân hệ 9: Mục tiêu Tiết kiệm & Khóa tiền Earmarking | [UC09](../SRS.md#uc09) | `GoalController`, `GoalService`, `FinancialGoal`, `FinancialGoalDAO` | [cd09_goal_saving_earmark.svg](./class_diagram/cd09_goal_saving_earmark.svg) |
 | **CD10** | Phân hệ 10: Dashboard Sức khỏe Net Worth & Snapshot Nền | [UC10](../SRS.md#uc10), [SYS03](../SRS.md#sys03) | `AnalyticsDashboardController`, `NetWorthAnalyticsService`, `NetWorthSnapshot`, `NetWorthSnapshotDAO` | [cd10_networth_analytics.svg](./class_diagram/cd10_networth_analytics.svg) |
 | **CD11** | Phân hệ 11: Quản trị & Broadcast Thông báo | [UC13](../SRS.md#uc13), [SYS01](../SRS.md#sys01) | `NotificationController`, `AdminBroadcastService`, `Notification`, `NotificationDAO` | [cd11_notification_broadcast.svg](./class_diagram/cd11_notification_broadcast.svg) |
 
@@ -126,7 +126,7 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
 
 2. **Tầng Control (Điều khiển & Xử lý nghiệp vụ):**
    - **`AuthService`**: Trung tâm xử lý an ninh và định danh. 
-     - Áp dụng thuật toán **Argon2id** với tham số an toàn để băm mật khẩu người dùng trước khi lưu trữ (`FR01`).
+     - Áp dụng thuật toán **bcrypt (cost=12)** để băm mật khẩu người dùng trước khi lưu trữ, tuân thủ [NFR02.01](../SRS.md#nfr02) cho phép Argon2id hoặc bcrypt ≥ cost 12 (`FR01`).
      - Sinh mã OTP 6 chữ số ngẫu nhiên an toàn (CSPRNG), băm một chiều lưu vào `PasswordResetToken` với thời hạn hiệu lực chính xác 10 phút. Kiểm soát biến `attempts`, nếu nhập sai quá 5 lần thì hủy mã OTP để triệt tiêu tấn công Brute-force.
      - Sinh cặp JWT Token: Access Token (thời hạn 15 phút, chứa claims định danh `userId`, `role`) và Refresh Token (thời hạn 7 ngày, lưu trữ trong Cookie an toàn `HttpOnly; Secure; SameSite=Strict`).
    - **`UserService`**: Quản lý thông tin hồ sơ và đồng tiền cơ sở (`baseCurrency`). Kiểm tra mật khẩu cũ trước khi cho phép cập nhật mật khẩu mới.
@@ -384,7 +384,7 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
    - **`GoldPortfolioSummaryVO` & `GoldSaleReceiptVO` (Value Objects)**: Đối tượng giá trị phản hồi hiệu quả đầu tư danh mục vàng.
 
 4. **Tầng DataAccess (Truy cập CSDL - DAOs):**
-   - **`GoldHoldingDAO`**: Thao tác bảng `gold_holdings`.
+   - **`GoldHoldingDAO`**: Thao tác bảng `gold_assets` (tích lũy vàng hiện có của người dùng).
    - **`GoldTransactionDAO`**: Thao tác bảng nhật ký mua bán `gold_transactions`.
    - **`GoldPriceDAO`**: Lưu trữ và truy vấn bảng lịch sử thị giá vàng `gold_price_history`.
 
@@ -409,7 +409,7 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
    - **`GoalController`**: Cung cấp các giao diện API quản lý mục tiêu tài chính: khởi tạo mục tiêu mới (`createGoal`), nạp tiền phân bổ tích lũy vào mục tiêu (`allocateFunds`), rút vốn tích lũy về ví (`withdrawFunds`), truy vấn danh sách theo tiến độ (`getGoals`) và xem chi tiết mục tiêu (`getGoalDetail`).
 
 2. **Tầng Control (Dịch vụ Điều khiển Nghiệp vụ Mục tiêu Tích lũy):**
-   - **`GoalSavingService`**:
+   - **`GoalService`**:
      - **Bản chất logic phi tiền tệ ([BR10](../SRS.md#br10)):** Mục tiêu tài chính là công cụ theo dõi kế hoạch, không tự động sinh ra tiền và không làm tăng tổng tài sản của người dùng trên hệ thống.
      - **Cơ chế Khóa tiền Earmarking ([BR04](../SRS.md#br04), [BR10](../SRS.md#br10)):** Khi người dùng nạp tiền vào mục tiêu từ ví tài sản liên kết, service gọi `IGoalWalletPort.checkAvailableBalance()`. Nếu đủ tiền, hệ thống tăng số dư khóa `earmarkedAmount` tại ví, bảo đảm người dùng không thể chi tiêu vượt quá số dư khả dụng còn lại ($\text{Available} = \text{Balance} - \text{Earmarked}$).
      - **Tính toán tiến độ & Khuyến nghị tích lũy hàng tháng ([BR10](../SRS.md#br10)):**
@@ -423,8 +423,7 @@ Toàn bộ các sơ đồ lớp được kết xuất thành ảnh Vector SVG ch
    - **`GoalAllocationReceiptVO` (Value Object)**: Biên lai phản hồi kết quả phân bổ vốn.
 
 4. **Tầng DataAccess (Truy cập CSDL - DAOs):**
-   - **`FinancialGoalDAO`**: Quản lý bảng `financial_goals`, hỗ trợ phương thức khóa dòng `findWithLock(id)`.
-   - **`GoalAllocationDAO`**: Quản lý bảng lịch sử phân bổ `goal_allocations`.
+   - **`FinancialGoalDAO`**: Quản lý bảng `financial_goals` và bảng lịch sử phân bổ `goal_allocations`, hỗ trợ phương thức khóa dòng `findWithLock(id)`.
 
 ---
 
@@ -526,7 +525,7 @@ Bảng ma trận truy vết tổng hợp hai chiều thể hiện sự gắn k�
 | **CD06** | [UC05](../SRS.md#uc05), [SYS03](../SRS.md#sys03) | [FR05](../SRS.md#fr05), [FR15](../SRS.md#fr15) | [BR07](../SRS.md#br07), [BR08](../SRS.md#br08), [BR14](../SRS.md#br14) | `BudgetController`, `BudgetCheckSchedulerJob` | `BudgetService`, `IBudgetLedgerPort`, `IBudgetNotificationPort` | `Budget`, `BudgetUsageVO` | `BudgetDAO` |
 | **CD07** | [UC06](../SRS.md#uc06), [UC07](../SRS.md#uc07) | [FR07](../SRS.md#fr07), [FR08](../SRS.md#fr08), [FR15](../SRS.md#fr15) | [BR04](../SRS.md#br04), [BR12](../SRS.md#br12), [BR16](../SRS.md#br16), [BR17](../SRS.md#br17) | `LoanController`, `LoanReminderSchedulerJob` | `LoanService`, `ILoanLedgerPort`, `ILoanWalletPort`, `ILoanNotificationPort` | `Loan`, `RepaymentScheduleItem`, `RepaymentReceiptVO` | `LoanDAO`, `RepaymentScheduleDAO`, `LoanRepaymentLogDAO` |
 | **CD08** | [UC08](../SRS.md#uc08) | [FR09](../SRS.md#fr09), [FR15](../SRS.md#fr15) | [BR01](../SRS.md#br01), [BR15](../SRS.md#br15), [BR16](../SRS.md#br16) | `GoldController`, `GoldPriceSyncSchedulerJob` | `GoldAssetService`, `IGoldLedgerPort`, `IGoldPriceFeedPort` | `GoldHolding`, `GoldTransaction`, `GoldPortfolioSummaryVO`, `GoldSaleReceiptVO` | `GoldHoldingDAO`, `GoldTransactionDAO`, `GoldPriceDAO` |
-| **CD09** | [UC09](../SRS.md#uc09) | [FR10](../SRS.md#fr10), [FR15](../SRS.md#fr15) | [BR04](../SRS.md#br04), [BR10](../SRS.md#br10) | `GoalController` | `GoalSavingService`, `IGoalWalletPort` | `FinancialGoal`, `GoalAllocation`, `GoalAllocationReceiptVO` | `FinancialGoalDAO`, `GoalAllocationDAO` |
+| **CD09** | [UC09](../SRS.md#uc09) | [FR10](../SRS.md#fr10), [FR15](../SRS.md#fr15) | [BR04](../SRS.md#br04), [BR10](../SRS.md#br10) | `GoalController` | `GoalService`, `IGoalWalletPort` | `FinancialGoal`, `GoalAllocation`, `GoalAllocationReceiptVO` | `FinancialGoalDAO` |
 | **CD10** | [UC10](../SRS.md#uc10), [SYS03](../SRS.md#sys03) | [FR10](../SRS.md#fr10), [FR11](../SRS.md#fr11), [FR14](../SRS.md#fr14), [FR15](../SRS.md#fr15) | [BR16](../SRS.md#br16), [BR18](../SRS.md#br18) | `AnalyticsDashboardController`, `DailySnapshotSchedulerJob` | `NetWorthAnalyticsService`, `ISnapshotAssetPort`, `ISnapshotLiabilityPort`, `ISnapshotLedgerPort` | `NetWorthSnapshot`, `NetWorthBreakdownVO`, `CashFlowReportVO`, `FinancialHealthScoreVO` | `NetWorthSnapshotDAO` |
 | **CD11** | [UC13](../SRS.md#uc13), [SYS01](../SRS.md#sys01) | [FR13](../SRS.md#fr13), [FR15](../SRS.md#fr15) | [BR11](../SRS.md#br11), [BR18](../SRS.md#br18) | `NotificationController`, `AdminBroadcastController`, `NotificationBroadcastWorker` | `NotificationService`, `AdminBroadcastService`, `ISystemConfigPort` | `Notification`, `SystemAnnouncement`, `SystemConfiguration`, `BroadcastResultVO` | `NotificationDAO`, `AnnouncementDAO`, `SystemConfigDAO` |
 

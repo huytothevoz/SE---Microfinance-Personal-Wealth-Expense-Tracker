@@ -50,7 +50,7 @@ Toàn bộ các kịch bản được mô hình hóa nghiêm ngặt theo kiến 
 
 | Mã Sơ đồ | Tên Kịch bản Nghiệp vụ | Use Cases Bao phủ | Quy tắc Nghiệp vụ (BR) | Sơ đồ Lớp Liên kết | Sơ đồ CSDL Liên kết | File Đồ họa Vector SVG |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: |
-| **SQ01** | Đăng ký tài khoản, Băm Argon2id & Đăng nhập cấp phát JWT | [UC01](./usecase_diagram.md#uc01-dang-ky-va-dang-nhap), [UC02](./usecase_diagram.md#uc02-quan-ly-vi-va-so-du-mo-so) | [BR01](../SRS.md#br01), [BR02](../SRS.md#br02), [BR11](../SRS.md#br11), [BR15](../SRS.md#br15) | [CD01 Identity & Access](./class_diagram.md#21-phân-hệ-1-định-danh-xác-thực--quản-trị-tài-khoản-identity-authentication--user-management-context) | [ERD01 Auth & Access](../database_design.md#31-phân-hệ-xác-thực--phân-quyền-authentication--authorization) | [sq01_auth_jwt.svg](./sequence_diagram/sq01_auth_jwt.svg) |
+| **SQ01** | Đăng ký tài khoản, Băm bcrypt (cost=12) & Đăng nhập cấp phát JWT | [UC01](./usecase_diagram.md#uc01-dang-ky-va-dang-nhap), [UC02](./usecase_diagram.md#uc02-quan-ly-vi-va-so-du-mo-so) | [BR01](../SRS.md#br01), [BR02](../SRS.md#br02), [BR11](../SRS.md#br11), [BR15](../SRS.md#br15) | [CD01 Identity & Access](./class_diagram.md#21-phân-hệ-1-định-danh-xác-thực--quản-trị-tài-khoản-identity-authentication--user-management-context) | [ERD01 Auth & Access](../database_design.md#31-phân-hệ-xác-thực--phân-quyền-authentication--authorization) | [sq01_auth_jwt.svg](./sequence_diagram/sq01_auth_jwt.svg) |
 | **SQ02** | Ghi nhận Chi tiêu, Khóa Bi quan, Hạch toán Kép & Kiểm tra Ngân sách | [UC03](./usecase_diagram.md#uc03-quan-ly-giao-dich-thu-chi-va-chuyen-khoan), [UC05](./usecase_diagram.md#uc05-thiet-lap-va-theo-doi-ngan-sach) | [BR01](../SRS.md#br01), [BR06](../SRS.md#br06), [BR07](../SRS.md#br07), [BR08](../SRS.md#br08), [BR13](../SRS.md#br13) | [CD03 Ledger](./class_diagram.md#23-phân-hệ-3-ghi-nhận-giao-dịch-thu-chi--sổ-cái-kế-toán-kép-double-entry-ledger-context---uc03), [CD06 Budget](./class_diagram.md#26-phân-hệ-6-thiết-lập--kiểm-soát-ngân-sách-chi-tiêu-budget-planning-context---uc05-sys03) | [ERD02 Ledger](../database_design.md#32-phân-hệ-ví-danh-mục--sổ-cái-kép-core-wallets--double-entry-ledger), [ERD03 Budgets](../database_design.md#33-phân-hệ-ngân-sách--chi-tiêu-định-kỳ-budgets--recurring-schedules) | [sq02_expense_budget.svg](./sequence_diagram/sq02_expense_budget.svg) |
 | **SQ03** | Chuyển tiền Nội bộ (Chống Deadlock theo Thứ tự ID) & Đảo Bút toán Sổ cái | [UC03](./usecase_diagram.md#uc03-quan-ly-giao-dich-thu-chi-va-chuyen-khoan) | [BR01](../SRS.md#br01), [BR05](../SRS.md#br05), [BR06](../SRS.md#br06), [BR13](../SRS.md#br13) | [CD03 Ledger](./class_diagram.md#23-phân-hệ-3-ghi-nhận-giao-dịch-thu-chi--sổ-cái-kế-toán-kép-double-entry-ledger-context---uc03) | [ERD02 Ledger](../database_design.md#32-phân-hệ-ví-danh-mục--sổ-cái-kép-core-wallets--double-entry-ledger) | [sq03_transfer_reversal.svg](./sequence_diagram/sq03_transfer_reversal.svg) |
 | **SQ04** | Tự động Hạch toán Chi tiêu Định kỳ (Cron) & Quy tắc Neo Ngày (Anchor Day) | [UC04](./usecase_diagram.md#uc04-quan-ly-chi-phi-co-dinh-va-giao-dich-dinh-ky), [SYS02](../SRS.md#sys02) | [BR07](../SRS.md#br07), [BR09](../SRS.md#br09), [BR13](../SRS.md#br13) | [CD05 Recurring](./class_diagram.md#25-phân-hệ-5-quản-lý-giao-dịch-định-kỳ-tự-động-recurring-transaction-context---uc04-sys02) | [ERD03 Budgets & Recurring](../database_design.md#33-phân-hệ-ngân-sách--chi-tiêu-định-kỳ-budgets--recurring-schedules) | [sq04_subscription_cron.svg](./sequence_diagram/sq04_subscription_cron.svg) |
@@ -63,7 +63,7 @@ Toàn bộ các kịch bản được mô hình hóa nghiêm ngặt theo kiến 
 
 ## 3. Chi Tiết 08 Kịch Bản Tuần Tự Nghiệp Vụ
 
-### 3.1. SQ01: Đăng ký tài khoản, Mã hóa Argon2id & Đăng nhập JWT
+### 3.1. SQ01: Đăng ký tài khoản, Mã hóa bcrypt (cost=12) & Đăng nhập JWT
 
 #### 3.1.1. Thông tin Kịch bản Nghiệp vụ
 - **Use Cases Bao phủ:** [UC01: Đăng ký & Xác thực người dùng](./usecase_diagram.md#uc01-dang-ky-va-dang-nhap), [UC02: Quản lý ví và số dư mở sổ](./usecase_diagram.md#uc02-quan-ly-vi-va-so-du-mo-so).
@@ -72,21 +72,21 @@ Toàn bộ các kịch bản được mô hình hóa nghiêm ngặt theo kiến 
 - **Tài liệu Liên kết:**
   - **Sơ đồ Lớp Thiết kế:** [CD01: Phân hệ Định danh & Xác thực](./class_diagram.md#21-phân-hệ-1-định-danh-xác-thực--quản-trị-tài-khoản-identity-authentication--user-management-context) | [Vector SVG](./class_diagram/cd01_identity_access.svg)
   - **Thiết kế Cơ sở Dữ liệu:** [ERD01: Xác thực & Phân quyền](../database_design.md#31-phân-hệ-xác-thực--phân-quyền-authentication--authorization) | [Vector SVG](../database_design/erd01_auth.svg) | Bảng vật lý: `users`, `auth_sessions`, `default_categories`, `transaction_categories`.
-- **Mục tiêu kỹ nghệ:** Mô hình hóa quy trình tạo tài khoản an toàn với giải thuật băm mật khẩu kháng GPU/ASIC `Argon2id` (cost factor 12, bộ nhớ 64MB), tự động sao chép cây danh mục chuẩn từ `default_categories` sang `transaction_categories` trong một Database Transaction duy nhất, thẩm định trạng thái qua Rich Entity `User`, và cấp phát cặp JWT Tokens (Access Token 15 phút, Refresh Token 7 ngày lưu băm SHA-256 vào bảng `auth_sessions`).
+- **Mục tiêu kỹ nghệ:** Mô hình hóa quy trình tạo tài khoản an toàn với giải thuật băm mật khẩu `bcrypt` (cost=12, tuân thủ [NFR02.01](../SRS.md#nfr02) cho phép Argon2id hoặc bcrypt ≥ cost 12), tự động sao chép cây danh mục chuẩn từ `default_categories` sang `transaction_categories` trong một Database Transaction duy nhất, thẩm định trạng thái qua Rich Entity `User`, và cấp phát cặp JWT Tokens (Access Token 15 phút, Refresh Token 7 ngày lưu băm SHA-256 vào bảng `auth_sessions`).
 
 #### 3.1.2. Danh mục Lifelines Tham gia (BCE+D)
 | Tên Lifeline | Stereotype | Tầng Kiến trúc | Vai trò & Trách nhiệm Kỹ nghệ |
 | :--- | :---: | :---: | :--- |
 | **User** | `<<Actor>>` | Tác nhân ngoài | Khách vãng lai gửi yêu cầu đăng ký hoặc Người dùng đăng nhập hệ thống. |
 | **AuthController** | `<<Boundary>>` | Biên tiếp nhận | REST Controller tiếp nhận HTTP POST `/api/auth/register` và `/api/auth/login`. |
-| **AuthService** | `<<Control>>` | Điều khiển nghiệp vụ | Xử lý băm Argon2id, điều phối Transaction tạo tài khoản và ký số cặp JWT Tokens. |
+| **AuthService** | `<<Control>>` | Điều khiển nghiệp vụ | Xử lý băm bcrypt (cost=12), điều phối Transaction tạo tài khoản và ký số cặp JWT Tokens. |
 | **user: User** | `<<Entity>>` | Thực thể miền | Rich Entity đóng gói trạng thái tài khoản, thực thi `validatePassword()` và `isActive()`. |
 | **UserDAO** | `<<DataAccess>>` | Truy cập CSDL | DAO thực thi các câu lệnh SQL trên bảng `users`, `categories`, `default_categories`, `auth_sessions`. |
 | **MySQL Database** | `<<Storage>>` | Cơ sở dữ liệu | Hệ quản trị CSDL MySQL 8.2+ / MariaDB 10.4+ InnoDB (`utf8mb4`), bảo đảm tính ACID. |
 
 #### 3.1.3. Sơ đồ Tuần tự Vector SVG
 ![SQ01: Đăng ký & Đăng nhập JWT](./sequence_diagram/sq01_auth_jwt.svg)
-*Hình 3.1: Sơ đồ Tuần tự SQ01 - Đăng ký, Mã hóa Argon2id & Đăng nhập JWT.*
+*Hình 3.1: Sơ đồ Tuần tự SQ01 - Đăng ký, Mã hóa bcrypt (cost=12) & Đăng nhập JWT.*
 
 #### 3.1.4. Điểm Nhấn Kiến Trúc & Xử Lý Kỹ Thuật
 1. **Kiểm tra trùng lặp email:** `UserDAO` kiểm tra `users` với chỉ mục `uk_user_email`. Nếu đã tồn tại, ném ngoại lệ `EmailAlreadyExistsException` -> Controller trả về `409 Conflict`.
@@ -438,7 +438,7 @@ graph TD
     SRS --> ACT["activity_diagram.md<br/><i>(Luồng Hoạt động Nghiệp vụ)</i>"]
     UC --> CD["class_diagram.md<br/><i>(Sơ đồ Lớp BCE+D & Domain Model)</i>"]
     UC --> SQ["sequence_diagram.md<br/><b>(08 Sơ đồ Tuần tự - Tài liệu Hiện tại)</b>"]:::current
-    CD --> DB["database_design.md<br/><i>(Thiết kế CSDL MySQL 8.2+ 22 Bảng)</i>"]
+    CD --> DB["database_design.md<br/><i>(Thiết kế CSDL MySQL 8.2+ 28 Bảng)</i>"]
     SQ --> DB
     SQ --> API["api_design.md<br/><i>(Đặc tả RESTful API - Bước kế tiếp)</i>"]:::target
     DB --> API
@@ -452,5 +452,5 @@ graph TD
 | **04** | **Sơ đồ Hoạt động (Activity)** | [activity_diagram.md](./activity_diagram.md) | Luồng nghiệp vụ trực quan hóa các tiến trình đa bước. |
 | **05** | **Sơ đồ Lớp Thiết kế (BCE+D)** | [class_diagram.md](./class_diagram.md) | Mô hình cấu trúc lớp chi tiết theo 11 phân hệ và Domain Model. |
 | **06** | **Sơ đồ Tuần tự (Sequence)** | [sequence_diagram.md](./sequence_diagram.md) *(Hiện tại)* | Mô hình hóa tương tác động của 08 kịch bản trọng yếu trên nền tảng MySQL InnoDB. |
-| **07** | **Thiết kế Cơ sở Dữ liệu Vật lý** | [database_design.md](../database_design.md) | Lược đồ quan hệ 22 bảng, khóa chính, khóa ngoại, kiểu dữ liệu tiền tệ chính xác cao và 8 ERD SVGs. |
+| **07** | **Thiết kế Cơ sở Dữ liệu Vật lý** | [database_design.md](../database_design.md) | Lược đồ quan hệ 28 bảng, khóa chính, khóa ngoại, kiểu dữ liệu tiền tệ chính xác cao và 8 ERD SVGs. |
 | **08** | **Đặc tả RESTful API** | [api_design.md](../api_design.md) *(Kế tiếp)* | Thiết kế chi tiết các Endpoints, Request/Response JSON Schemas, Headers và HTTP Status Codes. |

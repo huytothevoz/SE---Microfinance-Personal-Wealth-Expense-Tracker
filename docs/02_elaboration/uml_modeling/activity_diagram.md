@@ -58,10 +58,10 @@ Sơ đồ Hoạt động phân làn (Activity Diagram with Swimlanes) trong tài
 ### AD01: Quy trình Đăng ký & Xác thực Người dùng
 - **Ánh xạ Use Cases:** [UC01](../SRS.md#uc01) (Đăng ký & Xác thực người dùng).
 - **Yêu cầu Chức năng:** [FR01](../SRS.md#fr01), [FR15](../SRS.md#fr15).
-- **Quy tắc Nghiệp vụ:** [BR11](../SRS.md#br11) (Bảo mật phiên JWT/Argon2id).
+- **Quy tắc Nghiệp vụ:** [BR11](../SRS.md#br11) (Bảo mật phiên JWT/bcrypt cost=12).
 - **Phân làn Thực thi (Swimlanes):**
   - **Làn 1:** `Người dùng (User / Guest)` - Khách vãng lai đăng ký tài khoản mới hoặc người dùng đăng nhập hệ thống.
-  - **Làn 2:** `Hệ thống WealthFlow (System)` - Kiểm tra tính duy nhất email, băm mật khẩu Argon2id, gán danh mục mặc định, thẩm định đăng nhập và ký phát cặp Token JWT an toàn.
+  - **Làn 2:** `Hệ thống WealthFlow (System)` - Kiểm tra tính duy nhất email, băm mật khẩu bcrypt (cost=12), gán danh mục mặc định, thẩm định đăng nhập và ký phát cặp Token JWT an toàn.
 
 #### Sơ đồ Hoạt động Trực quan (Vector SVG)
 ![AD01 Activity Diagram](./activity_diagram/ad01.svg)
@@ -209,7 +209,7 @@ Bảng đối soát xác nhận mọi quy trình nghiệp vụ đã được mô
 
 | Use Case | Tên Use Case | Sơ đồ Hoạt động | Quy tắc Nghiệp vụ thực thi | Cơ chế Kiểm soát Ngoại lệ & Bảo mật |
 | :--- | :--- | :---: | :--- | :--- |
-| [UC01](../SRS.md#uc01) | Đăng ký & Xác thực người dùng | **AD01** | [BR11](../SRS.md#br11) | Băm mật khẩu Argon2id, chống trùng Email, HttpOnly Cookie. |
+| [UC01](../SRS.md#uc01) | Đăng ký & Xác thực người dùng | **AD01** | [BR11](../SRS.md#br11) | Băm mật khẩu bcrypt (cost=12), chống trùng Email, HttpOnly Cookie. |
 | [UC02](../SRS.md#uc02) | Quản lý ví & số dư mở sổ | **AD02** | [BR01](../SRS.md#br01), [BR02](../SRS.md#br02) | Bút toán mở sổ cân bằng vốn chủ sở hữu (Equity). |
 | [UC03](../SRS.md#uc03) | Ghi nhận giao dịch tài chính | **AD03**, **AD04** | [BR01](../SRS.md#br01), [BR03](../SRS.md#br03), [BR04](../SRS.md#br04) | Giao dịch CSDL ACID nguyên tử; chặn hoặc cảnh báo âm ví. |
 | [UC04](../SRS.md#uc04) | Thiết lập & Xử lý giao dịch định kỳ | **AD04**, **AD05** | [BR07](../SRS.md#br07), [BR09](../SRS.md#br09), [BR13](../SRS.md#br13), [SYS02](../SRS.md#sys02) | Bút toán đảo đối ứng (`REVERSED`), xử lý ngày neo cuối tháng (lùi 28/02), Idempotency-Key, tiến trình tự động lúc 00:05. |
