@@ -64,7 +64,7 @@ classDiagram
         -userDAO: UserDAO
         -tokenDAO: PasswordResetDAO
         -jwtProvider: JwtTokenProvider
-        -passwordEncoder: Argon2PasswordEncoder
+        -passwordEncoder: BcryptPasswordEncoder
         +register(dto: RegisterRequestDTO): User
         +authenticate(email: String, password: String): TokenPair
         +refreshAccessToken(refreshToken: String): TokenPair
@@ -76,7 +76,7 @@ classDiagram
     class UserService {
         <<Control>>
         -userDAO: UserDAO
-        -passwordEncoder: Argon2PasswordEncoder
+        -passwordEncoder: BcryptPasswordEncoder
         +getUserProfile(userId: UUID): User
         +updateProfile(userId: UUID, dto: UpdateProfileDTO): User
         +changePassword(userId: UUID, oldPass: String, newPass: String): void

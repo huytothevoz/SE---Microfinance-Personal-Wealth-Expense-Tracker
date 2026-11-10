@@ -50,11 +50,11 @@ else (Đủ số dư)
   |#F8FAFC|Người dùng (User)|
   :Chuyển khoản thành công;
   
-  if (Người dùng có yêu cầu Đảo giao dịch (BR07)?) then (Có yêu cầu)
+  if (Người dùng có yêu cầu Đảo giao dịch (BR06)?) then (Có yêu cầu)
     :Bấm "Yêu cầu Đảo giao dịch" & Nhập lý do;
     |#F1F5F9|Hệ thống WealthFlow|
     if (Giao dịch hợp lệ & Chưa bị đảo?) then (Hợp lệ)
-      :1. Đánh dấu status = REVERSED (BR07)\n2. Tạo bút toán đảo đối ứng (Nợ Ví nguồn / Có Ví đích)\n3. Khôi phục số dư 2 ví nguyên tử;
+      :1. Đánh dấu status = REVERSED (BR06)\n2. Tạo bút toán đảo đối ứng (Nợ Ví nguồn / Có Ví đích)\n3. Khôi phục số dư 2 ví nguyên tử;
       |#F8FAFC|Người dùng (User)|
       :Nhận thông báo đảo giao dịch thành công;
     else (Từ chối)

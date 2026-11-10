@@ -37,7 +37,7 @@ if (Lựa chọn thao tác?) then (Đăng ký tài khoản mới)
     stop
   else (Hợp lệ)
     |#F1F5F9|Hệ thống WealthFlow (System)|
-    :1. Băm mật khẩu bằng Argon2id\n2. Tạo bản ghi User mới (Status = Active)\n3. Tự động sao chép danh mục mặc định (FR13.01);
+    :1. Băm mật khẩu bằng bcrypt (cost=12)\n2. Tạo bản ghi User mới (Status = Active)\n3. Tự động sao chép danh mục mặc định (FR13.01);
     |#F8FAFC|Người dùng (User / Guest)|
     :Hiển thị thông báo đăng ký thành công;
   endif

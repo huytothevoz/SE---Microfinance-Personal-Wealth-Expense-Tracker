@@ -29,7 +29,7 @@ sequenceDiagram
             AS -->> AC: Ném lỗi ConflictException("Email đã được sử dụng")
             AC -->> User: 409 Conflict {"errorCode": "EMAIL_ALREADY_EXISTS"}
         else Email hợp lệ (chưa tồn tại)
-            AS ->> AS: hashPassword(password) [Argon2id, cost=12]
+            AS ->> AS: hashPassword(password) [bcrypt, cost=12]
             AS ->> UD: createUserWithDefaultCategories(userData)
             activate UD
             UD ->> DB: START TRANSACTION

@@ -97,7 +97,7 @@ Sơ đồ Hoạt động phân làn (Activity Diagram with Swimlanes) trong tài
 ### AD04: Quy trình Chuyển tiền Nội bộ, Quy đổi Ngoại tệ & Đảo Giao dịch
 - **Ánh xạ Use Cases:** [UC03](../SRS.md#uc03) (Ghi nhận giao dịch), [UC04](../SRS.md#uc04) (Đảo giao dịch chuyển tiền).
 - **Yêu cầu Chức năng:** [FR03](../SRS.md#fr03), [FR04](../SRS.md#fr04), [FR15](../SRS.md#fr15).
-- **Quy tắc Nghiệp vụ:** [BR01](../SRS.md#br01) (Kế toán kép), [BR04](../SRS.md#br04) (Số dư ví nguồn), [BR07](../SRS.md#br07) (Cơ chế Đảo giao dịch - Reversal, cấm xóa cứng), [BR08](../SRS.md#br08) (Quy đổi đa tiền tệ).
+- **Quy tắc Nghiệp vụ:** [BR01](../SRS.md#br01) (Kế toán kép), [BR04](../SRS.md#br04) (Số dư ví nguồn), [BR06](../SRS.md#br06) (Cơ chế Đảo giao dịch - Reversal, cấm xóa cứng), [BR08](../SRS.md#br08) (Quy đổi đa tiền tệ).
 - **Phân làn Thực thi (Swimlanes):**
   - **Làn 1:** `Người dùng (User)` - Chọn 2 ví, xác nhận số tiền quy đổi, yêu cầu đảo giao dịch.
   - **Làn 2:** `Hệ thống WealthFlow` - Tính toán tỷ giá, hạch toán đối ứng Nợ Ví đích / Có Ví nguồn, tạo bút toán đảo.
@@ -212,7 +212,7 @@ Bảng đối soát xác nhận mọi quy trình nghiệp vụ đã được mô
 | [UC01](../SRS.md#uc01) | Đăng ký & Xác thực người dùng | **AD01** | [BR11](../SRS.md#br11) | Băm mật khẩu bcrypt (cost=12), chống trùng Email, HttpOnly Cookie. |
 | [UC02](../SRS.md#uc02) | Quản lý ví & số dư mở sổ | **AD02** | [BR01](../SRS.md#br01), [BR02](../SRS.md#br02) | Bút toán mở sổ cân bằng vốn chủ sở hữu (Equity). |
 | [UC03](../SRS.md#uc03) | Ghi nhận giao dịch tài chính | **AD03**, **AD04** | [BR01](../SRS.md#br01), [BR03](../SRS.md#br03), [BR04](../SRS.md#br04) | Giao dịch CSDL ACID nguyên tử; chặn hoặc cảnh báo âm ví. |
-| [UC04](../SRS.md#uc04) | Thiết lập & Xử lý giao dịch định kỳ | **AD04**, **AD05** | [BR07](../SRS.md#br07), [BR09](../SRS.md#br09), [BR13](../SRS.md#br13), [SYS02](../SRS.md#sys02) | Bút toán đảo đối ứng (`REVERSED`), xử lý ngày neo cuối tháng (lùi 28/02), Idempotency-Key, tiến trình tự động lúc 00:05. |
+| [UC04](../SRS.md#uc04) | Thiết lập & Xử lý giao dịch định kỳ | **AD04**, **AD05** | [BR06](../SRS.md#br06), [BR09](../SRS.md#br09), [BR13](../SRS.md#br13), [SYS02](../SRS.md#sys02) | Bút toán đảo đối ứng (`REVERSED`), xử lý ngày neo cuối tháng (lùi 28/02), Idempotency-Key, tiến trình tự động lúc 00:05. |
 | [UC05](../SRS.md#uc05) | Thiết lập & cảnh báo ngân sách | **AD03** | [BR06](../SRS.md#br06) | Cảnh báo ngưỡng 80% (Vàng) và 100% (Đỏ) tức thời khi nhập chi tiêu. |
 | [UC06](../SRS.md#uc06) | Quản lý khoản vay vi mô | **AD06** | [BR01](../SRS.md#br01) | Hạch toán giải ngân vào ví và ghi nhận nợ phải trả. |
 | [UC07](../SRS.md#uc07) | Trả nợ & theo dõi lịch hoàn vốn | **AD06** | [BR05](../SRS.md#br05), [BR17](../SRS.md#br17) | Hạch toán 3 dòng: Trừ nợ gốc (không vào chi phí) + Lãi vay (vào chi phí). |
