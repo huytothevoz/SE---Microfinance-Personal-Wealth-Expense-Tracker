@@ -26,7 +26,7 @@
 | **[Phần 2](#phan-2)** | **Bối cảnh và Kiến trúc nền tảng** | Ranh giới hệ thống, tác nhân, kiến trúc tham chiếu Layered + Modular Monolith, chính sách đa tiền tệ và 18 quy tắc nghiệp vụ cốt lõi (BR). |
 | **[Phần 3](#phan-3)** | **Đặc tả Yêu cầu chức năng (FR)** | Đặc tả chi tiết 15 nhóm chức năng (FR01 - FR15) theo chuẩn Ian Sommerville §4.3.2, bao quát Microfinance (vay/nợ), Personal Wealth (vàng/Net Worth/Saving Rate), Expense Tracker và Quản trị hệ thống (Admin). |
 | **[Phần 4](#phan-4)** | **Mô hình tương tác và Use Case** | Danh mục 13 Use Cases cốt lõi (UC01 - UC13) đặc tả đầy đủ luồng chính, luồng phụ và luồng ngoại lệ tách biệt; 3 kịch bản xử lý nền (SYS01 - SYS03) và ma trận hạch toán kế toán kép. |
-| **[Phần 5](#phan-5)** | **Yêu cầu phi chức năng (NFR)** | Lượng hóa 7 nhóm NFR theo tiêu chuẩn quốc tế ISO/IEC 25010:2023 trên môi trường kiểm thử chuẩn E1/D1/L1. |
+| **[Phần 5](#phan-5)** | **Yêu cầu phi chức năng (NFR)** | Khung phương pháp tham khảo lượng hóa (Ian Sommerville & ISO/IEC 25010) và đặc tả chi tiết 7 nhóm NFR trên môi trường chuẩn E1/D1/L1. |
 | **[Phần 6](#phan-6)** | **Ma trận truy vết và Nghiệm thu** | Ma trận truy vết hai chiều (UR - FR - UC - BR - NFR - Test Suite), ca kiểm thử mẫu phân rã theo luồng và tiêu chí nghiệm thu pha Elaboration. |
 
 ---
@@ -1267,12 +1267,43 @@ Cấu trúc đặc tả tuân thủ chuẩn Kỹ nghệ yêu cầu phần mềm 
 
 ## 5. Yêu cầu phi chức năng (Non-Functional Requirements - NFR)
 
-Toàn bộ các yêu cầu phi chức năng được chuẩn hóa và lượng hóa theo tiêu chuẩn quốc tế **ISO/IEC 25010:2023** (Systems and software Quality Requirements and Evaluation - SQRE) trên môi trường kiểm thử tiêu chuẩn:
-- **E1 (Môi trường mạng):** Mạng giả lập độ trễ mạng tiêu chuẩn $100\text{ ms}$.
-- **D1 (Quy mô dữ liệu mẫu):** Cơ sở dữ liệu mẫu chứa $50.000$ dòng giao dịch và $1.000$ tài khoản.
-- **L1 (Mức tải đồng thời):** Tải đồng thời 50 người dùng tương tác liên tục (50 concurrent users).
+### 5.1 Khung phương pháp tham khảo để lượng hóa yêu cầu phi chức năng (Quantification Framework & Reference Metrics)
+
+#### 5.1.1 Nguyên lý lượng hóa yêu cầu phi chức năng (Verifiability Principle)
+Theo nguyên lý kỹ nghệ yêu cầu chuẩn của **Ian Sommerville** (*Software Engineering*, Ch. 4: *Requirements Engineering*) và chuẩn đặc tả phần mềm **IEEE Std 830-1998**:
+- Một yêu cầu phi chức năng viết dưới dạng định tính cảm quan (ví dụ: *"hệ thống phải phản hồi nhanh"*, *"giao diện phải thân thiện"*, *"hệ thống phải tuyệt đối an toàn"*, *"dữ liệu phải tin cậy"*) là **phi kỹ thuật** và **không thể kiểm chứng nghiệm thu (unverifiable)**.
+- Mọi yêu cầu phi chức năng chỉ đạt giá trị kỹ thuật thực sự khi được **lượng hóa (quantified)** thành các chỉ tiêu số học cụ thể, có thể đo lường và thẩm định khách quan thông qua các công cụ đo kiểm hoặc kịch bản kiểm thử tự động xác định.
+- Theo phương pháp lượng hóa yêu cầu **Tom Gilb (Gilb's Planguage / Measurable Requirements Framework)**, mỗi chỉ tiêu chất lượng của WealthFlow được cấu trúc chặt chẽ gồm 5 tham số chuẩn:
+  1. **Thuộc tính chất lượng (Attribute/Property):** Đặc tính kỹ thuật cần kiểm soát (ví dụ: Tốc độ xử lý, Độ sẵn sàng hệ thống).
+  2. **Thang đo & Thước đo (Scale/Metric):** Đại lượng đo lường cụ thể (ví dụ: thời gian mili-giây, tỷ lệ phần trăm, số bước click).
+  3. **Công cụ / Phương thức đo (Meter):** Phương tiện, công cụ hoặc bài test khách quan dùng để thu thập số liệu (ví dụ: k6, Postman, Google Lighthouse, Jest, PHPUnit / Custom Test Runner, SSL Labs).
+  4. **Ngưỡng chỉ tiêu (Target/Goal):** Giá trị số học định lượng hệ thống cam kết đạt được (ví dụ: $T_{resp} \le 200\text{ ms}$, Availability $\ge 99.5\%$).
+  5. **Môi trường kiểm chuẩn (Test Baseline):** Điều kiện biên, dữ liệu mẫu và tải trọng áp dụng (môi trường chuẩn E1, D1, L1).
+
+#### 5.1.2 Bảng phân loại thước đo định lượng tham chiếu chuẩn (Standard Metrics Classification Table)
+Dưới đây là khung tham chiếu các thước đo chuẩn theo giáo trình Kỹ thuật phần mềm (Ian Sommerville - Bảng 4.3 *Metrics for specifying non-functional requirements*) kết hợp mô hình chất lượng quốc tế **ISO/IEC 25010:2023** (*Systems and software Quality Requirements and Evaluation - SQRE*) và cách thức hiện thực hóa định lượng trong hệ thống WealthFlow:
+
+| Thuộc tính chất lượng (Property - Sommerville / ISO 25010) | Thước đo định lượng tham chiếu (Standard Measurement Metric) | Đơn vị đo (Unit) | Hiện thực hóa định lượng trong WealthFlow | Nhóm NFR áp dụng |
+| :--- | :--- | :---: | :--- | :---: |
+| **1. Tốc độ (Speed)**<br>*(Performance Efficiency)* | • Thời gian đáp ứng sự kiện / yêu cầu (User/event response time)<br>• Thời gian kết xuất nội dung giao diện (Screen render time / FCP)<br>• Thông lượng xử lý giao dịch (Processed transactions/second - TPS) | mili-giây ($\text{ms}$)<br><br>giây ($\text{s}$)<br><br>req/s | • $95\%$ API đọc $T_{resp} \le 200\text{ ms}$<br>• $95\%$ API ghi sổ kép $T_{write} \le 500\text{ ms}$<br>• First Contentful Paint $FCP \le 1.5\text{ s}$<br>• Tỷ lệ lỗi $< 0.1\%$ khi chịu tải 50 VU | [NFR01](#nfr01) |
+| **2. Kích thước & Dung lượng (Size)**<br>*(Resource Utilization)* | • Dung lượng bộ nhớ lưu trữ / tiêu thụ (Memory/Storage consumption)<br>• Dung lượng gói mã nguồn phân phối (Client bundle size)<br>• Độ dài chuỗi khóa / Salt băm mật khẩu (Key & salt size) | $\text{KB}$ / $\text{MB}$<br><br>bytes | • Bundle JS/CSS nén gzipped $\le 500\text{ KB}$<br>• Salt mật khẩu ngẫu nhiên $\ge 16\text{ bytes}$<br>• Bộ nhớ PHP worker $\le 128\text{ MB}$ | [NFR01](#nfr01)<br>[NFR02](#nfr02) |
+| **3. Tính dễ sử dụng (Ease of use)**<br>*(Usability)* | • Số bước thao tác hoàn tất tác vụ (Number of steps / clicks)<br>• Độ rõ ràng và tỷ lệ thông báo lỗi thân thiện (Error feedback clarity)<br>• Thời gian làm quen hệ thống (User onboarding time) | số lần click / tap<br><br>phần trăm ($\%$)<br><br>phút ($\text{phút}$) | • Tối đa $\le 4$ bước click/tap để ghi một khoản chi thông thường<br>• $100\%$ thông báo lỗi tiếng Việt dễ hiểu, $0\%$ lộ stack trace ra giao diện<br>• Người dùng nắm bắt dashboard trong $\le 5\text{ phút}$ | [NFR06](#nfr06) |
+| **4. Độ tin cậy & Toàn vẹn (Reliability)**<br>*(Reliability & Consistency)* | • Tỷ lệ thời gian sẵn sàng phục vụ (System Availability)<br>• Tần suất phát sinh lỗi (Rate of failure occurrence - ROCOF)<br>• Độ chính xác toán học sổ cái kép (Double-entry balance integrity) | phần trăm ($\%$)<br><br>lỗi / giờ<br><br>phần trăm ($\%$) | • Độ sẵn sàng vận hành $A \ge 99.5\%$ trong giai đoạn thử nghiệm<br>• Tỷ lệ cân bằng $\sum \text{Debit} = \sum \text{Credit}$ đạt chính xác tuyệt đối $100.000\%$<br>• Không có bút toán mồ côi | [NFR03](#nfr03) |
+| **5. Khả năng chịu lỗi & Bền vững (Robustness)**<br>*(Fault Tolerance & Recoverability)* | • Thời gian phục hồi hoạt động sau sự cố (Recovery Time Objective - RTO)<br>• Điểm khôi phục dữ liệu tối đa (Recovery Point Objective - RPO)<br>• Tỷ lệ hủy an toàn khi gặp sự cố (Atomic rollback rate) | phút ($\text{phút}$)<br><br>giờ ($\text{giờ}$)<br><br>phần trăm ($\%$) | • $RTO \le 60\text{ phút}$ phục hồi dịch vụ sau lỗi máy chủ<br>• $RPO \le 24\text{ giờ}$ qua sao lưu định kỳ hàng ngày<br>• $100\%$ giao dịch lỗi mạng hoặc xung đột được Rollback tự động nguyên tử | [NFR03](#nfr03) |
+| **6. Khả năng bảo trì & Kiểm thử (Maintainability)**<br>*(Testability & Modularity)* | • Tỷ lệ bao phủ kiểm thử tự động (Automated Test Coverage)<br>• Chuẩn hóa dữ liệu nhật ký vết (Structured logging compliance)<br>• Mức độ phân tách mô-đun (Layered coupling & complexity) | phần trăm ($\%$)<br><br>phần trăm ($\%$)<br><br>thang điểm | • Độ bao phủ kiểm thử tự động $\ge 80\%$ cho Tầng Nghiệp vụ (Domain Layer) và Tầng Dịch vụ (Application Services)<br>• $100\%$ log ứng dụng định dạng JSON có cấu trúc chuẩn | [NFR04](#nfr04) |
+| **7. Tính di động & Tương thích (Portability)**<br>*(Compatibility & Flexibility)* | • Tỷ lệ tương thích môi trường đích (Target browser compliance)<br>• Phổ kích thước màn hình đáp ứng (Responsive viewport range) | phần trăm ($\%$)<br><br>pixels ($\text{px}$) | • $100\%$ tương thích và hoạt động ổn định trên 4 trình duyệt chính (Chrome $\ge 115$, Firefox $\ge 115$, Edge $\ge 115$, Safari $\ge 16$)<br>• Responsive 3 dải độ phân giải: Mobile ($375-430\text{px}$), Tablet ($768-1024\text{px}$), Desktop ($1280-1920\text{px}$) | [NFR05](#nfr05) |
+| **8. An toàn & Bảo mật (Security)**<br>*(Confidentiality & Integrity)* | • Tỷ lệ triệt tiêu lỗ hổng OWASP Top 10<br>• Thời hạn hiệu lực phiên bảo vệ (Token lifetime)<br>• Tỷ lệ cách ly dữ liệu cá nhân (RBAC data isolation) | phần trăm ($\%$)<br><br>phút ($\text{phút}$)<br><br>phần trăm ($\%$) | • $100\%$ triệt tiêu SQL Injection, XSS, CSRF, CSV Injection<br>• Access Token $\le 60\text{ phút}$, Cookie HttpOnly Strict<br>• $100\%$ cách ly dữ liệu tài chính cá nhân khỏi quyền Admin | [NFR02](#nfr02) |
+| **9. Tuân thủ chuẩn mực (Compliance)**<br>*(Legal & Accounting Standards)* | • Mức độ tuân thủ quy chuẩn kế toán Việt Nam<br>• Mức độ tuân thủ pháp lý bảo vệ dữ liệu cá nhân | chuẩn mực<br><br>nghị định luật | • Chuẩn số học thập phân `DECIMAL(24,8)` và BCMath loại trừ sai số trôi số thực; VND định dạng dấu chấm không số lẻ<br>• Tuân thủ Nghị định 13/2023/NĐ-CP và Luật Kế toán 2015 | [NFR07](#nfr07) |
+
+#### 5.1.3 Môi trường kiểm chuẩn tiêu chuẩn (Standard Evaluation Baselines)
+Để đảm bảo các kết quả đo lường có tính so sánh khách quan và có thể tái lập (reproducible), mọi chỉ tiêu NFR được cam kết đo kiểm trên môi trường kiểm chuẩn cố định:
+- **E1 (Môi trường mạng - Network Baseline):** Mạng giả lập độ trễ tiêu chuẩn $100\text{ ms}$ (Round-Trip Time - RTT) qua đường truyền Internet thông thường.
+- **D1 (Quy mô dữ liệu mẫu - Database Scale):** Cơ sở dữ liệu mẫu chứa $50.000$ dòng giao dịch tài chính phát sinh thực tế và $1.000$ tài khoản ví phân bố ngẫu nhiên.
+- **L1 (Mức tải đồng thời - Concurrency Load):** Tải đồng thời 50 người dùng ảo tương tác liên tục (50 concurrent Virtual Users - VU) thực hiện các thao tác đọc Dashboard và ghi sổ kép trong thời gian 10 phút.
 
 ---
+
+### 5.2 Đặc tả chi tiết các nhóm yêu cầu phi chức năng (Detailed NFR Specifications)
 
 ### <a id="nfr01"></a>NFR01 - Hiệu năng và Thời gian đáp ứng (Performance Efficiency)
 

@@ -4,7 +4,7 @@
 > **Liên kết Tài liệu Liên quan (Related Documents):**  
 > - **Yêu cầu & Nghiệp vụ:** [SRS.md (Đặc tả Yêu cầu Phần mềm v2.1)](./SRS.md) | [Business-Modelling.md (Mô hình Hóa Nghiệp vụ)](../01_inception/Business-Modelling.md)
 > - **Mô hình Hóa Phân tích & Thiết kế (UML):** [usecase_diagram.md (Sơ đồ Use Case)](./uml_modeling/usecase_diagram.md) | [activity_diagram.md (Sơ đồ Hoạt động)](./uml_modeling/activity_diagram.md) | [class_diagram.md (Sơ đồ Lớp Chi tiết BCE+D)](./uml_modeling/class_diagram.md) | [sequence_diagram.md (Sơ đồ Tuần tự 08 Kịch bản)](./uml_modeling/sequence_diagram.md)
-> - **Cơ sở Dữ liệu & Triển khai:** [database_design.md (Thiết kế CSDL Vật lý MySQL 8.2+ 22 Bảng)](./database_design.md)
+> - **Cơ sở Dữ liệu & Triển khai:** [database_design.md (Thiết kế CSDL Vật lý MySQL 8.2+ 28 Bảng)](./database_design.md)
 
 ---
 
@@ -803,5 +803,5 @@ Bảng dưới đây xác nhận tính toàn vẹn và mức độ bao phủ 100
 
 Tài liệu **Đặc tả RESTful API (`api_design.md`)** đã định hình trọn vẹn hợp đồng giao tiếp giữa các thành phần phần mềm của WealthFlow:
 1. **Tính Nhất Quán & Bảo Mật Tuyệt Đối:** Chuẩn hóa toàn diện cơ chế xác thực JWT, bảo vệ CSRF Same-origin, mã băm Argon2id, chống trùng lặp Idempotency-Key và kiểm soát ranh giới phân quyền `USER` / `ADMIN`.
-2. **Kế Thừa Hoàn Chỉnh Thiết Kế UML & Database:** Mọi Endpoint đều được đối chiếu chặt chẽ với các phương thức Controller trong [class_diagram.md](./uml_modeling/class_diagram.md), các tương tác động trong [sequence_diagram.md](./uml_modeling/sequence_diagram.md), và cấu trúc 22 bảng trong [database_design.md](./database_design.md).
+2. **Kế Thừa Hoàn Chỉnh Thiết Kế UML & Database:** Mọi Endpoint đều được đối chiếu chặt chẽ với các phương thức Controller trong [class_diagram.md](./uml_modeling/class_diagram.md), các tương tác động trong [sequence_diagram.md](./uml_modeling/sequence_diagram.md), và cấu trúc 28 bảng trong [database_design.md](./database_design.md).
 3. **Sẵn Sàng Cho Pha Xây Dựng (Construction Phase):** Đội ngũ kỹ sư phát triển có thể triển khai trực tiếp các Route Handler và Controller trong thư mục `source/backend/src/Modules/` cùng các giao diện Web Client tương ứng.

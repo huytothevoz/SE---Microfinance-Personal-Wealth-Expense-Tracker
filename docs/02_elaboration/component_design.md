@@ -4,7 +4,7 @@
 > **Liên kết Tài liệu Liên quan (Related Documents):**  
 > - **Yêu cầu & Quy chuẩn:** [SRS.md (Đặc tả Yêu cầu Phần mềm v2.1)](./SRS.md) | [WealthFlow_Coding_Convention.md (Quy chuẩn Pha Construction)](../03_construction/WealthFlow_Coding_Convention.md) | [Business-Modelling.md](../01_inception/Business-Modelling.md)
 > - **Mô hình Hóa Phân tích & Thiết kế (UML):** [usecase_diagram.md](./uml_modeling/usecase_diagram.md) | [activity_diagram.md](./uml_modeling/activity_diagram.md) | [class_diagram.md (Sơ đồ Lớp Chi tiết BCE+D)](./uml_modeling/class_diagram.md) | [sequence_diagram.md (Sơ đồ Tuần tự 08 Kịch bản)](./uml_modeling/sequence_diagram.md)
-> - **Cơ sở Dữ liệu & Giao diện Lập trình:** [database_design.md (Thiết kế CSDL Vật lý MySQL 8.2+ 28 Bảng)](./database_design.md) | [api_design.md (Đặc tả RESTful API 42 Endpoints)](./api_design.md)
+> - **Cơ sở Dữ liệu & Giao diện Lập trình:** [database_design.md (Thiết kế CSDL Vật lý MySQL 8.2+ 28 Bảng)](./database_design.md) | [api_design.md (Đặc tả RESTful API 81 Endpoints)](./api_design.md)
 
 ---
 
@@ -13,7 +13,7 @@
 Tài liệu **Thiết Kế Kiến Trúc Thành Phần & Cấu Trúc Triển Khai (Component Design)** đóng vai trò là "chiếc cầu nối sống còn" giữa Pha Tinh tế hóa (Elaboration) và Pha Xây dựng (Construction) trong tiến trình Unified Process (UP/RUP). 
 
 Mục tiêu cốt lõi của tài liệu này là:
-1. **Chuyển hóa Mô hình Trừu tượng thành Thực tế Triển khai:** Ánh xạ tường minh toàn bộ các lớp thiết kế trong [class_diagram.md](./uml_modeling/class_diagram.md), các tương tác động trong [sequence_diagram.md](./uml_modeling/sequence_diagram.md), cấu trúc 28 bảng CSDL trong [database_design.md](./database_design.md), và 42 endpoints trong [api_design.md](./api_design.md) vào **cấu trúc thư mục và tệp tin mã nguồn vật lý** trong thư mục `source/`.
+1. **Chuyển hóa Mô hình Trừu tượng thành Thực tế Triển khai:** Ánh xạ tường minh toàn bộ các lớp thiết kế trong [class_diagram.md](./uml_modeling/class_diagram.md), các tương tác động trong [sequence_diagram.md](./uml_modeling/sequence_diagram.md), cấu trúc 28 bảng CSDL trong [database_design.md](./database_design.md), và 81 endpoints trong [api_design.md](./api_design.md) vào **cấu trúc thư mục và tệp tin mã nguồn vật lý** trong thư mục `source/`.
 2. **Quy định Vị trí Tệp tin Tuyệt đối (Absolute File Placement):** Xác định chính xác từng thành phần (Component/Class/Module) phải nằm trong thư mục nào, tệp tin tên gì, namespace chuẩn PSR-4 là gì, phụ thuộc vào những module nào, loại bỏ hoàn toàn tình trạng lập trình viên đặt file tùy tiện hoặc trùng lặp trách nhiệm.
 3. **Phân Rã Độc Lập Cho Làm Việc Nhóm (Parallel Development):** Thiết lập ranh giới mô-đun rõ ràng (Modular Monolith) giúp 4 thành viên trong nhóm kỹ thuật có thể đồng thời triển khai các phân hệ nghiệp vụ mà không gây xung đột mã nguồn (Merge Conflicts).
 
