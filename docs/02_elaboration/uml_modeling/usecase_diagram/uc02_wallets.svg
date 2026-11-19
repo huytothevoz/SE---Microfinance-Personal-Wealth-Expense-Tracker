@@ -1,89 +1,120 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 620" width="1100" height="620">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" font-family="Segoe UI, Arial, sans-serif">
+  
   <defs>
-    <marker id="uml-arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto">
-      <polyline points="2 2, 10 6, 2 10" fill="none" stroke="#000000" stroke-width="1.5"/>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <marker id="uml-arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 1 2 L 10 6 L 1 10" fill="none" stroke="#1e3a8a" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="uml-arrow-red" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 1 2 L 10 6 L 1 10" fill="none" stroke="#be123c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
     </marker>
   </defs>
 
-  <!-- Background -->
-  <rect width="1100" height="620" fill="#FFFFFF"/>
-
-  <!-- System Boundary Box -->
-  <rect x="20" y="20" width="1060" height="580" fill="#FFFFFF" stroke="#000000" stroke-width="1.5"/>
-
-  <!-- Header Banner -->
-  <rect x="20" y="20" width="1060" height="46" fill="#F1F5F9" stroke="#000000" stroke-width="1.5"/>
-  <text x="550" y="49" font-family="'Segoe UI', Arial, sans-serif" font-size="15" font-weight="bold" fill="#000000" text-anchor="middle">WealthFlow - Sơ đồ chi tiết UC02: Quản lý Ví tiền &amp; Nguồn vốn Mở sổ</text>
-
-  <!-- Actor: Người dùng (End-User) -->
-  <g id="actor-user">
-    <circle cx="105" cy="260" r="17" fill="#BAE6FD" stroke="#0284C7" stroke-width="2"/>
-    <line x1="105" y1="277" x2="105" y2="335" stroke="#0F172A" stroke-width="2"/>
-    <line x1="75" y1="298" x2="135" y2="298" stroke="#0F172A" stroke-width="2"/>
-    <line x1="105" y1="335" x2="80" y2="390" stroke="#0F172A" stroke-width="2"/>
-    <line x1="105" y1="335" x2="130" y2="390" stroke="#0F172A" stroke-width="2"/>
-    <text x="105" y="415" font-family="'Segoe UI', Arial, sans-serif" font-size="14" font-weight="bold" fill="#000000" text-anchor="middle">Người dùng</text>
-    <text x="105" y="435" font-family="'Segoe UI', Arial, sans-serif" font-size="12" fill="#475569" text-anchor="middle">(End-User)</text>
-  </g>
-
-  <!-- ==================== PRIMARY USE CASES ==================== -->
-  <!-- UC1: Tạo ví thanh toán mới -->
-  <ellipse cx="370" cy="130" rx="115" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
-  <text x="370" y="135" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Tạo ví thanh toán mới</text>
-
-  <!-- UC2: Xem chi tiết & Theo dõi số dư ví -->
-  <ellipse cx="370" cy="260" rx="120" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
-  <text x="370" y="265" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Xem chi tiết &amp; Số dư ví</text>
-
-  <!-- UC3: Điều chỉnh số dư thực tế -->
-  <ellipse cx="370" cy="390" rx="120" ry="32" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
-  <text x="370" y="395" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Điều chỉnh số dư thực tế</text>
-
-  <!-- UC4: Lưu trữ / Đóng ví (Archive) -->
-  <ellipse cx="370" cy="515" rx="115" ry="30" fill="#7DD3FC" stroke="#0284C7" stroke-width="2"/>
-  <text x="370" y="520" font-family="'Segoe UI', Arial, sans-serif" font-size="12" font-weight="bold" fill="#0F172A" text-anchor="middle">Lưu trữ / Đóng ví (Archive)</text>
-
-  <!-- ==================== SECONDARY / INCLUDED / EXTENDED USE CASES ==================== -->
-  <!-- UC Ext 1: Hạch toán Vốn mở sổ -->
-  <ellipse cx="780" cy="130" rx="140" ry="34" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
-  <text x="780" y="127" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Hạch toán Vốn mở sổ (Equity BR02)</text>
-  <text x="780" y="143" font-family="'Segoe UI', Arial, sans-serif" font-size="10" fill="#64748B" text-anchor="middle">[Kích hoạt khi Số dư ban đầu &gt; 0]</text>
-
-  <!-- UC Inc 2: Tính toán Số dư khả dụng -->
-  <ellipse cx="780" cy="260" rx="140" ry="34" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
-  <text x="780" y="257" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Tính toán Số dư khả dụng (BR04)</text>
-  <text x="780" y="273" font-family="'Segoe UI', Arial, sans-serif" font-size="10" fill="#64748B" text-anchor="middle">(Cached Balance - Earmarked)</text>
-
-  <!-- UC Inc 3: Sinh bút toán chênh lệch kiểm kê -->
-  <ellipse cx="780" cy="390" rx="140" ry="34" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
-  <text x="780" y="387" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Sinh bút toán chênh lệch kiểm kê</text>
-  <text x="780" y="403" font-family="'Segoe UI', Arial, sans-serif" font-size="10" fill="#64748B" text-anchor="middle">(Tự động cân bằng Nợ/Có BR01)</text>
-
-  <!-- UC Inc 4: Ràng buộc lịch sử giao dịch -->
-  <ellipse cx="780" cy="515" rx="140" ry="30" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="4,4"/>
-  <text x="780" y="520" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" fill="#0369A1" text-anchor="middle">Kiểm tra lịch sử giao dịch (Cấm xóa cứng)</text>
-
-  <!-- ==================== CONNECTIONS ==================== -->
-  <!-- User to Primary UCs -->
-  <line x1="135" y1="310" x2="260" y2="145" stroke="#000000" stroke-width="1.5"/>
-  <line x1="135" y1="310" x2="252" y2="260" stroke="#000000" stroke-width="1.5"/>
-  <line x1="135" y1="310" x2="252" y2="390" stroke="#000000" stroke-width="1.5"/>
-  <line x1="135" y1="310" x2="260" y2="505" stroke="#000000" stroke-width="1.5"/>
-
-  <!-- Relationships -->
-  <!-- Equity extends CreateWallet (arrow points from extended to base) -->
-  <line x1="640" y1="130" x2="495" y2="130" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
-  <text x="565" y="120" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
-
-  <!-- View includes Calc Available (arrow points from base to included) -->
-  <line x1="490" y1="260" x2="630" y2="260" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
-  <text x="565" y="250" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
-
-  <!-- Adjust includes Diff Entry -->
-  <line x1="490" y1="390" x2="630" y2="390" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
-  <text x="565" y="380" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
-
-  <!-- Archive includes History Check -->
-  <line x1="485" y1="515" x2="630" y2="515" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#uml-arrow)"/>
-  <text x="560" y="505" font-family="'Segoe UI', Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+  <rect width="960" height="540" fill="#ffffff"/>
+  <rect x="148" y="14" width="664" height="510" rx="6" fill="#fcfdff" stroke="#1e293b" stroke-width="2.4"/>
+  <rect x="148" y="14" width="664" height="42" rx="6" fill="#e2e8f0" stroke="#1e293b" stroke-width="2.4"/>
+  <text x="480" y="41" text-anchor="middle" fill="#0f172a" font-size="16" font-weight="700">WealthFlow - Sơ đồ chi tiết UC02: Quản lý Ví Đa tiền tệ &amp; Mở sổ Kép</text>
+  
+    <g>
+      <circle cx="68" cy="225" r="15" fill="#eaf2f8" stroke="#1b4f72" stroke-width="2.8"/>
+      <line x1="68" y1="240" x2="68" y2="278" stroke="#1b4f72" stroke-width="2.8"/>
+      <line x1="46" y1="254" x2="90" y2="254" stroke="#1b4f72" stroke-width="2.8"/>
+      <line x1="68" y1="278" x2="49" y2="307" stroke="#1b4f72" stroke-width="2.8"/>
+      <line x1="68" y1="278" x2="87" y2="307" stroke="#1b4f72" stroke-width="2.8"/>
+      <text x="68" y="328" text-anchor="middle" fill="#0f172a" font-size="15" font-weight="700">Người dùng</text>
+      <text x="68" y="347" text-anchor="middle" fill="#475569" font-size="13.5" font-weight="600">(Personal User)</text>
+    </g>
+    
+    <g>
+      <circle cx="892" cy="195" r="15" fill="#eaf2f8" stroke="#0f766e" stroke-width="2.8"/>
+      <line x1="892" y1="210" x2="892" y2="248" stroke="#0f766e" stroke-width="2.8"/>
+      <line x1="870" y1="224" x2="914" y2="224" stroke="#0f766e" stroke-width="2.8"/>
+      <line x1="892" y1="248" x2="873" y2="277" stroke="#0f766e" stroke-width="2.8"/>
+      <line x1="892" y1="248" x2="911" y2="277" stroke="#0f766e" stroke-width="2.8"/>
+      <text x="892" y="298" text-anchor="middle" fill="#0f172a" font-size="15" font-weight="700">Dịch vụ Tỷ giá</text>
+      <text x="892" y="317" text-anchor="middle" fill="#475569" font-size="13.5" font-weight="600">(Vietcombank FX)</text>
+    </g>
+    
+    <g filter="url(#shadow)">
+      <ellipse cx="305" cy="120" rx="130" ry="36" fill="#fff1f2" stroke="#be123c" stroke-width="2.6" />
+      
+        <text x="305" y="115" text-anchor="middle" fill="#881337" font-size="15" font-weight="700">Tạo Ví Tiền tệ mới</text>
+        <text x="305" y="135" text-anchor="middle" fill="#1e293b" font-size="13.5" font-weight="600">(Tiền mặt/Bank/Tín dụng)</text>
+        
+    </g>
+    
+    <g filter="url(#shadow)">
+      <ellipse cx="305" cy="232" rx="130" ry="36" fill="#cfe8fc" stroke="#1565c0" stroke-width="2.4" />
+      
+        <text x="305" y="227" text-anchor="middle" fill="#0d3b66" font-size="15" font-weight="700">Cập nhật Hạn mức</text>
+        <text x="305" y="247" text-anchor="middle" fill="#0f172a" font-size="13.5" font-weight="600">&amp; Thông tin Ví</text>
+        
+    </g>
+    
+    <g filter="url(#shadow)">
+      <ellipse cx="305" cy="344" rx="130" ry="36" fill="#cfe8fc" stroke="#1565c0" stroke-width="2.4" />
+      
+        <text x="305" y="339" text-anchor="middle" fill="#0d3b66" font-size="15" font-weight="700">Lưu trữ Ví (Archive)</text>
+        <text x="305" y="359" text-anchor="middle" fill="#0f172a" font-size="13.5" font-weight="600">(Xóa mềm Bảo toàn Sổ)</text>
+        
+    </g>
+    
+    <g filter="url(#shadow)">
+      <ellipse cx="305" cy="452" rx="130" ry="36" fill="#cfe8fc" stroke="#1565c0" stroke-width="2.4" />
+      
+        <text x="305" y="447" text-anchor="middle" fill="#0d3b66" font-size="15" font-weight="700">Xem Số dư Khả dụng</text>
+        <text x="305" y="467" text-anchor="middle" fill="#0f172a" font-size="13.5" font-weight="600">(Trừ Quỹ Phong tỏa)</text>
+        
+    </g>
+    
+    <g filter="url(#shadow)">
+      <ellipse cx="658" cy="120" rx="128" ry="36" fill="#eef7ff" stroke="#1e6091" stroke-width="2.0" stroke-dasharray="6,4"/>
+      
+        <text x="658" y="115" text-anchor="middle" fill="#155e75" font-size="15" font-weight="700">Hạch toán Mở sổ Kép</text>
+        <text x="658" y="135" text-anchor="middle" fill="#334155" font-size="13.5" font-weight="600">(Opening Equity - BR01)</text>
+        
+    </g>
+    
+    <g filter="url(#shadow)">
+      <ellipse cx="658" cy="232" rx="128" ry="36" fill="#eef7ff" stroke="#1e6091" stroke-width="2.0" stroke-dasharray="6,4"/>
+      
+        <text x="658" y="227" text-anchor="middle" fill="#155e75" font-size="15" font-weight="700">Chốt Lát cắt Tỷ giá</text>
+        <text x="658" y="247" text-anchor="middle" fill="#334155" font-size="13.5" font-weight="600">(FX Snapshot - BR04)</text>
+        
+    </g>
+    
+    <g filter="url(#shadow)">
+      <ellipse cx="658" cy="344" rx="128" ry="36" fill="#eef7ff" stroke="#1e6091" stroke-width="2.0" stroke-dasharray="6,4"/>
+      
+        <text x="658" y="339" text-anchor="middle" fill="#155e75" font-size="15" font-weight="700">Kiểm tra Ràng buộc</text>
+        <text x="658" y="359" text-anchor="middle" fill="#334155" font-size="13.5" font-weight="600">Không còn Dư nợ Vay</text>
+        
+    </g>
+    
+    <g filter="url(#shadow)">
+      <ellipse cx="658" cy="452" rx="128" ry="36" fill="#eef7ff" stroke="#1e6091" stroke-width="2.0" stroke-dasharray="6,4"/>
+      
+        <text x="658" y="447" text-anchor="middle" fill="#155e75" font-size="15" font-weight="700">Khóa tiền Mục tiêu</text>
+        <text x="658" y="467" text-anchor="middle" fill="#334155" font-size="13.5" font-weight="600">(Goal Earmarking)</text>
+        
+    </g>
+    <line x1="95" y1="245" x2="175" y2="120" stroke="#be123c" stroke-width="2.6"/><line x1="95" y1="258" x2="175" y2="232" stroke="#1b4f72" stroke-width="2.2"/><line x1="95" y1="270" x2="175" y2="344" stroke="#1b4f72" stroke-width="2.2"/><line x1="95" y1="282" x2="175" y2="452" stroke="#1b4f72" stroke-width="2.2"/><line x1="865" y1="232" x2="786" y2="232" stroke="#0f766e" stroke-width="2.4"/>
+    <line x1="530" y1="120" x2="435" y2="120" stroke="#be123c" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow-red)"/>
+    <rect x="445.1" y="109.5" width="74.8" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#be123c" stroke-width="1.0"/>
+    <text x="482.5" y="123.8" text-anchor="middle" fill="#be123c" font-size="13" font-weight="700">«extend»</text>
+    
+    <line x1="540" y1="212" x2="422" y2="142" stroke="#1e3a8a" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow)"/>
+    <rect x="443.6" y="174.5" width="74.8" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#1e3a8a" stroke-width="1.0"/>
+    <text x="481.0" y="188.8" text-anchor="middle" fill="#1e3a8a" font-size="13" font-weight="700">«extend»</text>
+    
+    <line x1="435" y1="344" x2="530" y2="344" stroke="#1e3a8a" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow)"/>
+    <rect x="441.3" y="333.5" width="82.39999999999999" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#1e3a8a" stroke-width="1.0"/>
+    <text x="482.5" y="347.8" text-anchor="middle" fill="#1e3a8a" font-size="13" font-weight="700">«include»</text>
+    
+    <line x1="530" y1="452" x2="435" y2="452" stroke="#1e3a8a" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow)"/>
+    <rect x="445.1" y="441.5" width="74.8" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#1e3a8a" stroke-width="1.0"/>
+    <text x="482.5" y="455.8" text-anchor="middle" fill="#1e3a8a" font-size="13" font-weight="700">«extend»</text>
+    
 </svg>
