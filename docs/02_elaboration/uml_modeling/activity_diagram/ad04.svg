@@ -1,1 +1,193 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" data-diagram-type="ACTIVITY" style="width:1860px;height:1056px;background:#FFFFFF;" width="1860px" height="1056px" viewBox="0 0 1860 1056" zoomAndPan="magnify" preserveAspectRatio="none" contentStyleType="text/css"><?plantuml 1.2026.9beta4?><defs/><g font-family="sans-serif" lengthAdjust="spacing"><g class="title" data-source-line="1"><text x="557.848" y="32.995" fill="#000" font-size="14" textLength="742.656" font-weight="700" font-family="'Segoe UI', Arial, sans-serif">Bản đồ Hoạt động: Chuyển tiền Nội bộ, Quy đổi Ngoại tệ &amp; Đảo Giao dịch (AD04 - UC03, UC04)</text></g><rect x="20" y="53.863" width="1813.352" height="15.133" fill="none" style="stroke:none;"/><rect x="20" y="53.863" width="854.646" height="982.098" fill="#F8FAFC" style="stroke:#F8FAFC;stroke-width:1;"/><ellipse cx="377.557" cy="83.996" rx="10" ry="10" fill="#222" style="stroke:#222;stroke-width:1;"/><rect x="287.237" y="113.996" width="180.641" height="33.969" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="297.237" y="135.134" fill="#0F172A" font-size="12" textLength="160.641" font-family="'Segoe UI', Arial, sans-serif">1. Chọn Ví nguồn &amp; Ví đích</text><rect x="298.167" y="167.964" width="158.779" height="33.969" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="308.167" y="189.103" fill="#0F172A" font-size="12" textLength="138.779" font-family="'Segoe UI', Arial, sans-serif">2. Nhập số tiền chuyển</text><rect x="406.89" y="373.871" width="216.775" height="33.969" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="416.89" y="395.009" fill="#0F172A" font-size="12" textLength="196.775" font-family="'Segoe UI', Arial, sans-serif">Xác nhận số tiền quy đổi dự kiến</text><rect x="26" y="505.839" width="236.006" height="33.969" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="36" y="526.978" fill="#0F172A" font-size="12" textLength="216.006" font-family="'Segoe UI', Arial, sans-serif">Nhận thông báo lỗi: Số dư không đủ</text><ellipse cx="144.003" cy="584.777" rx="11" ry="11" fill="none" style="stroke:#222;stroke-width:1;"/><ellipse cx="144.003" cy="584.777" rx="6" ry="6" fill="#222" style="stroke:#222;stroke-width:1;"/><rect x="528.104" y="587.746" width="178.016" height="33.969" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="538.104" y="608.884" fill="#0F172A" font-size="12" textLength="158.016" font-family="'Segoe UI', Arial, sans-serif">Chuyển khoản thành công</text><rect x="478.302" y="690.117" width="277.619" height="33.969" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="488.302" y="711.255" fill="#0F172A" font-size="12" textLength="257.619" font-family="'Segoe UI', Arial, sans-serif">Bấm "Yêu cầu Đảo giao dịch" &amp; Nhập lý do</text><rect x="332.161" y="869.992" width="272.58" height="33.969" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="342.161" y="891.13" fill="#0F172A" font-size="12" textLength="252.58" font-family="'Segoe UI', Arial, sans-serif">Nhận thông báo đảo giao dịch thành công</text><rect x="660.896" y="788.085" width="209.75" height="33.969" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="670.896" y="809.224" fill="#0F172A" font-size="12" textLength="189.75" font-family="'Segoe UI', Arial, sans-serif">Báo lỗi không thể đảo giao dịch</text><polygon points="479.217,641.714,755.006,641.714,767.006,653.714,755.006,665.714,479.217,665.714,467.217,653.714,479.217,641.714" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;stroke-linejoin:miter;stroke-miterlimit:10;"/><text x="621.111" y="675.925" fill="#334155" font-size="11" textLength="61.413" font-family="'Segoe UI', Arial, sans-serif">Có yêu cầu</text><text x="479.217" y="657.869" fill="#0F172A" font-size="12" textLength="275.789" font-family="'Segoe UI', Arial, sans-serif">Người dùng có yêu cầu Đảo giao dịch (BR06)?</text><text x="385.345" y="651.12" fill="#334155" font-size="11" textLength="81.872" font-family="'Segoe UI', Arial, sans-serif">Không yêu cầu</text><polygon points="617.111,957.96,629.111,969.96,617.111,981.96,605.111,969.96,617.111,957.96" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;stroke-linejoin:miter;stroke-miterlimit:10;"/><ellipse cx="617.111" cy="1012.96" rx="11" ry="11" fill="none" style="stroke:#222;stroke-width:1;"/><ellipse cx="617.111" cy="1012.96" rx="6" ry="6" fill="#222" style="stroke:#222;stroke-width:1;"/><line x1="20" y1="53.863" x2="20" y2="1035.96" style="stroke:#334155;stroke-width:1.5;"/><rect x="889.646" y="53.863" width="643.965" height="982.098" fill="#F1F5F9" style="stroke:#F1F5F9;stroke-width:1;"/><polygon points="1063.119,221.933,1204.611,221.933,1216.611,233.933,1204.611,245.933,1063.119,245.933,1051.119,233.933,1063.119,221.933" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;stroke-linejoin:miter;stroke-miterlimit:10;"/><text x="1063.119" y="238.087" fill="#0F172A" font-size="12" textLength="141.492" font-family="'Segoe UI', Arial, sans-serif">Hai ví cùng loại tiền tệ?</text><text x="983.331" y="231.339" fill="#334155" font-size="11" textLength="67.789" font-family="'Segoe UI', Arial, sans-serif">Cùng tiền tệ</text><text x="1216.611" y="231.339" fill="#334155" font-size="11" textLength="66.156" font-family="'Segoe UI', Arial, sans-serif">Khác tiền tệ</text><rect x="895.646" y="265.933" width="200.996" height="33.969" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="905.646" y="287.072" fill="#0F172A" font-size="12" textLength="180.996" font-family="'Segoe UI', Arial, sans-serif">Tỷ giá quy đổi mặc định = 1.0</text><rect x="1116.643" y="319.902" width="309.887" height="33.969" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="1126.643" y="341.041" fill="#0F172A" font-size="12" textLength="289.887" font-family="'Segoe UI', Arial, sans-serif">Quy đổi số tiền sang loại tiền của Ví đích (BR08)</text><polygon points="1133.865,417.839,1145.865,429.839,1133.865,441.839,1121.865,429.839,1133.865,417.839" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;stroke-linejoin:miter;stroke-miterlimit:10;"/><polygon points="1035.935,461.839,1231.796,461.839,1243.796,473.839,1231.796,485.839,1035.935,485.839,1023.935,473.839,1035.935,461.839" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;stroke-linejoin:miter;stroke-miterlimit:10;"/><text x="1035.935" y="477.994" fill="#0F172A" font-size="12" textLength="195.861" font-family="'Segoe UI', Arial, sans-serif">Kiểm tra số dư Ví nguồn (BR04)?</text><text x="938.207" y="471.245" fill="#334155" font-size="11" textLength="85.728" font-family="'Segoe UI', Arial, sans-serif">Không đủ số dư</text><text x="1243.796" y="471.245" fill="#334155" font-size="11" textLength="48.904" font-family="'Segoe UI', Arial, sans-serif">Đủ số dư</text><rect x="1241.196" y="505.839" width="264.447" height="47.938" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="1251.196" y="526.978" fill="#0F172A" font-size="12" textLength="244.447" font-family="'Segoe UI', Arial, sans-serif">Hạch toán kép chuyển khoản nguyên tử:</text><text x="1251.196" y="540.947" fill="#0F172A" font-size="12" textLength="190.002" font-family="'Segoe UI', Arial, sans-serif">Nợ Ví đích / Có Ví nguồn (BR01)</text><polygon points="1277.22,744.085,1469.619,744.085,1481.619,756.085,1469.619,768.085,1277.22,768.085,1265.22,756.085,1277.22,744.085" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;stroke-linejoin:miter;stroke-miterlimit:10;"/><text x="1277.22" y="760.24" fill="#0F172A" font-size="12" textLength="192.398" font-family="'Segoe UI', Arial, sans-serif">Giao dịch hợp lệ &amp; Chưa bị đảo?</text><text x="1229.916" y="753.491" fill="#334155" font-size="11" textLength="35.304" font-family="'Segoe UI', Arial, sans-serif">Hợp lệ</text><text x="1481.619" y="753.491" fill="#334155" font-size="11" textLength="39.993" font-family="'Segoe UI', Arial, sans-serif">Từ chối</text><rect x="1052.314" y="788.085" width="344.891" height="61.906" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="1062.314" y="809.224" fill="#0F172A" font-size="12" textLength="241.395" font-family="'Segoe UI', Arial, sans-serif">1. Đánh dấu status = REVERSED (BR06)</text><text x="1062.314" y="823.193" fill="#0F172A" font-size="12" textLength="324.891" font-family="'Segoe UI', Arial, sans-serif">2. Tạo bút toán đảo đối ứng (Nợ Ví nguồn / Có Ví đích)</text><text x="1062.314" y="837.162" fill="#0F172A" font-size="12" textLength="201.656" font-family="'Segoe UI', Arial, sans-serif">3. Khôi phục số dư 2 ví nguyên tử</text><polygon points="1373.419,913.96,1385.419,925.96,1373.419,937.96,1361.419,925.96,1373.419,913.96" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="889.646" y1="53.863" x2="889.646" y2="1035.96" style="stroke:#334155;stroke-width:1.5;"/><rect x="1548.612" y="53.863" width="270.74" height="982.098" fill="#FEF3C7" style="stroke:#FEF3C7;stroke-width:1;"/><rect x="1554.612" y="265.933" width="252.74" height="33.969" fill="#FFF" style="stroke:#0F172A;stroke-width:0.5;" rx="4" ry="4"/><text x="1564.612" y="287.072" fill="#0F172A" font-size="12" textLength="232.74" font-family="'Segoe UI', Arial, sans-serif">Cung cấp tỷ giá hối đoái thời gian thực</text><line x1="1548.612" y1="53.863" x2="1548.612" y2="1035.96" style="stroke:#334155;stroke-width:1.5;"/><line x1="1834.352" y1="53.863" x2="1834.352" y2="1035.96" style="stroke:#334155;stroke-width:1.5;"/><line x1="377.557" y1="93.996" x2="377.557" y2="113.996" style="stroke:#0F172A;stroke-width:1;"/><polygon points="373.557,103.996,381.557,103.996,377.557,113.996" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="377.557" y1="147.964" x2="377.557" y2="167.964" style="stroke:#0F172A;stroke-width:1;"/><polygon points="373.557,157.964,381.557,157.964,377.557,167.964" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="144.003" y1="539.808" x2="144.003" y2="573.777" style="stroke:#0F172A;stroke-width:1;"/><polygon points="140.003,563.777,148.003,563.777,144.003,573.777" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="617.111" y1="665.714" x2="617.111" y2="690.117" style="stroke:#0F172A;stroke-width:1;"/><polygon points="613.111,680.117,621.111,680.117,617.111,690.117" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="467.217" y1="653.714" x2="276.006" y2="653.714" style="stroke:#0F172A;stroke-width:1;"/><polygon points="272.006,804.039,280.006,804.039,276.006,814.039" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="276.006" y1="653.714" x2="276.006" y2="969.96" style="stroke:#0F172A;stroke-width:1;"/><line x1="276.006" y1="969.96" x2="605.111" y2="969.96" style="stroke:#0F172A;stroke-width:1;"/><polygon points="595.111,965.96,605.111,969.96,595.111,973.96" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="617.111" y1="621.714" x2="617.111" y2="641.714" style="stroke:#0F172A;stroke-width:1;"/><polygon points="613.111,631.714,621.111,631.714,617.111,641.714" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="617.111" y1="981.96" x2="617.111" y2="1001.96" style="stroke:#0F172A;stroke-width:1;"/><polygon points="613.111,991.96,621.111,991.96,617.111,1001.96" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1051.119" y1="233.933" x2="996.145" y2="233.933" style="stroke:#0F172A;stroke-width:1;"/><line x1="996.145" y1="233.933" x2="996.145" y2="265.933" style="stroke:#0F172A;stroke-width:1;"/><polygon points="992.145,255.933,1000.145,255.933,996.145,265.933" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="996.145" y1="299.902" x2="996.145" y2="429.839" style="stroke:#0F172A;stroke-width:1;"/><line x1="996.145" y1="429.839" x2="1121.865" y2="429.839" style="stroke:#0F172A;stroke-width:1;"/><polygon points="1111.865,425.839,1121.865,429.839,1111.865,433.839" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1265.22" y1="756.085" x2="1224.759" y2="756.085" style="stroke:#0F172A;stroke-width:1;"/><line x1="1224.759" y1="756.085" x2="1224.759" y2="788.085" style="stroke:#0F172A;stroke-width:1;"/><polygon points="1220.759,778.085,1228.759,778.085,1224.759,788.085" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1243.796" y1="473.839" x2="1373.419" y2="473.839" style="stroke:#0F172A;stroke-width:1;"/><line x1="1373.419" y1="473.839" x2="1373.419" y2="505.839" style="stroke:#0F172A;stroke-width:1;"/><polygon points="1369.419,495.839,1377.419,495.839,1373.419,505.839" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1133.865" y1="441.839" x2="1133.865" y2="461.839" style="stroke:#0F172A;stroke-width:1;"/><polygon points="1129.865,451.839,1137.865,451.839,1133.865,461.839" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1680.982" y1="299.902" x2="1680.982" y2="304.902" style="stroke:#0F172A;stroke-width:1;"/><line x1="1680.982" y1="304.902" x2="1271.586" y2="304.902" style="stroke:#0F172A;stroke-width:1;"/><line x1="1271.586" y1="304.902" x2="1271.586" y2="319.902" style="stroke:#0F172A;stroke-width:1;"/><polygon points="1267.586,309.902,1275.586,309.902,1271.586,319.902" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1271.586" y1="353.871" x2="1271.586" y2="358.871" style="stroke:#0F172A;stroke-width:1;"/><line x1="1271.586" y1="358.871" x2="515.278" y2="358.871" style="stroke:#0F172A;stroke-width:1;"/><line x1="515.278" y1="358.871" x2="515.278" y2="373.871" style="stroke:#0F172A;stroke-width:1;"/><polygon points="511.278,363.871,519.278,363.871,515.278,373.871" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1216.611" y1="233.933" x2="1680.982" y2="233.933" style="stroke:#0F172A;stroke-width:1;"/><line x1="1680.982" y1="233.933" x2="1680.982" y2="265.933" style="stroke:#0F172A;stroke-width:1;"/><polygon points="1676.982,255.933,1684.982,255.933,1680.982,265.933" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="515.278" y1="407.839" x2="515.278" y2="411.839" style="stroke:#0F172A;stroke-width:1;"/><line x1="515.278" y1="411.839" x2="1163.865" y2="411.839" style="stroke:#0F172A;stroke-width:1;"/><line x1="1163.865" y1="411.839" x2="1163.865" y2="429.839" style="stroke:#0F172A;stroke-width:1;"/><line x1="1163.865" y1="429.839" x2="1145.865" y2="429.839" style="stroke:#0F172A;stroke-width:1;"/><polygon points="1155.865,425.839,1145.865,429.839,1155.865,433.839" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="377.557" y1="201.933" x2="377.557" y2="206.933" style="stroke:#0F172A;stroke-width:1;"/><line x1="377.557" y1="206.933" x2="1133.865" y2="206.933" style="stroke:#0F172A;stroke-width:1;"/><line x1="1133.865" y1="206.933" x2="1133.865" y2="221.933" style="stroke:#0F172A;stroke-width:1;"/><polygon points="1129.865,211.933,1137.865,211.933,1133.865,221.933" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1373.419" y1="553.777" x2="1373.419" y2="570.246" style="stroke:#0F172A;stroke-width:1;"/><line x1="1373.419" y1="570.246" x2="617.111" y2="570.246" style="stroke:#0F172A;stroke-width:1;"/><line x1="617.111" y1="570.246" x2="617.111" y2="587.746" style="stroke:#0F172A;stroke-width:1;"/><polygon points="613.111,577.746,621.111,577.746,617.111,587.746" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1224.759" y1="849.992" x2="1224.759" y2="854.992" style="stroke:#0F172A;stroke-width:1;"/><line x1="1224.759" y1="854.992" x2="468.451" y2="854.992" style="stroke:#0F172A;stroke-width:1;"/><line x1="468.451" y1="854.992" x2="468.451" y2="869.992" style="stroke:#0F172A;stroke-width:1;"/><polygon points="464.451,859.992,472.451,859.992,468.451,869.992" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1481.619" y1="756.085" x2="1493.619" y2="756.085" style="stroke:#0F172A;stroke-width:1;"/><line x1="1493.619" y1="756.085" x2="1493.619" y2="774.085" style="stroke:#0F172A;stroke-width:1;"/><line x1="1493.619" y1="774.085" x2="765.771" y2="774.085" style="stroke:#0F172A;stroke-width:1;"/><line x1="765.771" y1="774.085" x2="765.771" y2="788.085" style="stroke:#0F172A;stroke-width:1;"/><polygon points="761.771,778.085,769.771,778.085,765.771,788.085" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="468.451" y1="903.96" x2="468.451" y2="925.96" style="stroke:#0F172A;stroke-width:1;"/><line x1="468.451" y1="925.96" x2="1361.419" y2="925.96" style="stroke:#0F172A;stroke-width:1;"/><polygon points="1351.419,921.96,1361.419,925.96,1351.419,929.96" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="765.771" y1="822.054" x2="765.771" y2="907.96" style="stroke:#0F172A;stroke-width:1;"/><line x1="765.771" y1="907.96" x2="1403.419" y2="907.96" style="stroke:#0F172A;stroke-width:1;"/><line x1="1403.419" y1="907.96" x2="1403.419" y2="925.96" style="stroke:#0F172A;stroke-width:1;"/><line x1="1403.419" y1="925.96" x2="1385.419" y2="925.96" style="stroke:#0F172A;stroke-width:1;"/><polygon points="1395.419,921.96,1385.419,925.96,1395.419,929.96" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="617.111" y1="724.085" x2="617.111" y2="729.085" style="stroke:#0F172A;stroke-width:1;"/><line x1="617.111" y1="729.085" x2="1373.419" y2="729.085" style="stroke:#0F172A;stroke-width:1;"/><line x1="1373.419" y1="729.085" x2="1373.419" y2="744.085" style="stroke:#0F172A;stroke-width:1;"/><polygon points="1369.419,734.085,1377.419,734.085,1373.419,744.085" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1373.419" y1="937.96" x2="1373.419" y2="945.759" style="stroke:#0F172A;stroke-width:1;"/><line x1="1373.419" y1="945.759" x2="617.111" y2="945.759" style="stroke:#0F172A;stroke-width:1;"/><line x1="617.111" y1="945.759" x2="617.111" y2="957.96" style="stroke:#0F172A;stroke-width:1;"/><polygon points="613.111,947.96,621.111,947.96,617.111,957.96" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><line x1="1023.935" y1="473.839" x2="144.003" y2="473.839" style="stroke:#0F172A;stroke-width:1;"/><line x1="144.003" y1="473.839" x2="144.003" y2="505.839" style="stroke:#0F172A;stroke-width:1;"/><polygon points="140.003,495.839,148.003,495.839,144.003,505.839" fill="#0F172A" style="stroke:#0F172A;stroke-width:1;stroke-linejoin:miter;stroke-miterlimit:10;"/><text x="380.121" y="65.93" fill="#000" font-size="13" textLength="134.405" font-weight="700" font-family="'Segoe UI', Arial, sans-serif">Người dùng (User)</text><text x="1129.209" y="65.93" fill="#000" font-size="13" textLength="157.841" font-weight="700" font-family="'Segoe UI', Arial, sans-serif">Hệ thống WealthFlow</text><text x="1591.531" y="65.93" fill="#000" font-size="13" textLength="176.903" font-weight="700" font-family="'Segoe UI', Arial, sans-serif">Dịch vụ Tỷ giá (A03 API)</text><?plantuml-src bLLTQ-D657tNhxXaeTYGJUqu8QbDAOuIrSk2QVEnsyA-A98Y3PPcN6cKuEANaeS-XCA6PIbzA3G44xObaAM5fHQb3mhv7_DFUcSasxBNITmGJ9ovSywvzznxXnFkEx0bXfSKRiz5yWPQJ0mlkFho2tNhe7jnJoId53WHoGyKslX_0eVukGnVnpqL-9P0svNt272H_0YVmErhX6Jm9J4Ps28vipmeDRShQ_0K3lHARLb-hfKrBUeGsZL3Cu28zr19n4DYyJZm2oUsSsJ6FZSOvMqpS61fpt6P0mVFbfQX6HBJNuR8fD7Jo0d9qVnxU-Hx1wghXSEGnTJMMKYT43QBCav8u9lKUKbixY5kuCmvt6AXxOGwyra8JsgrjUhw-hrH-nwnEjI98gYkp8lQbmueZQe0Xyot7unIcTIAbMjQd1mJtfjILJ6g6wlDUL6crN7px5MaeNxcHCulNF7qCQvjOWQCsei96mNVewzu8mpPoRrmyd0YlJhlQDevJUi_CJQDfg7ts-xTZKX-9M2dVrCNIWVOK-M-5d4pv5gzkeBJ89AVABn8hu6wCSuBnMQNtsxFqslBQsZrrHLeUs9utOL89EUZgR7oAMeeiggnRdpMRybHuGXuZbGl7TFddk6paxv6Zg3KCWaS8wwbXFZvS6LWSiQ-AEDLXq99Lm65ax86KDyNoGTmINe1tqrcD1333vRwSaOz-1mRijBG73zoeFJSIo-iMHHKkcFKz8t-TZR1no8Pm0IvrApKeFdLComGCkenoh34SD2Lz_CGcHn1HfPAzPughKjCglv-RpKoaaVAWU25HLEiAexzR6qiaLoP1KUWjBLRsIpdJ0-wZ3pVo2fGQH-T8YeK4RVPU-WGCVmNpNIeZIjdGKkV8zPf03mqCspxxcQgaQJIjVBOMBJaBqIHj5VZ2-N5ycXdAV0CuZ2zOE2Bv6TIXxqHSwS0BwiJSTRDcm6NzyUKZvlKGX-mu1pDfj19ttN7NOzaJ3qnc6el_Lrrs7Nz5SMtvBBerQUWftz-L9FgekxfitIO_s_OwPRCL6BWhpHY1i52JbGLo-wzYaTFbrjykb35HhamSiKBiZv8Zc_e882bRny2Mi9baIy7F_q7RDPGTnUfRgQy-9vYs6LNsYhVMzsxkp7bgtmc7KNQiTZME2mJYb9nZzs-HfCyX1eEOhJUv7642s5tvyNExjxETfxmAuhBR1zTPTX2Gvuxc-6hni7P5iaxQSBOoP5n4oipRn6ijWAofmbqKVh0cWp1gjfqnTvev58VDrqbDAVTSvL55sUx0I1hTzneVs2hodJA_uztQpnOet6IvftE8S_vrBeOyUO3Fjr9ev1i7EMN_m00?></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 650" width="980" height="650" font-family="Segoe UI, Arial, sans-serif">
+  
+  <defs>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.2" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arr-navy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#1e3a8a"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#be123c"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#047857"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#b45309"/>
+    </marker>
+  </defs>
+
+  <rect width="980" height="650" fill="#ffffff"/>
+
+  <!-- Outer Frame & Title Bar -->
+  <rect x="12" y="10" width="956" height="630" rx="8" fill="#fcfdff" stroke="#1e293b" stroke-width="2.4"/>
+  <rect x="12" y="10" width="956" height="40" rx="8" fill="#1e293b"/>
+  <text x="490" y="36" text-anchor="middle" fill="#ffffff" font-size="16.5" font-weight="700">Sơ đồ Hoạt động Phân làn Trọng tâm 1 — Sổ cái Kép, Khóa FOR UPDATE &amp; Đảo Bút toán (AD03/AD04)</text>
+
+  <!-- 3 Parallel Vertical Swimlanes (y=56..592) -->
+  <!-- Lane 1: x=20..312 (w=292) -->
+  <rect x="20" y="56" width="292" height="536" rx="6" fill="#f0f9ff" stroke="#0284c7" stroke-width="2"/>
+  <rect x="20" y="56" width="292" height="36" rx="6" fill="#0284c7"/>
+  <text x="166" y="79" text-anchor="middle" fill="#ffffff" font-size="14.5" font-weight="700">LÀN 1: NGƯỜI DÙNG / SPA</text>
+
+  <!-- Lane 2: x=320..660 (w=340) -->
+  <rect x="320" y="56" width="340" height="536" rx="6" fill="#fffbeb" stroke="#d97706" stroke-width="2.2"/>
+  <rect x="320" y="56" width="340" height="36" rx="6" fill="#d97706"/>
+  <text x="490" y="79" text-anchor="middle" fill="#ffffff" font-size="14.5" font-weight="700">LÀN 2: TẦNG ĐIỀU KHIỂN (LedgerService)</text>
+
+  <!-- Lane 3: x=668..960 (w=292) -->
+  <rect x="668" y="56" width="292" height="536" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+  <rect x="668" y="56" width="292" height="36" rx="6" fill="#059669"/>
+  <text x="814" y="79" text-anchor="middle" fill="#ffffff" font-size="14.5" font-weight="700">LÀN 3: TẦNG CSDL (DAO &amp; InnoDB)</text>
+
+  
+  
+    <circle cx="166" cy="112" r="11" fill="#0f172a"/>
+    <circle cx="166" cy="568" r="12" fill="#ffffff" stroke="#0f172a" stroke-width="2.8"/>
+    <circle cx="166" cy="568" r="6.5" fill="#0f172a"/>
+    
+  <line x1="166" y1="123" x2="166" y2="146" stroke="#1e3a8a" stroke-width="2.4" marker-end="url(#arr-navy)"/>
+
+  <!-- Row 1 (y=180) -->
+  
+    <g filter="url(#shadow)">
+      <rect x="34.0" y="148.0" width="264" height="64" rx="12" fill="#ffffff" stroke="#1d4ed8" stroke-width="2.2"/>
+      
+      
+        <text x="166" y="174" text-anchor="middle" fill="#1e3a8a" font-size="14.5" font-weight="700">1. Gửi Yêu cầu Ghi sổ / Đảo sổ</text>
+        <text x="166" y="195" text-anchor="middle" fill="#334155" font-size="13.2" font-weight="600">Đính kèm Idempotency-Key (UUIDv4)</text>
+        
+    </g>
+    
+  <line x1="298" y1="180" x2="348" y2="180" stroke="#1e3a8a" stroke-width="2.4" marker-end="url(#arr-navy)"/>
+
+  
+    <g filter="url(#shadow)">
+      <polygon points="490,142 628,180 490,218 352,180" fill="#fef3c7" stroke="#d97706" stroke-width="2.4"/>
+      
+        <text x="490" y="176" text-anchor="middle" fill="#78350f" font-size="13.5" font-weight="700">Chốt 1: Kiểm tra Khóa</text>
+        <text x="490" y="193" text-anchor="middle" fill="#92400e" font-size="13" font-weight="700">Idempotency-Key (BR13)?</text>
+        
+    </g>
+    
+  <line x1="628" y1="180" x2="678" y2="180" stroke="#be123c" stroke-width="2.6" marker-end="url(#arr-red)"/>
+
+  
+    <g filter="url(#shadow)">
+      <rect x="681.0" y="146.0" width="266" height="68" rx="12" fill="#fff1f2" stroke="#be123c" stroke-width="2.6"/>
+      
+        <rect x="697.25" y="134.0" width="233.5" height="21" rx="10" fill="#be123c"/>
+        <text x="814" y="149.0" text-anchor="middle" fill="#ffffff" font-size="11.8" font-weight="700">[*] TRỌNG TÂM 1: KHÓA BI QUAN</text>
+        
+      
+        <text x="814" y="177" text-anchor="middle" fill="#881337" font-size="14.5" font-weight="700">2. Mở ACID &amp; Khóa Dòng Ví</text>
+        <text x="814" y="197" text-anchor="middle" fill="#1e293b" font-size="13.2" font-weight="600">SELECT ... FOR UPDATE (BR12)</text>
+        
+    </g>
+    
+
+  <!-- Row 2 (y=292) -->
+  <line x1="490" y1="218" x2="490" y2="256" stroke="#dc2626" stroke-width="2.2" marker-end="url(#arr-red)"/>
+  
+    <rect x="443.4" y="227" width="93.2" height="19" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#dc2626" stroke-width="1.0"/>
+    <text x="490" y="240.5" text-anchor="middle" fill="#dc2626" font-size="12.2" font-weight="700">[Trùng Key]</text>
+    
+  
+    <g filter="url(#shadow)">
+      <rect x="342.0" y="259.0" width="296" height="62" rx="12" fill="#fef2f2" stroke="#dc2626" stroke-width="2.2"/>
+      
+      
+        <text x="490" y="284" text-anchor="middle" fill="#991b1b" font-size="14.5" font-weight="700">Từ chối 409 CONFLICT (Khác Hash)</text>
+        <text x="490" y="305" text-anchor="middle" fill="#475569" font-size="13.2" font-weight="600">Hoặc trả Cache 200 OK (Cùng Hash)</text>
+        
+    </g>
+    
+
+  <!-- L3 Row 1 down to L3 Row 2 -->
+  <line x1="814" y1="214" x2="814" y2="256" stroke="#be123c" stroke-width="2.5" marker-end="url(#arr-red)"/>
+  
+    <g filter="url(#shadow)">
+      <rect x="681.0" y="258.0" width="266" height="64" rx="12" fill="#ffffff" stroke="#059669" stroke-width="2.4"/>
+      
+      
+        <text x="814" y="284" text-anchor="middle" fill="#065f46" font-size="14.5" font-weight="700">3. Đọc Số dư &amp; Kiểm tra Ví</text>
+        <text x="814" y="305" text-anchor="middle" fill="#1e293b" font-size="13.2" font-weight="600">Available = cached - earmarked</text>
+        
+    </g>
+    
+
+  <!-- Row 3 (y=402) -->
+  <path d="M 814 322 L 814 352 L 490 352 L 490 364" fill="none" stroke="#be123c" stroke-width="2.4" marker-end="url(#arr-red)"/>
+  
+    <g filter="url(#shadow)">
+      <polygon points="490,366 632,404 490,442 348,404" fill="#fef3c7" stroke="#d97706" stroke-width="2.4"/>
+      
+        <text x="490" y="400" text-anchor="middle" fill="#78350f" font-size="13.5" font-weight="700">Chốt 2: Đủ Số dư Khả dụng</text>
+        <text x="490" y="417" text-anchor="middle" fill="#92400e" font-size="13" font-weight="700">Available &gt;= Amount (BR05)?</text>
+        
+    </g>
+    
+
+  <line x1="348" y1="404" x2="298" y2="404" stroke="#dc2626" stroke-width="2.4" marker-end="url(#arr-red)"/>
+  
+    <g filter="url(#shadow)">
+      <rect x="34.0" y="373.0" width="264" height="62" rx="12" fill="#fef2f2" stroke="#dc2626" stroke-width="2.2"/>
+      
+      
+        <text x="166" y="398" text-anchor="middle" fill="#991b1b" font-size="14.5" font-weight="700">Rollback &amp; Báo lỗi 422</text>
+        <text x="166" y="419" text-anchor="middle" fill="#475569" font-size="13.2" font-weight="600">INSUFFICIENT_FUNDS</text>
+        
+    </g>
+    
+
+  <!-- Row 4 (y=508) -->
+  <line x1="490" y1="442" x2="490" y2="472" stroke="#047857" stroke-width="2.6" marker-end="url(#arr-green)"/>
+  
+    <rect x="447.0" y="446" width="86.0" height="19" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#047857" stroke-width="1.0"/>
+    <text x="490" y="459.5" text-anchor="middle" fill="#047857" font-size="12.2" font-weight="700">[Đủ số dư]</text>
+    
+  
+    <g filter="url(#shadow)">
+      <rect x="335.0" y="476.0" width="310" height="68" rx="12" fill="#fff1f2" stroke="#be123c" stroke-width="2.6"/>
+      
+        <rect x="317.0" y="464.0" width="346.0" height="21" rx="10" fill="#be123c"/>
+        <text x="490" y="479.0" text-anchor="middle" fill="#ffffff" font-size="11.8" font-weight="700">[*] TRỌNG TÂM 2: BẤT BIẾN KÉP &amp; REVERSAL</text>
+        
+      
+        <text x="490" y="507" text-anchor="middle" fill="#881337" font-size="14.5" font-weight="700">4. Hạch toán Kép / Đảo Reversal</text>
+        <text x="490" y="527" text-anchor="middle" fill="#1e293b" font-size="13.2" font-weight="600">BCMath: ΣDebit == ΣCredit &gt; 0</text>
+        
+    </g>
+    
+
+  <line x1="645" y1="510" x2="678" y2="510" stroke="#047857" stroke-width="2.6" marker-end="url(#arr-green)"/>
+  
+    <g filter="url(#shadow)">
+      <rect x="681.0" y="476.0" width="266" height="68" rx="12" fill="#ffffff" stroke="#059669" stroke-width="2.4"/>
+      
+      
+        <text x="814" y="504" text-anchor="middle" fill="#065f46" font-size="14.5" font-weight="700">5. Ghi Sổ Kép &amp; Commit ACID</text>
+        <text x="814" y="525" text-anchor="middle" fill="#1e293b" font-size="13.2" font-weight="600">INSERT entries + UPDATE wallet</text>
+        
+    </g>
+    
+
+  <path d="M 814 544 L 814 576 L 302 576 L 302 510 L 298 510" fill="none" stroke="#047857" stroke-width="2.4" marker-end="url(#arr-green)"/>
+  
+    <g filter="url(#shadow)">
+      <rect x="34.0" y="478.0" width="264" height="64" rx="12" fill="#ffffff" stroke="#059669" stroke-width="2.4"/>
+      
+      
+        <text x="166" y="504" text-anchor="middle" fill="#065f46" font-size="14.5" font-weight="700">6. Cập nhật Số dư &amp; Cảnh báo</text>
+        <text x="166" y="525" text-anchor="middle" fill="#1e293b" font-size="13.2" font-weight="600">Phản hồi HTTP 201 / 200 OK</text>
+        
+    </g>
+    
+  <line x1="166" y1="542" x2="166" y2="556" stroke="#0f172a" stroke-width="2.4"/>
+
+
+  <!-- Bottom Focal Bar -->
+  <rect x="20" y="598" width="940" height="34" rx="6" fill="#0f172a"/>
+  <text x="36" y="620" fill="#fbbf24" font-size="13.5" font-weight="700">[*] TRỌNG TÂM: Khóa dòng ví FOR UPDATE trước khi kiểm tra số dư; cưỡng chế ΣDebit = ΣCredit và Đảo giao dịch bất biến (BR01, BR06).</text>
+</svg>

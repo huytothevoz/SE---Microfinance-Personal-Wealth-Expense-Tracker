@@ -1,0 +1,276 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 690" width="980" height="690" font-family="Segoe UI, Arial, sans-serif">
+  
+  <defs>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <marker id="uml-arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 1 2 L 10 6 L 1 10" fill="none" stroke="#1e3a8a" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="uml-arrow-red" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 1 2 L 10 6 L 1 10" fill="none" stroke="#be123c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect width="980" height="690" fill="#ffffff"/>
+
+  <!-- System Boundary Outer Frame -->
+  <rect x="148" y="14" width="684" height="624" rx="6" fill="#fcfdff" stroke="#1e293b" stroke-width="2.4"/>
+  <rect x="148" y="14" width="684" height="42" rx="6" fill="#e2e8f0" stroke="#1e293b" stroke-width="2.4"/>
+  <text x="490" y="41" text-anchor="middle" fill="#0f172a" font-size="17" font-weight="700">Hệ thống Quản lý Tài chính &amp; Tín dụng Vi mô (WealthFlow)</text>
+
+  <!-- ZONE 1: CORE FINANCIAL & MICROFINANCE ZONE -->
+  <rect x="164" y="68" width="652" height="392" rx="8" fill="#fff8f8" stroke="#be123c" stroke-width="2.2" stroke-dasharray="8,4"/>
+  <rect x="178" y="57" width="388" height="24" rx="12" fill="#be123c"/>
+  <text x="372" y="73" text-anchor="middle" fill="#ffffff" font-size="13.5" font-weight="700">[*] NHÓM USE CASE TRỌNG TÂM (CORE FINANCIAL)</text>
+
+  <!-- Left Column: Primary Core Use Cases (cx=302, rx=124 -> right edge 426) -->
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="302" cy="122" rx="124" ry="33" fill="#cfe8fc" stroke="#1565c0" stroke-width="2.4" />
+      
+        <text x="302" y="117" text-anchor="middle" fill="#0d3b66" font-size="15" font-weight="700">UC02: Quản lý Ví</text>
+        <text x="302" y="137" text-anchor="middle" fill="#0f172a" font-size="13.5" font-weight="600">&amp; Số dư Mở sổ (Equity)</text>
+        
+    </g>
+    
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="302" cy="204" rx="126" ry="35" fill="#fff1f2" stroke="#be123c" stroke-width="2.6" />
+      
+        <text x="302" y="199" text-anchor="middle" fill="#881337" font-size="15" font-weight="700">UC03: Giao dịch Sổ cái Kép</text>
+        <text x="302" y="219" text-anchor="middle" fill="#1e293b" font-size="13.5" font-weight="600">(Thu / Chi / Chuyển tiền)</text>
+        
+    </g>
+    
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="302" cy="286" rx="124" ry="33" fill="#fff1f2" stroke="#be123c" stroke-width="2.6" />
+      
+        <text x="302" y="281" text-anchor="middle" fill="#881337" font-size="15" font-weight="700">UC04: Đảo Bút toán</text>
+        <text x="302" y="301" text-anchor="middle" fill="#1e293b" font-size="13.5" font-weight="600">Bất biến (Reversal)</text>
+        
+    </g>
+    
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="302" cy="366" rx="124" ry="33" fill="#fff1f2" stroke="#be123c" stroke-width="2.6" />
+      
+        <text x="302" y="361" text-anchor="middle" fill="#881337" font-size="15" font-weight="700">UC05: Quản lý Ngân sách</text>
+        <text x="302" y="381" text-anchor="middle" fill="#1e293b" font-size="13.5" font-weight="600">&amp; Cảnh báo 80% / 100%</text>
+        
+    </g>
+    
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="302" cy="434" rx="126" ry="23" fill="#fff1f2" stroke="#be123c" stroke-width="2.6" />
+      <text x="302" y="439" text-anchor="middle" fill="#881337" font-size="15" font-weight="700">UC06/07: Vay &amp; Trả nợ Vi mô</text>
+    </g>
+    
+
+  <!-- Right Column: Core Engine & Sub Use Cases (cx=678, rx=124 -> left edge 554; Corridor = 128px!) -->
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="678" cy="122" rx="124" ry="33" fill="#eef7ff" stroke="#1e6091" stroke-width="2.0" stroke-dasharray="6,4"/>
+      
+        <text x="678" y="117" text-anchor="middle" fill="#155e75" font-size="15" font-weight="700">Chốt Tỷ giá Ngoại tệ</text>
+        <text x="678" y="137" text-anchor="middle" fill="#334155" font-size="13.5" font-weight="600">(FX Snapshot - BR04)</text>
+        
+    </g>
+    
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="678" cy="204" rx="126" ry="35" fill="#eef7ff" stroke="#1e6091" stroke-width="2.0" stroke-dasharray="6,4"/>
+      
+        <text x="678" y="199" text-anchor="middle" fill="#155e75" font-size="15" font-weight="700">Hạch toán Kép Nợ/Có</text>
+        <text x="678" y="219" text-anchor="middle" fill="#334155" font-size="13.5" font-weight="600">&amp; Khóa Ví (FOR UPDATE)</text>
+        
+    </g>
+    
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="678" cy="286" rx="124" ry="33" fill="#cfe8fc" stroke="#1565c0" stroke-width="2.4" />
+      
+        <text x="678" y="281" text-anchor="middle" fill="#0d3b66" font-size="15" font-weight="700">UC08/11: Định giá Vàng WAC</text>
+        <text x="678" y="301" text-anchor="middle" fill="#0f172a" font-size="13.5" font-weight="600">&amp; Tổng hợp Net Worth</text>
+        
+    </g>
+    
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="678" cy="366" rx="124" ry="33" fill="#eef7ff" stroke="#1e6091" stroke-width="2.0" stroke-dasharray="6,4"/>
+      
+        <text x="678" y="361" text-anchor="middle" fill="#155e75" font-size="15" font-weight="700">Đánh giá Ngưỡng</text>
+        <text x="678" y="381" text-anchor="middle" fill="#334155" font-size="13.5" font-weight="600">Jump-Over-Yellow (SYS02)</text>
+        
+    </g>
+    
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="678" cy="434" rx="124" ry="23" fill="#eef7ff" stroke="#1e6091" stroke-width="2.0" stroke-dasharray="6,4"/>
+      <text x="678" y="439" text-anchor="middle" fill="#155e75" font-size="15" font-weight="700">Tách Gốc &amp; Lãi Vay (BR17)</text>
+    </g>
+    
+
+  <!-- Clean Non-Crossing Relationships inside Core Zone -->
+  <!-- Row 1: FX Snapshot -> UC02 (extend) -->
+  
+    <line x1="554" y1="122" x2="426" y2="122" stroke="#1e3a8a" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow)"/>
+    <rect x="452.6" y="111.5" width="74.8" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#1e3a8a" stroke-width="1.0"/>
+    <text x="490.0" y="125.8" text-anchor="middle" fill="#1e3a8a" font-size="13" font-weight="700">«extend»</text>
+    
+  <!-- Diagonal 1->2: UC02 -> Core Ledger (include) -->
+  
+    <line x1="410" y1="138" x2="568" y2="186" stroke="#be123c" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow-red)"/>
+    <rect x="447.8" y="149.5" width="82.39999999999999" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#be123c" stroke-width="1.0"/>
+    <text x="489.0" y="163.8" text-anchor="middle" fill="#be123c" font-size="13" font-weight="700">«include»</text>
+    
+  <!-- Row 2: UC03 -> Core Ledger (include) -->
+  
+    <line x1="428" y1="204" x2="552" y2="204" stroke="#be123c" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow-red)"/>
+    <rect x="448.8" y="193.5" width="82.39999999999999" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#be123c" stroke-width="1.0"/>
+    <text x="490.0" y="207.8" text-anchor="middle" fill="#be123c" font-size="13" font-weight="700">«include»</text>
+    
+  <!-- Vertical Left 3->2: UC04 Reversal -> UC03 (extend) -->
+  
+    <line x1="302" y1="253" x2="302" y2="239" stroke="#be123c" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow-red)"/>
+    <rect x="206.6" y="235.5" width="74.8" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#be123c" stroke-width="1.0"/>
+    <text x="244.0" y="249.8" text-anchor="middle" fill="#be123c" font-size="13" font-weight="700">«extend»</text>
+    
+  <!-- Diagonal 3->2: UC04 Reversal -> Core Ledger (include) -->
+  
+    <line x1="414" y1="270" x2="568" y2="222" stroke="#be123c" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow-red)"/>
+    <rect x="449.8" y="237.5" width="82.39999999999999" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#be123c" stroke-width="1.0"/>
+    <text x="491.0" y="251.8" text-anchor="middle" fill="#be123c" font-size="13" font-weight="700">«include»</text>
+    
+  <!-- Row 3 Right->2 Right: UC08 Gold -> Core Ledger (include) -->
+  
+    <line x1="678" y1="253" x2="678" y2="239" stroke="#1e3a8a" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow)"/>
+    <rect x="692.8" y="235.5" width="82.39999999999999" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#1e3a8a" stroke-width="1.0"/>
+    <text x="734.0" y="249.8" text-anchor="middle" fill="#1e3a8a" font-size="13" font-weight="700">«include»</text>
+    
+  <!-- Row 4: UC05 Budget -> SYS02 Jump-Over-Yellow (include) -->
+  
+    <line x1="426" y1="366" x2="554" y2="366" stroke="#be123c" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow-red)"/>
+    <rect x="448.8" y="355.5" width="82.39999999999999" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#be123c" stroke-width="1.0"/>
+    <text x="490.0" y="369.8" text-anchor="middle" fill="#be123c" font-size="13" font-weight="700">«include»</text>
+    
+  <!-- Row 5: UC06/07 Loan -> Split Principal/Interest (include) -->
+  
+    <line x1="428" y1="434" x2="554" y2="434" stroke="#be123c" stroke-width="2.0" stroke-dasharray="6,4" marker-end="url(#uml-arrow-red)"/>
+    <rect x="449.8" y="423.5" width="82.39999999999999" height="19.5" rx="5" fill="#ffffff" fill-opacity="0.96" stroke="#be123c" stroke-width="1.0"/>
+    <text x="491.0" y="437.8" text-anchor="middle" fill="#be123c" font-size="13" font-weight="700">«include»</text>
+    
+
+  <!-- ZONE 2: SUPPORTING & ADMIN ZONE -->
+  <rect x="164" y="474" width="652" height="150" rx="8" fill="#f8fafc" stroke="#64748b" stroke-width="1.8" stroke-dasharray="6,4"/>
+  <rect x="178" y="463" width="392" height="22" rx="11" fill="#475569"/>
+  <text x="374" y="478" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">NHÓM USE CASE BỔ TRỢ &amp; QUẢN TRỊ (SUPPORTING)</text>
+
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="302" cy="518" rx="124" ry="26" fill="#f1f5f9" stroke="#475569" stroke-width="1.8" />
+      <text x="302" y="523" text-anchor="middle" fill="#1e293b" font-size="15" font-weight="700">UC01: Đăng ký &amp; Đăng nhập JWT</text>
+    </g>
+    
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="302" cy="584" rx="124" ry="26" fill="#f1f5f9" stroke="#475569" stroke-width="1.8" />
+      <text x="302" y="589" text-anchor="middle" fill="#1e293b" font-size="15" font-weight="700">UC10: Đối soát &amp; Xuất CSV</text>
+    </g>
+    
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="678" cy="518" rx="124" ry="26" fill="#f1f5f9" stroke="#475569" stroke-width="1.8" />
+      <text x="678" y="523" text-anchor="middle" fill="#1e293b" font-size="15" font-weight="700">UC06/09: Định kỳ &amp; Quỹ Mục tiêu</text>
+    </g>
+    
+  
+    <g filter="url(#shadow)">
+      <ellipse cx="678" cy="584" rx="124" ry="26" fill="#f1f5f9" stroke="#475569" stroke-width="1.8" />
+      <text x="678" y="589" text-anchor="middle" fill="#1e293b" font-size="15" font-weight="700">UC12/13: Thông báo &amp; Quản trị</text>
+    </g>
+    
+
+  <!-- Actors (Positioned so NO line ever crosses an Actor's text label!) -->
+  
+    <g>
+      <circle cx="68" cy="195" r="15" fill="#eaf2f8" stroke="#1b4f72" stroke-width="2.8"/>
+      <line x1="68" y1="210" x2="68" y2="248" stroke="#1b4f72" stroke-width="2.8"/>
+      <line x1="46" y1="224" x2="90" y2="224" stroke="#1b4f72" stroke-width="2.8"/>
+      <line x1="68" y1="248" x2="49" y2="277" stroke="#1b4f72" stroke-width="2.8"/>
+      <line x1="68" y1="248" x2="87" y2="277" stroke="#1b4f72" stroke-width="2.8"/>
+      <text x="68" y="298" text-anchor="middle" fill="#0f172a" font-size="15" font-weight="700">Người dùng</text>
+      <text x="68" y="317" text-anchor="middle" fill="#475569" font-size="13.5" font-weight="600">(Personal User)</text>
+    </g>
+    
+  
+    <g>
+      <circle cx="68" cy="488" r="15" fill="#eaf2f8" stroke="#475569" stroke-width="2.8"/>
+      <line x1="68" y1="503" x2="68" y2="541" stroke="#475569" stroke-width="2.8"/>
+      <line x1="46" y1="517" x2="90" y2="517" stroke="#475569" stroke-width="2.8"/>
+      <line x1="68" y1="541" x2="49" y2="570" stroke="#475569" stroke-width="2.8"/>
+      <line x1="68" y1="541" x2="87" y2="570" stroke="#475569" stroke-width="2.8"/>
+      <text x="68" y="591" text-anchor="middle" fill="#0f172a" font-size="15" font-weight="700">Khách</text>
+      <text x="68" y="610" text-anchor="middle" fill="#475569" font-size="13.5" font-weight="600">(Guest)</text>
+    </g>
+    
+  
+    <g>
+      <circle cx="912" cy="195" r="15" fill="#eaf2f8" stroke="#0f766e" stroke-width="2.8"/>
+      <line x1="912" y1="210" x2="912" y2="248" stroke="#0f766e" stroke-width="2.8"/>
+      <line x1="890" y1="224" x2="934" y2="224" stroke="#0f766e" stroke-width="2.8"/>
+      <line x1="912" y1="248" x2="893" y2="277" stroke="#0f766e" stroke-width="2.8"/>
+      <line x1="912" y1="248" x2="931" y2="277" stroke="#0f766e" stroke-width="2.8"/>
+      <text x="912" y="298" text-anchor="middle" fill="#0f172a" font-size="15" font-weight="700">Bộ lập lịch &amp; FX</text>
+      <text x="912" y="317" text-anchor="middle" fill="#475569" font-size="13.5" font-weight="600">(Cron / VCB API)</text>
+    </g>
+    
+  
+    <g>
+      <circle cx="912" cy="510" r="15" fill="#eaf2f8" stroke="#6d28d9" stroke-width="2.8"/>
+      <line x1="912" y1="525" x2="912" y2="563" stroke="#6d28d9" stroke-width="2.8"/>
+      <line x1="890" y1="539" x2="934" y2="539" stroke="#6d28d9" stroke-width="2.8"/>
+      <line x1="912" y1="563" x2="893" y2="592" stroke="#6d28d9" stroke-width="2.8"/>
+      <line x1="912" y1="563" x2="931" y2="592" stroke="#6d28d9" stroke-width="2.8"/>
+      <text x="912" y="613" text-anchor="middle" fill="#0f172a" font-size="15" font-weight="700">Quản trị viên</text>
+      <text x="912" y="632" text-anchor="middle" fill="#475569" font-size="13.5" font-weight="600">(System Admin)</text>
+    </g>
+    
+
+  <!-- Left Actor (User) Clean Bus Trunk at x=128 (completely clear of actor text at x=68!) -->
+  <line x1="90" y1="224" x2="128" y2="224" stroke="#1b4f72" stroke-width="2.6"/>
+  <line x1="128" y1="122" x2="128" y2="584" stroke="#1b4f72" stroke-width="2.4"/>
+  <line x1="128" y1="122" x2="178" y2="122" stroke="#1b4f72" stroke-width="2.2"/>
+  <line x1="128" y1="204" x2="176" y2="204" stroke="#be123c" stroke-width="2.8"/>
+  <line x1="128" y1="286" x2="178" y2="286" stroke="#be123c" stroke-width="2.4"/>
+  <line x1="128" y1="366" x2="178" y2="366" stroke="#be123c" stroke-width="2.6"/>
+  <line x1="128" y1="434" x2="176" y2="434" stroke="#be123c" stroke-width="2.6"/>
+  <line x1="128" y1="518" x2="178" y2="518" stroke="#64748b" stroke-width="1.8"/>
+  <line x1="128" y1="584" x2="178" y2="584" stroke="#64748b" stroke-width="1.8"/>
+
+  <!-- Guest Actor to UC01 -->
+  <line x1="90" y1="518" x2="178" y2="518" stroke="#475569" stroke-width="2.2"/>
+
+  <!-- Right Actor (Scheduler & FX) Clean Bus Trunk at x=852 (completely clear of actor text at x=912!) -->
+  <line x1="890" y1="224" x2="852" y2="224" stroke="#0f766e" stroke-width="2.6"/>
+  <line x1="852" y1="122" x2="852" y2="518" stroke="#0f766e" stroke-width="2.4"/>
+  <line x1="852" y1="122" x2="802" y2="122" stroke="#0f766e" stroke-width="2.2"/>
+  <line x1="852" y1="286" x2="802" y2="286" stroke="#0f766e" stroke-width="2.2"/>
+  <line x1="852" y1="366" x2="802" y2="366" stroke="#0f766e" stroke-width="2.2"/>
+  <line x1="852" y1="518" x2="802" y2="518" stroke="#0f766e" stroke-width="2.0"/>
+
+  <!-- Admin Actor to UC12/13 -->
+  <line x1="890" y1="550" x2="802" y2="584" stroke="#6d28d9" stroke-width="2.4"/>
+
+  <!-- Bottom Legend Bar -->
+  <rect x="148" y="646" width="684" height="34" rx="6" fill="#0f172a"/>
+  <circle cx="174" cy="663" r="7" fill="#fff1f2" stroke="#be123c" stroke-width="2.2"/>
+  <text x="187" y="668" fill="#ffffff" font-size="13.5" font-weight="700">Trọng tâm Cốt lõi</text>
+  <circle cx="324" cy="663" r="7" fill="#cfe8fc" stroke="#1565c0" stroke-width="2.2"/>
+  <text x="337" y="668" fill="#bfdbfe" font-size="13.5" font-weight="700">Trọng tâm Tài chính</text>
+  <circle cx="492" cy="663" r="7" fill="#eef7ff" stroke="#1e6091" stroke-width="2"/>
+  <text x="505" y="668" fill="#a5f3fc" font-size="13.5" font-weight="700">Ca sử dụng Lõi («include»/«extend»)</text>
+  <circle cx="764" cy="663" r="7" fill="#f1f5f9" stroke="#475569" stroke-width="1.8"/>
+  <text x="777" y="668" fill="#cbd5e1" font-size="13.5">Bổ trợ</text>
+</svg>
